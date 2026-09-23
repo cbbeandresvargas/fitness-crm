@@ -1,0 +1,29 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "fitness-crm",
+  "main": "src/index.tsx",
+  "compatibility_date": "2024-09-23",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "fitness-crm-db",
+      "database_id": "7194fec3-c400-421c-a9d7-edfa89e3f912"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "KV",
+      "id": "ca43ee0f72ba4bfd84fddfa3491e4851"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "STORAGE",
+      "bucket_name": "fitness-crm-storage"
+    }
+  ],
+  "ai": {
+    "binding": "AI"
+  }
+}
