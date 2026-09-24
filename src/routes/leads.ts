@@ -1,5 +1,5 @@
-import { Hono } from 'hono';
-import { Env, Lead, User, ActivityLog, SessionData } from '../lib/types';
+import { Hono, Context } from 'hono';
+import { Env, Lead, User, ActivityLog, SessionData, WhatsAppMessage } from '../lib/types';
 import { requireAuth } from '../lib/auth';
 import { normalizePhone, checkDuplicatePhone, calculateDynamicSegment, autoAssignAgent } from '../lib/rules';
 import {
@@ -745,4 +745,313 @@ leadsRoutes.post('/api/leads/:id/metadata', async (c) => {
 
   await c.env.DB.prepare('UPDATE leads SET metadata = ? WHERE id = ?').bind(JSON.stringify(updatedMeta), leadId).run();
   return c.json({ success: true, metadata: updatedMeta });
+});
+
+/**
+ * Actualizar datos generales del lead (Nombre, Teléfono, Correo, Metas, Sede)
+ */
+const handleUpdateLead = async (c: Context<{ Bindings: Env; Variables: { user: SessionData } }>) => {
+  const user = c.get('user');
+  const leadId = c.req.param('id');
+  const body = await (c.req.header('content-type')?.includes('application/json')
+    ? c.req.json()
+    : c.req.parseBody());
+
+  const currentLead = await c.env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(leadId).first<Lead>();
+  if (!currentLead) return c.json({ error: 'Lead no encontrado' }, 404);
+
+  if (user.role === 'agent' && currentLead.assigned_to !== user.userId) {
+    return c.json({ error: 'Acceso Denegado' }, 403);
+  }
+
+  const fullName = (body.full_name as string)?.trim() || currentLead.full_name;
+  const rawPhone = (body.phone as string)?.trim();
+  const phone = rawPhone ? normalizePhone(rawPhone) : currentLead.phone;
+  const email = body.email !== undefined ? ((body.email as string)?.trim().toLowerCase() || null) : currentLead.email;
+  const notesSummary = body.notes_summary !== undefined ? (body.notes_summary as string)?.trim() : currentLead.notes_summary;
+
+  if (phone !== currentLead.phone) {
+    const dupCheck = await checkDuplicatePhone(c.env.DB, phone, leadId);
+    if (dupCheck.exists) {
+      return c.json({ error: `El número ${phone} ya pertenece a otro prospecto (${dupCheck.existingLead?.full_name})` }, 409);
+    }
+  }
+
+  let metadata = typeof currentLead.metadata === 'string' ? JSON.parse(currentLead.metadata || '{}') : (currentLead.metadata || {});
+  if (body.metadata && typeof body.metadata === 'object') {
+    metadata = { ...metadata, ...body.metadata };
+  } else {
+    if (body.presupuesto !== undefined) metadata.presupuesto = Number(body.presupuesto) || 0;
+    if (body.producto !== undefined) metadata.producto = body.producto;
+    if (body.objetivo !== undefined) metadata.objetivo = body.objetivo;
+    if (body.sede !== undefined) metadata.sede = body.sede;
+    if (body.ciudad !== undefined) metadata.ciudad = body.ciudad;
+    if (body.horario_preferido !== undefined) metadata.horario_preferido = body.horario_preferido;
+  }
+
+  let tags = typeof currentLead.tags === 'string' ? JSON.parse(currentLead.tags || '[]') : (currentLead.tags || []);
+  if (Array.isArray(body.tags)) {
+    tags = body.tags;
+  } else if (typeof body.tags === 'string' && body.tags.trim()) {
+    tags = body.tags.split(',').map((t: string) => t.trim()).filter(Boolean);
+  }
+
+  const now = new Date().toISOString();
+  const dynamicSeg = calculateDynamicSegment({
+    status: currentLead.status,
+    metadata,
+    last_contacted_at: currentLead.last_contacted_at,
+    created_at: currentLead.created_at,
+  });
+
+  await c.env.DB.prepare(`
+    UPDATE leads 
+    SET full_name = ?, phone = ?, email = ?, segment = ?, tags = ?, metadata = ?, notes_summary = ?, updated_by = ?, updated_at = ?
+    WHERE id = ?
+  `)
+    .bind(
+      fullName,
+      phone,
+      email,
+      dynamicSeg.segment,
+      JSON.stringify(tags),
+      JSON.stringify(metadata),
+      notesSummary,
+      user.userId,
+      now,
+      leadId
+    )
+    .run();
+
+  await c.env.DB.prepare(`
+    INSERT INTO activity_logs (id, lead_id, user_id, action_type, details, created_at)
+    VALUES (?, ?, ?, 'update', ?, ?)
+  `)
+    .bind(
+      `act_${crypto.randomUUID().slice(0, 8)}`,
+      leadId,
+      user.userId,
+      `Datos del prospecto actualizados por ${user.name}.`,
+      now
+    )
+    .run();
+
+  return c.json({
+    success: true,
+    lead: {
+      ...currentLead,
+      full_name: fullName,
+      phone,
+      email,
+      segment: dynamicSeg.segment,
+      tags,
+      metadata,
+      notes_summary: notesSummary,
+      updated_at: now,
+    },
+  });
+};
+
+leadsRoutes.put('/api/leads/:id', handleUpdateLead);
+leadsRoutes.post('/api/leads/:id/update', handleUpdateLead);
+
+/**
+ * Eliminar prospecto
+ */
+leadsRoutes.delete('/api/leads/:id', async (c) => {
+  const user = c.get('user');
+  const leadId = c.req.param('id');
+
+  const lead = await c.env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(leadId).first<Lead>();
+  if (!lead) return c.json({ error: 'Lead no encontrado' }, 404);
+
+  if (user.role === 'agent' && lead.assigned_to !== user.userId) {
+    return c.json({ error: 'Acceso Denegado' }, 403);
+  }
+
+  await c.env.DB.batch([
+    c.env.DB.prepare('DELETE FROM activity_logs WHERE lead_id = ?').bind(leadId),
+    c.env.DB.prepare('DELETE FROM whatsapp_messages WHERE lead_id = ?').bind(leadId),
+    c.env.DB.prepare('DELETE FROM leads WHERE id = ?').bind(leadId),
+    c.env.DB.prepare(`
+      INSERT INTO audit_logs (id, user_id, entity_type, entity_id, action, details, created_at)
+      VALUES (?, ?, 'lead', ?, 'delete_lead', ?, ?)
+    `).bind(
+      `aud_${crypto.randomUUID().slice(0, 8)}`,
+      user.userId,
+      leadId,
+      `Prospecto ${lead.full_name} (${lead.phone}) eliminado por ${user.name}`,
+      new Date().toISOString()
+    ),
+  ]);
+
+  return c.json({ success: true, deletedId: leadId });
+});
+
+/**
+ * Obtener historial de mensajes de WhatsApp
+ */
+leadsRoutes.get('/api/leads/:id/messages', async (c) => {
+  const user = c.get('user');
+  const leadId = c.req.param('id');
+
+  const lead = await c.env.DB.prepare('SELECT id, full_name, phone, assigned_to FROM leads WHERE id = ?')
+    .bind(leadId)
+    .first<Lead>();
+  if (!lead) return c.json({ error: 'Lead no encontrado' }, 404);
+
+  if (user.role === 'agent' && lead.assigned_to !== user.userId) {
+    return c.json({ error: 'Acceso Denegado' }, 403);
+  }
+
+  const messagesRes = await c.env.DB.prepare(`
+    SELECT m.*, u.name as user_name 
+    FROM whatsapp_messages m 
+    LEFT JOIN users u ON u.id = m.user_id 
+    WHERE m.lead_id = ? 
+    ORDER BY m.created_at ASC
+  `)
+    .bind(leadId)
+    .all<WhatsAppMessage>();
+
+  return c.json({
+    lead: { id: lead.id, full_name: lead.full_name, phone: lead.phone },
+    messages: messagesRes.results || [],
+  });
+});
+
+/**
+ * Enviar / Registrar nuevo mensaje de WhatsApp (texto o imagen)
+ */
+leadsRoutes.post('/api/leads/:id/messages', async (c) => {
+  const user = c.get('user');
+  const leadId = c.req.param('id');
+  const body = await (c.req.header('content-type')?.includes('application/json')
+    ? c.req.json()
+    : c.req.parseBody());
+
+  const content = (body.content as string)?.trim() || '';
+  const messageType = ((body.message_type as string) || 'text') as 'text' | 'image' | 'document' | 'audio';
+  const mediaUrl = (body.media_url as string)?.trim() || null;
+  const sender = ((body.sender as string) || 'agent') as 'agent' | 'lead' | 'system';
+
+  if (!content && !mediaUrl) {
+    return c.json({ error: 'El contenido o archivo adjunto es requerido' }, 400);
+  }
+
+  const lead = await c.env.DB.prepare('SELECT id, full_name, phone, assigned_to FROM leads WHERE id = ?')
+    .bind(leadId)
+    .first<Lead>();
+  if (!lead) return c.json({ error: 'Lead no encontrado' }, 404);
+
+  if (user.role === 'agent' && lead.assigned_to !== user.userId) {
+    return c.json({ error: 'Acceso Denegado' }, 403);
+  }
+
+  const msgId = `msg_${crypto.randomUUID().slice(0, 8)}`;
+  const now = new Date().toISOString();
+
+  await c.env.DB.prepare(`
+    INSERT INTO whatsapp_messages (
+      id, lead_id, user_id, sender, message_type, content, media_url, status, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, 'sent', ?)
+  `)
+    .bind(
+      msgId,
+      leadId,
+      sender === 'agent' ? user.userId : null,
+      sender,
+      messageType,
+      content || (messageType === 'image' ? 'Imagen enviada' : ''),
+      mediaUrl,
+      now
+    )
+    .run();
+
+  // Actualizar último contacto en lead y registrar en bitácora
+  await c.env.DB.prepare(`
+    UPDATE leads SET last_contacted_at = ?, updated_by = ?, updated_at = ? WHERE id = ?
+  `)
+    .bind(now, user.userId, now, leadId)
+    .run();
+
+  const activityDetail = messageType === 'image'
+    ? `Imagen enviada por WhatsApp: "${content || 'Archivo multimedia'}"`
+    : `WhatsApp ${sender === 'lead' ? 'recibido de' : 'enviado a'} ${lead.full_name}: "${content.slice(0, 80)}"`;
+
+  await c.env.DB.prepare(`
+    INSERT INTO activity_logs (id, lead_id, user_id, action_type, details, created_at)
+    VALUES (?, ?, ?, 'whatsapp_sent', ?, ?)
+  `)
+    .bind(
+      `act_${crypto.randomUUID().slice(0, 8)}`,
+      leadId,
+      user.userId,
+      activityDetail,
+      now
+    )
+    .run();
+
+  const deepLink = createWhatsAppDeepLink(lead.phone, content || 'Hola');
+
+  return c.json({
+    success: true,
+    message: {
+      id: msgId,
+      lead_id: leadId,
+      user_id: user.userId,
+      user_name: user.name,
+      sender,
+      message_type: messageType,
+      content,
+      media_url: mediaUrl,
+      status: 'sent',
+      created_at: now,
+    },
+    deepLink,
+  }, 201);
+});
+
+/**
+ * Subir imagen o comprobante para WhatsApp (R2 o KV fallback)
+ */
+leadsRoutes.post('/api/upload/image', async (c) => {
+  try {
+    const body = await c.req.parseBody();
+    const file = body['file'];
+
+    if (!file || typeof file !== 'object' || !('arrayBuffer' in file)) {
+      return c.json({ error: 'No se recibió ningún archivo de imagen' }, 400);
+    }
+
+    const typedFile = file as File;
+    const arrayBuffer = await typedFile.arrayBuffer();
+    const ext = typedFile.name.split('.').pop() || 'jpg';
+    const key = `chat-media/${Date.now()}_${crypto.randomUUID().slice(0, 8)}.${ext}`;
+
+    if (c.env.STORAGE && typeof c.env.STORAGE.put === 'function') {
+      try {
+        await c.env.STORAGE.put(key, arrayBuffer, {
+          httpMetadata: { contentType: typedFile.type || 'image/jpeg' },
+        });
+      } catch (e) {
+        console.warn('Storage put warning:', e);
+      }
+    }
+
+    const base64 = btoa(
+      new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+    );
+    const dataUrl = `data:${typedFile.type || 'image/jpeg'};base64,${base64}`;
+
+    return c.json({
+      success: true,
+      media_url: dataUrl,
+      key,
+      file_name: typedFile.name,
+    });
+  } catch (err: any) {
+    console.error('Error subiendo imagen:', err);
+    return c.json({ error: err.message || 'Error al procesar archivo' }, 500);
+  }
 });

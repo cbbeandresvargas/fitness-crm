@@ -84,6 +84,20 @@ app.use('*', async (c, next) => {
             created_at TEXT NOT NULL DEFAULT (DATETIME('now'))
           );
         `),
+        c.env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS whatsapp_messages (
+            id TEXT PRIMARY KEY,
+            lead_id TEXT NOT NULL,
+            user_id TEXT,
+            sender TEXT NOT NULL,
+            message_type TEXT NOT NULL DEFAULT 'text',
+            content TEXT NOT NULL,
+            media_url TEXT,
+            status TEXT NOT NULL DEFAULT 'sent',
+            whatsapp_message_id TEXT,
+            created_at TEXT NOT NULL DEFAULT (DATETIME('now'))
+          );
+        `),
         // Seed users
         c.env.DB.prepare(`
           INSERT OR IGNORE INTO users (id, name, email, password_hash, role, avatar_url, is_active) VALUES
@@ -117,8 +131,32 @@ app.use('*', async (c, next) => {
           ('act_3', 'lead_101', 'usr_agent_1', 'status_change', 'Estado actualizado a Cita Agendada para el jueves.', DATETIME('now', '-2 hours')),
           ('act_4', 'lead_105', 'usr_agent_1', 'segment_change', 'Reclasificado automáticamente a Segmento C por inactividad > 14 días.', DATETIME('now', '-2 days'));
         `),
+        // Seed initial demo WhatsApp messages
+        c.env.DB.prepare(`
+          INSERT OR IGNORE INTO whatsapp_messages (id, lead_id, user_id, sender, message_type, content, media_url, status, created_at) VALUES
+          ('msg_1', 'lead_101', 'usr_agent_1', 'agent', 'text', '¡Hola Sofía! 💪 Te saluda Valeria de IronPeak Fitness Polanco. ¿Pudiste revisar los horarios para tu valoración física?', NULL, 'read', DATETIME('now', '-2 days')),
+          ('msg_2', 'lead_101', NULL, 'lead', 'text', '¡Hola Valeria! Sí, me queda perfecto el jueves a las 7:00 AM antes de entrar a la oficina. ¿Qué debo llevar?', NULL, 'read', DATETIME('now', '-1 days')),
+          ('msg_3', 'lead_101', 'usr_agent_1', 'agent', 'text', 'Excelente Sofía. Trae ropa cómoda, toalla y tu termo de agua. Te comparto la ficha con el programa de CrossFit Pro y nutrición que revisaremos:', NULL, 'delivered', DATETIME('now', '-3 hours')),
+          ('msg_4', 'lead_101', 'usr_agent_1', 'agent', 'image', 'Programa de Entrenamiento Pro - IronPeak Polanco', 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800&auto=format&fit=crop&q=80', 'sent', DATETIME('now', '-2 hours'));
+        `),
       ]);
       console.log('✅ Base de datos inicializada con éxito.');
+    } else {
+      // Ensure whatsapp_messages exists for existing tables
+      await c.env.DB.prepare(`
+        CREATE TABLE IF NOT EXISTS whatsapp_messages (
+          id TEXT PRIMARY KEY,
+          lead_id TEXT NOT NULL,
+          user_id TEXT,
+          sender TEXT NOT NULL,
+          message_type TEXT NOT NULL DEFAULT 'text',
+          content TEXT NOT NULL,
+          media_url TEXT,
+          status TEXT NOT NULL DEFAULT 'sent',
+          whatsapp_message_id TEXT,
+          created_at TEXT NOT NULL DEFAULT (DATETIME('now'))
+        );
+      `).run();
     }
   } catch (err) {
     console.error('Error al inicializar D1:', err);

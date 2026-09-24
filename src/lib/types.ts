@@ -82,6 +82,24 @@ export interface AuditLog {
   created_at: string;
 }
 
+export type MessageSender = 'agent' | 'lead' | 'system';
+export type MessageType = 'text' | 'image' | 'document' | 'audio';
+export type MessageStatus = 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
+
+export interface WhatsAppMessage {
+  id: string;
+  lead_id: string;
+  user_id?: string | null;
+  user_name?: string | null;
+  sender: MessageSender;
+  message_type: MessageType;
+  content: string;
+  media_url?: string | null;
+  status: MessageStatus;
+  whatsapp_message_id?: string | null;
+  created_at: string;
+}
+
 export interface Env {
   DB: D1Database;
   KV: KVNamespace;

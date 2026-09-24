@@ -59,9 +59,24 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   created_at TEXT NOT NULL DEFAULT (DATETIME('now'))
 );
 
+CREATE TABLE IF NOT EXISTS whatsapp_messages (
+  id TEXT PRIMARY KEY,
+  lead_id TEXT NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+  user_id TEXT REFERENCES users(id),
+  sender TEXT NOT NULL CHECK(sender IN ('agent', 'lead', 'system')),
+  message_type TEXT NOT NULL DEFAULT 'text' CHECK(message_type IN ('text', 'image', 'document', 'audio')),
+  content TEXT NOT NULL,
+  media_url TEXT,
+  status TEXT NOT NULL DEFAULT 'sent' CHECK(status IN ('pending', 'sent', 'delivered', 'read', 'failed')),
+  whatsapp_message_id TEXT,
+  created_at TEXT NOT NULL DEFAULT (DATETIME('now'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_leads_phone ON leads(phone);
 CREATE INDEX IF NOT EXISTS idx_leads_assigned_to ON leads(assigned_to);
 CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
 CREATE INDEX IF NOT EXISTS idx_leads_segment ON leads(segment);
 CREATE INDEX IF NOT EXISTS idx_activities_lead ON activity_logs(lead_id);
 CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_lead ON whatsapp_messages(lead_id);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_created ON whatsapp_messages(created_at);

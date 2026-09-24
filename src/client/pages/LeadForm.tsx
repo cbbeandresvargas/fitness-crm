@@ -17,7 +17,7 @@ export default function LeadForm() {
   const [fullName, setFullName] = createSignal('');
   const [phone, setPhone] = createSignal('');
   const [email, setEmail] = createSignal('');
-  const [presupuesto, setPresupuesto] = createSignal('120');
+  const [presupuesto, setPresupuesto] = createSignal('150');
   const [producto, setProducto] = createSignal('CrossFit Pro');
   const [objetivo, setObjetivo] = createSignal('');
   const [sede, setSede] = createSignal('Polanco');
@@ -33,6 +33,29 @@ export default function LeadForm() {
       setAgents(res.agents);
     } catch {}
   });
+
+  const predictedSegment = () => {
+    const p = Number(presupuesto()) || 0;
+    if (p >= 150) {
+      return {
+        label: 'Segmento A (VIP)',
+        desc: 'Presupuesto alto (≥ $150 USD) - Atención prioritaria',
+        color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40',
+      };
+    }
+    if (p > 0 && p < 35) {
+      return {
+        label: 'Segmento D (Frío)',
+        desc: 'Presupuesto por debajo del mínimo',
+        color: 'bg-zinc-800 text-zinc-400 border-zinc-700',
+      };
+    }
+    return {
+      label: 'Segmento B (Tibio)',
+      desc: 'Seguimiento comercial estándar',
+      color: 'bg-blue-500/20 text-blue-400 border-blue-500/40',
+    };
+  };
 
   const handleSubmit = async (e: Event) => {
     e.preventDefault();
@@ -88,7 +111,7 @@ export default function LeadForm() {
           <div>
             <h2 class="text-2xl font-black text-white">Registro de Nuevo Prospecto</h2>
             <p class="text-xs text-zinc-400">
-              El motor evaluará automáticamente el segmento (A, B, C, D) y asignará el asesor de forma inteligente.
+              El motor evaluará automáticamente el segmento y asignará el asesor de forma balanceada.
             </p>
           </div>
         </div>
@@ -102,7 +125,7 @@ export default function LeadForm() {
 
         <form
           onSubmit={handleSubmit}
-          class="p-8 rounded-3xl bg-zinc-900 border border-zinc-800 space-y-6 shadow-xl"
+          class="p-6 sm:p-8 rounded-3xl bg-zinc-900 border border-zinc-800 space-y-6 shadow-2xl"
         >
           {/* Datos Personales */}
           <div class="space-y-4">
@@ -154,11 +177,17 @@ export default function LeadForm() {
             </div>
           </div>
 
-          {/* Interés Deportivo y Presupuesto */}
+          {/* Interés Deportivo y Presupuesto con Live Segment Badge */}
           <div class="space-y-4 pt-4 border-t border-zinc-800">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-orange-400">
-              2. Metas & Presupuesto
-            </h3>
+            <div class="flex items-center justify-between">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-orange-400">
+                2. Metas & Presupuesto
+              </h3>
+              {/* Live Badge Preview */}
+              <div class={`px-3 py-1 rounded-full text-[11px] font-bold border ${predictedSegment().color}`}>
+                <span>{predictedSegment().label}</span>
+              </div>
+            </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
@@ -172,8 +201,8 @@ export default function LeadForm() {
                   placeholder="150"
                   class="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-2xl text-xs text-white focus:outline-none focus:border-orange-500"
                 />
-                <span class="text-[10px] text-zinc-500 mt-1 block">
-                  &gt;= $150 califica automáticamente como Segmento A (VIP)
+                <span class="text-[10px] text-zinc-400 mt-1 block">
+                  {predictedSegment().desc}
                 </span>
               </div>
 
@@ -227,7 +256,7 @@ export default function LeadForm() {
             </div>
           </div>
 
-          {/* Asignación y Etiquetas */}
+          {/* Asignación y Notas */}
           <div class="space-y-4 pt-4 border-t border-zinc-800">
             <h3 class="text-xs font-bold uppercase tracking-wider text-orange-400">
               3. Asignación & Notas

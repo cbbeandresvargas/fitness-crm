@@ -6,6 +6,7 @@ import {
   ActivityLog,
   MessageTemplate,
   AuditLog,
+  WhatsAppMessage,
 } from './types';
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
@@ -165,6 +166,70 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ tag }),
     });
+  },
+
+  async updateLead(
+    id: string,
+    data: {
+      full_name?: string;
+      phone?: string;
+      email?: string | null;
+      tags?: string[];
+      metadata?: Record<string, any>;
+      notes_summary?: string;
+    }
+  ): Promise<{ success: boolean; lead: Lead }> {
+    return fetchJson(`/api/leads/${id}/update`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteLead(id: string): Promise<{ success: boolean; deletedId: string }> {
+    return fetchJson(`/api/leads/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // WhatsApp Chat
+  async getWhatsAppMessages(id: string): Promise<{
+    lead: { id: string; full_name: string; phone: string };
+    messages: WhatsAppMessage[];
+  }> {
+    return fetchJson(`/api/leads/${id}/messages`);
+  },
+
+  async sendChatMessage(
+    id: string,
+    payload: {
+      content: string;
+      message_type?: 'text' | 'image' | 'document' | 'audio';
+      media_url?: string;
+      sender?: 'agent' | 'lead' | 'system';
+    }
+  ): Promise<{ success: boolean; message: WhatsAppMessage; deepLink: string }> {
+    return fetchJson(`/api/leads/${id}/messages`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async uploadImage(file: File): Promise<{ success: boolean; media_url: string; key: string; file_name: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch('/api/upload/image', {
+      method: 'POST',
+      body: formData,
+    });
+    if (!res.ok) {
+      let err = 'Error al subir imagen';
+      try {
+        const d = (await res.json()) as any;
+        if (d && d.error) err = d.error;
+      } catch {}
+      throw new Error(err);
+    }
+    return res.json();
   },
 
   // Templates
