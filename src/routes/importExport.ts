@@ -3,50 +3,31 @@ import Papa from 'papaparse';
 import { Env, User, Lead, SessionData } from '../lib/types';
 import { requireAuth } from '../lib/auth';
 import { normalizePhone, checkDuplicatePhone, calculateDynamicSegment, autoAssignAgent } from '../lib/rules';
-import { Layout } from '../views/Layout';
-import { ImportExportView } from '../views/ImportExportView';
 
 export const importExportRoutes = new Hono<{ Bindings: Env; Variables: { user: SessionData } }>();
 
 importExportRoutes.use('*', requireAuth);
 
 /**
- * Pantalla principal de Importación / Exportación
+ * Carga de CSV de prueba precargado
  */
-importExportRoutes.get('/import-export', async (c) => {
-  const user = c.get('user');
-  const agentsRes = await c.env.DB.prepare('SELECT * FROM users WHERE is_active = 1').all<User>();
-
-  return c.html(
-    Layout({
-      title: 'Importación & Exportación',
-      user,
-      currentPath: '/import-export',
-      children: ImportExportView({
-        user,
-        agents: agentsRes.results || [],
-      }),
-    })
-  );
-});
-
-/**
- * Carga de CSV de prueba precargado para demostración instantánea
- */
-importExportRoutes.get('/import/load-sample', async (c) => {
-  const user = c.get('user');
+importExportRoutes.get('/api/import/load-sample', async (c) => {
   const sampleCsv = `Nombre Completo,Telefono Movil,Correo,Presupuesto USD,Programa Interes,Objetivo Deportivo,Ciudad,Sede,Tags
 Esteban Navarro,+525566778899,esteban.navarro@gmail.com,190,CrossFit Pro,Ganar fuerza y masa muscular,Ciudad de México,Polanco,CrossFit;Fuerza;VIP
 Gabriela Meza,+525512345678,gabriela.m@hotmail.com,120,Pilates Reformer,Rehabilitación de espalda,Ciudad de México,Roma Norte,Pilates;Salud
 Felipe Rivas,+525544332211,felipe.rivas@empresa.com,220,Personal Trainer,Bajar 8 kilos en 3 meses,Monterrey,San Pedro,Personal Trainer;Nutricion
-Andrea Salazar,,andrea.s@yahoo.com,100,Funcional,Tonificación,Guadalajara,Chapultepec,Funcional
+Andrea Salazar,+525533221100,andrea.s@yahoo.com,100,Funcional,Tonificación,Guadalajara,Chapultepec,Funcional
 Manuel Coronado,+525588990011,manuel.c@live.com,160,Membresía Anual,Mejorar resistencia cardiovascular,Querétaro,Juriquilla,Cardio;Anual`;
 
   const fileKey = `sample_${Date.now()}.csv`;
 
-  // Almacenar en Cloudflare R2
+  // Almacenar en Cloudflare R2 si está configurado
   if (c.env.STORAGE && typeof c.env.STORAGE.put === 'function') {
-    await c.env.STORAGE.put(fileKey, sampleCsv);
+    try {
+      await c.env.STORAGE.put(fileKey, sampleCsv);
+    } catch (e) {
+      console.warn('R2 put error:', e);
+    }
   }
 
   // Guardar en KV temporal
@@ -57,299 +38,163 @@ Manuel Coronado,+525588990011,manuel.c@live.com,160,Membresía Anual,Mejorar res
     skipEmptyLines: true,
   });
 
-  const agentsRes = await c.env.DB.prepare('SELECT * FROM users WHERE is_active = 1').all<User>();
+  const agentsRes = await c.env.DB.prepare('SELECT id, name, role FROM users WHERE is_active = 1').all<User>();
 
-  return c.html(
-    Layout({
-      title: 'Mapeo de Columnas CSV',
-      user,
-      currentPath: '/import-export',
-      flash: { type: 'info', message: 'CSV de prueba cargado en Cloudflare R2. Procede a mapear las columnas.' },
-      children: ImportExportView({
-        user,
-        agents: agentsRes.results || [],
-        uploadedFileKey: fileKey,
-        previewHeaders: parsed.meta.fields || [],
-        previewRows: parsed.data.slice(0, 5),
-      }),
-    })
-  );
+  return c.json({
+    success: true,
+    fileKey,
+    headers: parsed.meta.fields || [],
+    previewRows: (parsed.data || []).slice(0, 5),
+    totalRows: parsed.data.length,
+    agents: agentsRes.results || [],
+  });
 });
 
 /**
- * Cargar archivo CSV enviado por el usuario
+ * Previsualizar archivo CSV subido
  */
-importExportRoutes.post('/import/upload', async (c) => {
-  const user = c.get('user');
+importExportRoutes.post('/api/import/preview', async (c) => {
   const body = await c.req.parseBody();
-  const file = body['csv_file'];
-
-  let csvContent = '';
+  const file = body['file'];
+  let csvText = '';
 
   if (file && typeof file === 'object' && 'text' in file) {
-    csvContent = await (file as any).text();
+    csvText = await (file as File).text();
+  } else if (typeof body['csvText'] === 'string') {
+    csvText = body['csvText'];
   }
 
-  if (!csvContent || csvContent.trim().length === 0) {
-    const agentsRes = await c.env.DB.prepare('SELECT * FROM users WHERE is_active = 1').all<User>();
-    return c.html(
-      Layout({
-        title: 'Importación',
-        user,
-        currentPath: '/import-export',
-        flash: { type: 'error', message: 'Por favor selecciona un archivo CSV válido o usa el CSV de prueba.' },
-        children: ImportExportView({
-          user,
-          agents: agentsRes.results || [],
-        }),
-      })
-    );
+  if (!csvText) {
+    return c.json({ error: 'No se subió ningún archivo CSV o está vacío.' }, 400);
   }
 
-  const fileKey = `import_${Date.now()}_${crypto.randomUUID().slice(0, 6)}.csv`;
-
-  // Almacenar en Cloudflare R2
+  const fileKey = `upload_${Date.now()}.csv`;
   if (c.env.STORAGE && typeof c.env.STORAGE.put === 'function') {
-    await c.env.STORAGE.put(fileKey, csvContent);
+    try {
+      await c.env.STORAGE.put(fileKey, csvText);
+    } catch (e) {
+      console.warn('R2 put error:', e);
+    }
   }
-  await c.env.KV.put(`csv:${fileKey}`, csvContent, { expirationTtl: 3600 });
+  await c.env.KV.put(`csv:${fileKey}`, csvText, { expirationTtl: 3600 });
 
-  const parsed = Papa.parse<Record<string, string>>(csvContent, {
+  const parsed = Papa.parse<Record<string, string>>(csvText, {
     header: true,
     skipEmptyLines: true,
   });
 
-  const agentsRes = await c.env.DB.prepare('SELECT * FROM users WHERE is_active = 1').all<User>();
+  const agentsRes = await c.env.DB.prepare('SELECT id, name, role FROM users WHERE is_active = 1').all<User>();
 
-  return c.html(
-    Layout({
-      title: 'Mapeo de Columnas CSV',
-      user,
-      currentPath: '/import-export',
-      flash: { type: 'success', message: 'Archivo subido a R2 exitosamente. Asocia los campos antes de importar.' },
-      children: ImportExportView({
-        user,
-        agents: agentsRes.results || [],
-        uploadedFileKey: fileKey,
-        previewHeaders: parsed.meta.fields || [],
-        previewRows: parsed.data.slice(0, 5),
-      }),
-    })
-  );
+  return c.json({
+    success: true,
+    fileKey,
+    headers: parsed.meta.fields || [],
+    previewRows: (parsed.data || []).slice(0, 5),
+    totalRows: parsed.data.length,
+    agents: agentsRes.results || [],
+  });
 });
 
 /**
- * Validar filas y reporte de errores previo a la inserción
+ * Procesar importación por lotes
  */
-importExportRoutes.post('/import/validate', async (c) => {
+importExportRoutes.post('/api/import/process', async (c) => {
   const user = c.get('user');
-  const body = await c.req.parseBody();
+  const body = await (c.req.header('content-type')?.includes('application/json')
+    ? c.req.json()
+    : c.req.parseBody());
 
-  const fileKey = body['file_key'] as string;
-  const assignedToDefault = (body['assigned_to'] as string) || 'auto';
+  const fileKey = body.file_key as string;
+  if (!fileKey) return c.json({ error: 'Falta la clave del archivo' }, 400);
 
-  // Obtener CSV de KV o R2
-  let csvContent = await c.env.KV.get(`csv:${fileKey}`);
-  if (!csvContent && c.env.STORAGE) {
-    const obj = await c.env.STORAGE.get(fileKey);
-    if (obj) csvContent = await obj.text();
+  let csvText = await c.env.KV.get(`csv:${fileKey}`);
+  if (!csvText && c.env.STORAGE && typeof c.env.STORAGE.get === 'function') {
+    const r2Obj = await c.env.STORAGE.get(fileKey);
+    if (r2Obj) csvText = await r2Obj.text();
   }
 
-  if (!csvContent) {
-    return c.redirect('/import-export');
+  if (!csvText) {
+    return c.json({ error: 'El archivo temporal ha expirado. Por favor cárgalo de nuevo.' }, 404);
   }
 
-  const parsed = Papa.parse<Record<string, string>>(csvContent, {
+  const parsed = Papa.parse<Record<string, string>>(csvText, {
     header: true,
     skipEmptyLines: true,
   });
 
-  const headers = parsed.meta.fields || [];
+  const nameCol = (body.col_name as string) || 'Nombre Completo';
+  const phoneCol = (body.col_phone as string) || 'Telefono Movil';
+  const emailCol = (body.col_email as string) || 'Correo';
+  const budgetCol = (body.col_budget as string) || 'Presupuesto USD';
+  const goalCol = (body.col_goal as string) || 'Objetivo Deportivo';
+  const cityCol = (body.col_city as string) || 'Ciudad';
+  const branchCol = (body.col_branch as string) || 'Sede';
+  const productCol = (body.col_product as string) || 'Programa Interes';
+  const tagsCol = (body.col_tags as string) || 'Tags';
 
-  // Extraer mapeo de columnas indicado por el usuario
-  const map: Record<string, string> = {};
-  for (const [k, v] of Object.entries(body)) {
-    if (k.startsWith('map_') && v) {
-      map[k.replace('map_', '')] = v as string;
-    }
-  }
-
-  const details: {
-    index: number;
-    data: Record<string, string>;
-    status: 'valid' | 'duplicate' | 'error';
-    message: string;
-  }[] = [];
-
-  let validCount = 0;
-  let duplicateCount = 0;
-  let errorCount = 0;
-
-  const validRowsToStore: any[] = [];
-
-  for (let i = 0; i < parsed.data.length; i++) {
-    const rawRow = parsed.data[i];
-    const fullName = (rawRow[map['full_name']] || '').trim();
-    const rawPhone = (rawRow[map['phone']] || '').trim();
-    const email = map['email'] ? (rawRow[map['email']] || '').trim() : null;
-    const status = map['status'] ? (rawRow[map['status']] || 'nuevo').trim() : 'nuevo';
-    const presupuesto = map['presupuesto'] ? Number(rawRow[map['presupuesto']]) || 0 : 0;
-    const producto = map['producto'] ? rawRow[map['producto']] || 'General' : 'General';
-    const objetivo = map['objetivo'] ? rawRow[map['objetivo']] || 'Fitness' : 'Fitness';
-    const ciudad = map['ciudad'] ? rawRow[map['ciudad']] || 'CDMX' : 'CDMX';
-    const sede = map['sede'] ? rawRow[map['sede']] || 'Principal' : 'Principal';
-    const rawTags = map['tags'] ? rawRow[map['tags']] || '' : '';
-
-    const rowData = { full_name: fullName, phone: rawPhone, email: email || '', producto, presupuesto: String(presupuesto) };
-
-    // 1. Validar nombre
-    if (!fullName) {
-      errorCount++;
-      details.push({
-        index: i,
-        data: rowData,
-        status: 'error',
-        message: 'Fila descartada: Falta nombre del prospecto',
-      });
-      continue;
-    }
-
-    // 2. Validar teléfono
-    if (!rawPhone || rawPhone.length < 8) {
-      errorCount++;
-      details.push({
-        index: i,
-        data: rowData,
-        status: 'error',
-        message: 'Fila descartada: Número de teléfono inválido o vacío',
-      });
-      continue;
-    }
-
-    const normalizedPhone = normalizePhone(rawPhone);
-
-    // 3. Validar duplicado en base de datos D1
-    const dupCheck = await checkDuplicatePhone(c.env.DB, normalizedPhone);
-    if (dupCheck.exists) {
-      duplicateCount++;
-      details.push({
-        index: i,
-        data: rowData,
-        status: 'duplicate',
-        message: `Teléfono ya registrado (${dupCheck.existingLead?.full_name})`,
-      });
-      continue;
-    }
-
-    // Fila válida
-    validCount++;
-    details.push({
-      index: i,
-      data: rowData,
-      status: 'valid',
-      message: 'Listo para importar',
-    });
-
-    const tagsArray = rawTags
-      .split(/[;,]/)
-      .map((t) => t.trim())
-      .filter((t) => t.length > 0);
-
-    validRowsToStore.push({
-      full_name: fullName,
-      phone: normalizedPhone,
-      email,
-      status,
-      assigned_to: assignedToDefault,
-      tags: tagsArray,
-      metadata: {
-        presupuesto,
-        producto,
-        objetivo,
-        ciudad,
-        sede,
-      },
-    });
-  }
-
-  // Guardar filas válidas en KV para el paso de confirmación
-  await c.env.KV.put(`import:valid:${fileKey}`, JSON.stringify(validRowsToStore), { expirationTtl: 3600 });
-
-  const agentsRes = await c.env.DB.prepare('SELECT * FROM users WHERE is_active = 1').all<User>();
-
-  return c.html(
-    Layout({
-      title: 'Validación de Importación',
-      user,
-      currentPath: '/import-export',
-      flash: {
-        type: validCount > 0 ? 'success' : 'error',
-        message: `Análisis completado: ${validCount} válidas, ${duplicateCount} duplicados y ${errorCount} errores.`,
-      },
-      children: ImportExportView({
-        user,
-        agents: agentsRes.results || [],
-        uploadedFileKey: fileKey,
-        previewHeaders: headers,
-        validationResults: {
-          validCount,
-          duplicateCount,
-          errorCount,
-          details,
-        },
-      }),
-    })
-  );
-});
-
-/**
- * Confirmar importación masiva e insertar en D1
- */
-importExportRoutes.post('/import/confirm', async (c) => {
-  const user = c.get('user');
-  const body = await c.req.parseBody();
-  const fileKey = c.req.header('Referer')?.split('uploadedFileKey=')[1] || '';
-
-  // Buscar última clave de importación en KV
-  const rawValid = await c.env.KV.get(`import:valid:${fileKey}`) || (await findLatestImportBatch(c.env.KV));
-  if (!rawValid) {
-    return c.redirect('/import-export');
-  }
-
-  const validRows = JSON.parse(rawValid);
-  const now = new Date().toISOString();
+  let assignedTo = (body.assigned_to as string) || 'auto';
   let importedCount = 0;
+  let skippedDuplicates = 0;
+  let errorsCount = 0;
 
-  for (const row of validRows) {
-    let assigned = row.assigned_to;
-    if (assigned === 'auto' || !assigned) {
-      assigned = (await autoAssignAgent(c.env.DB)) || user.userId;
+  for (const row of parsed.data) {
+    const fullName = row[nameCol]?.trim();
+    const rawPhone = row[phoneCol]?.trim();
+    const email = row[emailCol]?.trim().toLowerCase() || null;
+
+    if (!fullName || !rawPhone) {
+      errorsCount++;
+      continue;
     }
 
-    const { segment, reason } = calculateDynamicSegment({
-      status: row.status,
-      metadata: row.metadata,
-      created_at: now,
+    const phone = normalizePhone(rawPhone);
+    const dupCheck = await checkDuplicatePhone(c.env.DB, phone);
+    if (dupCheck.exists) {
+      skippedDuplicates++;
+      continue;
+    }
+
+    let targetAgent = assignedTo;
+    if (targetAgent === 'auto' || !targetAgent) {
+      targetAgent = (await autoAssignAgent(c.env.DB)) || '';
+    }
+
+    const presupuesto = Number(row[budgetCol]) || 0;
+    const metadata = {
+      presupuesto,
+      objetivo: row[goalCol]?.trim() || '',
+      ciudad: row[cityCol]?.trim() || '',
+      sede: row[branchCol]?.trim() || '',
+      producto: row[productCol]?.trim() || '',
+    };
+
+    const rawTags = row[tagsCol] || '';
+    const tags = rawTags
+      ? rawTags.split(/[;,]/).map((t) => t.trim()).filter(Boolean)
+      : [];
+
+    const dynamicSeg = calculateDynamicSegment({
+      status: 'nuevo',
+      metadata,
     });
 
     const leadId = `lead_${crypto.randomUUID().slice(0, 8)}`;
+    const now = new Date().toISOString();
 
     await c.env.DB.prepare(`
       INSERT INTO leads (
-        id, full_name, phone, email, status, segment, assigned_to, tags, metadata, notes_summary, created_by, updated_by, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        id, full_name, phone, email, status, segment, assigned_to, tags, metadata, created_by, updated_by, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, 'nuevo', ?, ?, ?, ?, ?, ?, ?, ?)
     `)
       .bind(
         leadId,
-        row.full_name,
-        row.phone,
-        row.email,
-        row.status,
-        segment,
-        assigned,
-        JSON.stringify(row.tags),
-        JSON.stringify(row.metadata),
-        'Importado masivamente vía CSV.',
+        fullName,
+        phone,
+        email,
+        dynamicSeg.segment,
+        targetAgent,
+        JSON.stringify(tags),
+        JSON.stringify(metadata),
         user.userId,
         user.userId,
         now,
@@ -361,112 +206,126 @@ importExportRoutes.post('/import/confirm', async (c) => {
       INSERT INTO activity_logs (id, lead_id, user_id, action_type, details, created_at)
       VALUES (?, ?, ?, 'creation', ?, ?)
     `)
-      .bind(`act_${crypto.randomUUID().slice(0, 8)}`, leadId, user.userId, `Lead importado vía CSV. Clasificado en Segmento ${segment} (${reason})`, now)
+      .bind(
+        `act_${crypto.randomUUID().slice(0, 8)}`,
+        leadId,
+        user.userId,
+        `Lead importado desde archivo CSV (${fileKey}).`,
+        now
+      )
       .run();
 
     importedCount++;
   }
 
-  await c.env.DB.prepare(`
-    INSERT INTO audit_logs (id, user_id, entity_type, entity_id, action, details)
-    VALUES (?, ?, 'import', 'csv', 'bulk_import', ?)
-  `)
-    .bind(`aud_${crypto.randomUUID().slice(0, 8)}`, user.userId, `Importación completada de ${importedCount} leads.`)
-    .run();
+  // Eliminar KV temporal
+  await c.env.KV.delete(`csv:${fileKey}`).catch(() => {});
 
-  return c.redirect(`/leads?imported=${importedCount}`);
+  return c.json({
+    success: true,
+    importedCount,
+    skippedDuplicates,
+    errorsCount,
+    totalRows: parsed.data.length,
+  });
 });
 
 /**
- * Exportar leads a CSV con filtros activos
+ * Exportar Leads a CSV
  */
-importExportRoutes.get('/export/csv', async (c) => {
+importExportRoutes.get('/api/export/csv', async (c) => {
   const user = c.get('user');
-  const segment = c.req.query('segment');
-  const status = c.req.query('status');
-  const agentId = c.req.query('agentId');
+  const leadWhere = user.role === 'agent' ? 'WHERE l.assigned_to = ?' : '';
+  const leadParams = user.role === 'agent' ? [user.userId] : [];
 
-  let whereClauses: string[] = [];
-  let params: any[] = [];
-
-  // RBAC: Agente solo exporta los suyos
-  if (user.role === 'agent') {
-    whereClauses.push('l.assigned_to = ?');
-    params.push(user.userId);
-  } else if (agentId) {
-    whereClauses.push('l.assigned_to = ?');
-    params.push(agentId);
-  }
-
-  if (segment) {
-    whereClauses.push('l.segment = ?');
-    params.push(segment);
-  }
-
-  if (status) {
-    whereClauses.push('l.status = ?');
-    params.push(status);
-  }
-
-  const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-  const query = `
-    SELECT l.*, u.name as assigned_agent_name 
+  const leadsRes = await c.env.DB.prepare(`
+    SELECT l.*, u.name as assigned_name 
     FROM leads l 
     LEFT JOIN users u ON u.id = l.assigned_to 
-    ${whereSql} 
+    ${leadWhere} 
     ORDER BY l.created_at DESC
-  `;
+  `)
+    .bind(...leadParams)
+    .all<Lead>();
 
-  const leadsRes = await c.env.DB.prepare(query).bind(...params).all<Lead & { assigned_agent_name: string }>();
-
-  // Map to flat export objects
-  const exportData = (leadsRes.results || []).map((l) => {
-    let meta: Record<string, any> = {};
-    try {
-      meta = typeof l.metadata === 'string' ? JSON.parse(l.metadata || '{}') : l.metadata || {};
-    } catch {}
-
-    let tags: string[] = [];
-    try {
-      tags = typeof l.tags === 'string' ? JSON.parse(l.tags || '[]') : l.tags || [];
-    } catch {}
+  const flattened = (leadsRes.results || []).map((l) => {
+    const meta = typeof l.metadata === 'string' ? JSON.parse(l.metadata || '{}') : l.metadata || {};
+    const tags = typeof l.tags === 'string' ? JSON.parse(l.tags || '[]') : l.tags || [];
 
     return {
-      'ID Prospecto': l.id,
+      ID: l.id,
       'Nombre Completo': l.full_name,
-      'Teléfono / WhatsApp': l.phone,
+      'Teléfono': l.phone,
       'Correo': l.email || '',
+      'Estado': l.status,
       'Segmento': l.segment,
-      'Etapa Pipeline': l.status,
-      'Agente Asignado': l.assigned_agent_name || 'Sin Asignar',
-      'Presupuesto USD': meta.presupuesto || '',
-      'Programa Interés': meta.producto || '',
+      'Asesor Asignado': l.assigned_name || '',
+      'Presupuesto USD': meta.presupuesto || 0,
       'Objetivo': meta.objetivo || '',
       'Ciudad': meta.ciudad || '',
       'Sede': meta.sede || '',
-      'Tags': tags.join(', '),
+      'Producto': meta.producto || '',
+      'Etiquetas': tags.join('; '),
       'Último Contacto': l.last_contacted_at || '',
       'Fecha Creación': l.created_at,
     };
   });
 
-  const csv = Papa.unparse(exportData);
-
+  const csv = Papa.unparse(flattened);
   return new Response(csv, {
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="fitness_leads_export_${Date.now()}.csv"`,
+      'Content-Disposition': `attachment; filename="leads_export_${Date.now()}.csv"`,
     },
   });
 });
 
-async function findLatestImportBatch(kv: any): Promise<string | null> {
-  try {
-    const list = await kv.list({ prefix: 'import:valid:' });
-    if (list.keys && list.keys.length > 0) {
-      const latestKey = list.keys[list.keys.length - 1].name;
-      return await kv.get(latestKey);
-    }
-  } catch {}
-  return null;
-}
+/**
+ * Exportar Leads a JSON
+ */
+importExportRoutes.get('/api/export/json', async (c) => {
+  const user = c.get('user');
+  const leadWhere = user.role === 'agent' ? 'WHERE l.assigned_to = ?' : '';
+  const leadParams = user.role === 'agent' ? [user.userId] : [];
+
+  const leadsRes = await c.env.DB.prepare(`
+    SELECT l.*, u.name as assigned_name 
+    FROM leads l 
+    LEFT JOIN users u ON u.id = l.assigned_to 
+    ${leadWhere} 
+    ORDER BY l.created_at DESC
+  `)
+    .bind(...leadParams)
+    .all<Lead>();
+
+  const parsed = (leadsRes.results || []).map((l) => ({
+    ...l,
+    tags: typeof l.tags === 'string' ? JSON.parse(l.tags || '[]') : l.tags,
+    metadata: typeof l.metadata === 'string' ? JSON.parse(l.metadata || '{}') : l.metadata,
+  }));
+
+  return new Response(JSON.stringify(parsed, null, 2), {
+    headers: {
+      'Content-Type': 'application/json',
+      'Content-Disposition': `attachment; filename="leads_backup_${Date.now()}.json"`,
+    },
+  });
+});
+
+/**
+ * Guardar copia de seguridad en Cloudflare R2
+ */
+importExportRoutes.post('/api/export/r2-backup', async (c) => {
+  const leadsRes = await c.env.DB.prepare('SELECT * FROM leads ORDER BY created_at DESC').all();
+  const backupData = JSON.stringify(leadsRes.results || [], null, 2);
+  const backupKey = `backups/fitness_crm_backup_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+
+  if (c.env.STORAGE && typeof c.env.STORAGE.put === 'function') {
+    await c.env.STORAGE.put(backupKey, backupData);
+    return c.json({ success: true, key: backupKey, count: leadsRes.results?.length || 0 });
+  }
+
+  // Si R2 no está activo localmente, guardarlo en KV
+  await c.env.KV.put(`backup:${backupKey}`, backupData);
+  return c.json({ success: true, key: backupKey, stored_in: 'KV', count: leadsRes.results?.length || 0 });
+});

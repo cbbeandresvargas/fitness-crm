@@ -4,12 +4,10 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  password_hash: string;
   role: UserRole;
   avatar_url?: string;
   is_active: number;
   created_at: string;
-  updated_at: string;
 }
 
 export type LeadStatus =
@@ -32,7 +30,15 @@ export interface Lead {
   assigned_to?: string | null;
   assigned_name?: string | null;
   tags: string[];
-  metadata: Record<string, any>;
+  metadata: {
+    presupuesto?: number;
+    objetivo?: string;
+    horario_preferido?: string;
+    ciudad?: string;
+    sede?: string;
+    producto?: string;
+    [key: string]: any;
+  };
   notes_summary?: string | null;
   last_contacted_at?: string | null;
   created_by?: string | null;
@@ -41,22 +47,21 @@ export interface Lead {
   updated_at: string;
 }
 
-export type ActivityActionType =
-  | 'note'
-  | 'status_change'
-  | 'segment_change'
-  | 'assignment'
-  | 'whatsapp_sent'
-  | 'ai_generated'
-  | 'creation'
-  | 'update';
-
 export interface ActivityLog {
   id: string;
   lead_id: string;
   user_id?: string | null;
   user_name?: string | null;
-  action_type: ActivityActionType;
+  lead_name?: string | null;
+  action_type:
+    | 'note'
+    | 'status_change'
+    | 'segment_change'
+    | 'assignment'
+    | 'whatsapp_sent'
+    | 'ai_generated'
+    | 'creation'
+    | 'update';
   details: string;
   created_at: string;
 }
@@ -68,7 +73,6 @@ export interface MessageTemplate {
   content: string;
   created_by?: string | null;
   created_at: string;
-  updated_at?: string | null;
 }
 
 export interface AuditLog {
@@ -82,21 +86,18 @@ export interface AuditLog {
   created_at: string;
 }
 
-export interface Env {
-  DB: D1Database;
-  KV: KVNamespace;
-  STORAGE: R2Bucket;
-  AI?: any;
-  ASSETS?: Fetcher;
-  CLOUDFLARE_API_TOKEN?: string;
-  CLOUDFLARE_ACCOUNT_ID?: string;
-  ADMIN_SECRET?: string;
-}
-
 export interface SessionData {
   userId: string;
   name: string;
   email: string;
   role: UserRole;
   avatar_url?: string;
+}
+
+export interface DashboardData {
+  totalLeads: number;
+  segmentsCount: { A: number; B: number; C: number; D: number };
+  statusCount: Record<string, number>;
+  recentActivities: ActivityLog[];
+  leadsNeedingAttention: Lead[];
 }

@@ -129,58 +129,26 @@ app.use('*', async (c, next) => {
 // Middleware de sesión
 app.use('*', authMiddleware);
 
-// Rutas
+// Rutas de API y autenticación
 app.route('/', authRoutes);
 app.route('/', leadsRoutes);
 app.route('/', templatesRoutes);
 app.route('/', importExportRoutes);
 app.route('/', teamRoutes);
 
-// Manejo 404
-app.notFound((c) => {
-  return c.html(`
-    <!DOCTYPE html>
-    <html lang="es" class="dark">
-    <head>
-      <meta charset="UTF-8"><title>404 | Página no encontrada</title>
-      <script src="https://cdn.tailwindcss.com"></script>
-    </head>
-    <body class="bg-zinc-950 text-white min-h-screen flex items-center justify-center p-4">
-      <div class="text-center space-y-4 max-w-md">
-        <div class="text-6xl font-black text-orange-500">404</div>
-        <h1 class="text-xl font-bold">Página no encontrada</h1>
-        <p class="text-xs text-zinc-400">La ruta solicitada no existe o no tienes permisos para acceder.</p>
-        <a href="/" class="inline-block px-5 py-2.5 bg-orange-500 text-white rounded-xl text-xs font-bold hover:bg-orange-600 transition">
-          Regresar al Dashboard
-        </a>
-      </div>
-    </body>
-    </html>
-  `, 404);
+// Servir estáticos o SPA de SolidJS para rutas que no son de API
+app.all('*', async (c) => {
+  // Si Cloudflare Workers Static Assets está disponible, dejar que sirva el archivo estático o index.html
+  if (c.env.ASSETS && typeof c.env.ASSETS.fetch === 'function') {
+    return c.env.ASSETS.fetch(c.req.raw);
+  }
+  return c.text('Not found', 404);
 });
 
-// Manejo de errores 500
+// Manejo de errores
 app.onError((err, c) => {
-  console.error('Error no controlado:', err);
-  return c.html(`
-    <!DOCTYPE html>
-    <html lang="es" class="dark">
-    <head>
-      <meta charset="UTF-8"><title>500 | Error del Servidor</title>
-      <script src="https://cdn.tailwindcss.com"></script>
-    </head>
-    <body class="bg-zinc-950 text-white min-h-screen flex items-center justify-center p-4">
-      <div class="text-center space-y-4 max-w-md">
-        <div class="text-6xl font-black text-red-500">500</div>
-        <h1 class="text-xl font-bold">Error del Servidor</h1>
-        <p class="text-xs text-zinc-400">${err.message || 'Ocurrió un error inesperado al procesar la solicitud.'}</p>
-        <a href="/" class="inline-block px-5 py-2.5 bg-orange-500 text-white rounded-xl text-xs font-bold hover:bg-orange-600 transition">
-          Volver al Inicio
-        </a>
-      </div>
-    </body>
-    </html>
-  `, 500);
+  console.error('Error no controlado en Worker:', err);
+  return c.json({ error: err.message || 'Error interno del servidor' }, 500);
 });
 
 export default app;
