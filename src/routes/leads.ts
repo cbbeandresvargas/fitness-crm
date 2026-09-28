@@ -250,16 +250,31 @@ leadsRoutes.post('/api/leads', async (c) => {
     data = await c.req.parseBody();
   }
 
-  const fullName = (data.full_name as string)?.trim();
+  const firstName = (data.first_name as string)?.trim() || '';
+  const lastName = (data.last_name as string)?.trim() || '';
+  const legacyFullName = (data.full_name as string)?.trim() || '';
   const rawPhone = (data.phone as string)?.trim();
   const email = (data.email as string)?.trim().toLowerCase() || null;
+  const ci = (data.ci as string)?.trim() || null;
   const status = (data.status as string) || 'nuevo';
   let assignedTo = (data.assigned_to as string) || null;
   const tagsStr = (data.tags as string) || '';
   const notes = (data.notes as string)?.trim() || null;
 
+  // Nombre compuesto a partir de Nombre + Apellido (o full_name para compatibilidad)
+  const fullName = legacyFullName || [firstName, lastName].filter(Boolean).join(' ');
+
+  if ((firstName || lastName) && (!firstName || !lastName)) {
+    return c.json({ error: 'El nombre y el apellido son obligatorios.' }, 400);
+  }
   if (!fullName || !rawPhone) {
-    return c.json({ error: 'El nombre completo y el teléfono son obligatorios.' }, 400);
+    return c.json({ error: 'El nombre, el apellido y el teléfono son obligatorios.' }, 400);
+  }
+
+  // Validar estado contra el sistema de estados existente
+  const allowedStatuses = ['nuevo', 'contactado', 'cita_agendada', 'negociacion', 'ganado', 'perdido'];
+  if (!allowedStatuses.includes(status)) {
+    return c.json({ error: `Estado inválido: '${status}'. Estados permitidos: ${allowedStatuses.join(', ')}` }, 400);
   }
 
   const phone = normalizePhone(rawPhone);
@@ -285,7 +300,7 @@ leadsRoutes.post('/api/leads', async (c) => {
   // Metadatos
   let metadata: Record<string, any> = {};
   if (data.metadata && typeof data.metadata === 'object') {
-    metadata = data.metadata;
+    metadata = { ...data.metadata };
   } else {
     metadata = {
       presupuesto: Number(data.presupuesto) || 0,
@@ -295,6 +310,20 @@ leadsRoutes.post('/api/leads', async (c) => {
       sede: data.sede || '',
       producto: data.producto || '',
     };
+  }
+
+  // Estructura FC: Nombre/Apellido y CI se preservan como datos estructurados
+  if (firstName && lastName) {
+    metadata.first_name = firstName;
+    metadata.last_name = lastName;
+  }
+  if (ci) {
+    metadata.ci = ci;
+  }
+
+  // Valor gestionado por el sistema: cantidad de membresías inicia en 0
+  if (metadata.cantidad_membresias === undefined) {
+    metadata.cantidad_membresias = 0;
   }
 
   // Segmentación Dinámica Automática

@@ -83,8 +83,8 @@ export default function Team() {
         fallback={
           <div class="p-16 text-center space-y-3 max-w-md mx-auto">
             <span class="text-4xl block">🛡️</span>
-            <h2 class="text-xl font-bold text-white">Acceso Restringido</h2>
-            <p class="text-xs text-zinc-400">
+            <h2 class="text-xl font-bold text-body">Acceso Restringido</h2>
+            <p class="text-xs text-muted">
               Esta sección requiere permisos de Administrador (Director). Usa el botón inferior del menú lateral para cambiar de rol y explorar.
             </p>
           </div>
@@ -92,64 +92,64 @@ export default function Team() {
       >
         <div class="space-y-8 max-w-6xl mx-auto">
           {/* Cabecera */}
-          <div class="p-8 rounded-3xl bg-zinc-900 border border-zinc-800 space-y-2">
-            <h2 class="text-2xl font-black text-white">Gestión de Asesores y Bitácora de Seguridad</h2>
-            <p class="text-xs text-zinc-400 max-w-2xl leading-relaxed">
+          <div class="p-8 rounded-3xl bg-surface border border-edge space-y-2">
+            <h2 class="text-2xl font-black text-body">Gestión de Asesores y Bitácora de Seguridad</h2>
+            <p class="text-xs text-muted max-w-2xl leading-relaxed">
               Control de acceso basado en roles (RBAC). Los asesores solo pueden ver sus propios prospectos asignados, mientras que los administradores tienen visibilidad total y auditoría.
             </p>
           </div>
 
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Formulario Agregar Miembro (1 col) */}
-            <div class="p-6 rounded-3xl bg-zinc-900 border border-zinc-800 space-y-4">
-              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            <div class="p-6 rounded-3xl bg-surface border border-edge space-y-4">
+              <h3 class="text-sm font-bold text-body flex items-center gap-2">
                 <span>➕</span>
                 <span>Registrar Nuevo Asesor / Admin</span>
               </h3>
 
               <form onSubmit={handleCreateMember} class="space-y-4">
                 <div>
-                  <label class="block text-xs font-bold text-zinc-400 mb-1">Nombre Completo</label>
+                  <label class="block text-xs font-bold text-muted mb-1">Nombre Completo</label>
                   <input
                     type="text"
                     required
                     value={name()}
                     onInput={(e) => setName(e.currentTarget.value)}
                     placeholder="Ej. Sofía Herrera"
-                    class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-2xl text-xs text-white focus:outline-none focus:border-orange-500"
+                    class="w-full px-3.5 py-2.5 bg-app border border-edge rounded-2xl text-xs text-body focus:outline-none focus:border-accent"
                   />
                 </div>
 
                 <div>
-                  <label class="block text-xs font-bold text-zinc-400 mb-1">Correo Electrónico</label>
+                  <label class="block text-xs font-bold text-muted mb-1">Correo Electrónico</label>
                   <input
                     type="email"
                     required
                     value={email()}
                     onInput={(e) => setEmail(e.currentTarget.value)}
                     placeholder="sofia@ironpeak.fit"
-                    class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-2xl text-xs text-white focus:outline-none focus:border-orange-500"
+                    class="w-full px-3.5 py-2.5 bg-app border border-edge rounded-2xl text-xs text-body focus:outline-none focus:border-accent"
                   />
                 </div>
 
                 <div>
-                  <label class="block text-xs font-bold text-zinc-400 mb-1">Contraseña</label>
+                  <label class="block text-xs font-bold text-muted mb-1">Contraseña</label>
                   <input
                     type="password"
                     required
                     value={password()}
                     onInput={(e) => setPassword(e.currentTarget.value)}
                     placeholder="••••••••"
-                    class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-2xl text-xs text-white focus:outline-none focus:border-orange-500"
+                    class="w-full px-3.5 py-2.5 bg-app border border-edge rounded-2xl text-xs text-body focus:outline-none focus:border-accent"
                   />
                 </div>
 
                 <div>
-                  <label class="block text-xs font-bold text-zinc-400 mb-1">Rol en el Gimnasio</label>
+                  <label class="block text-xs font-bold text-muted mb-1">Rol en el Gimnasio</label>
                   <select
                     value={role()}
                     onChange={(e) => setRole(e.currentTarget.value as any)}
-                    class="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-2xl text-xs text-white focus:outline-none focus:border-orange-500"
+                    class="w-full px-3.5 py-2.5 bg-app border border-edge rounded-2xl text-xs text-body focus:outline-none focus:border-accent"
                   >
                     <option value="agent">🏋️ Coach / Asesor de Ventas</option>
                     <option value="admin">👑 Administrador / Director</option>
@@ -159,7 +159,7 @@ export default function Team() {
                 <button
                   type="submit"
                   disabled={saving()}
-                  class="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold rounded-2xl transition shadow-orange-glow disabled:opacity-50 cursor-pointer"
+                  class="w-full py-3 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded-2xl transition shadow-accent-glow disabled:opacity-50 cursor-pointer"
                 >
                   {saving() ? 'Guardando...' : 'Crear Miembro'}
                 </button>
@@ -168,31 +168,31 @@ export default function Team() {
 
             {/* Listado de Miembros del Equipo (2 cols) */}
             <div class="lg:col-span-2 space-y-4">
-              <h3 class="text-sm font-bold text-white flex items-center justify-between">
+              <h3 class="text-sm font-bold text-body flex items-center justify-between">
                 <span>Miembros Registrados ({users().length})</span>
               </h3>
 
               <Show
                 when={!loading()}
                 fallback={
-                  <div class="flex items-center justify-center p-12 text-zinc-500">
-                    <div class="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                  <div class="flex items-center justify-center p-12 text-muted">
+                    <div class="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin"></div>
                   </div>
                 }
               >
                 <div class="space-y-3">
                   <For each={users()}>
                     {(u) => (
-                      <div class="p-4 rounded-3xl bg-zinc-900 border border-zinc-800 flex items-center justify-between gap-4">
+                      <div class="p-4 rounded-3xl bg-surface border border-edge flex items-center justify-between gap-4">
                         <div class="flex items-center gap-3">
-                          <div class="w-10 h-10 rounded-2xl bg-orange-500/20 text-orange-400 border border-orange-500/30 flex items-center justify-center font-bold text-sm overflow-hidden shrink-0">
+                          <div class="w-10 h-10 rounded-2xl bg-accent/20 text-accent-text border border-accent/30 flex items-center justify-center font-bold text-sm overflow-hidden shrink-0">
                             <Show when={u.avatar_url} fallback={u.name.slice(0, 2).toUpperCase()}>
                               <img src={u.avatar_url} alt={u.name} class="w-full h-full object-cover" />
                             </Show>
                           </div>
                           <div>
                             <div class="flex items-center gap-2">
-                              <span class="font-bold text-white text-sm">{u.name}</span>
+                              <span class="font-bold text-body text-sm">{u.name}</span>
                               <span
                                 class={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                                   u.role === 'admin'
@@ -203,7 +203,7 @@ export default function Team() {
                                 {u.role === 'admin' ? 'Administrador' : 'Coach Ventas'}
                               </span>
                             </div>
-                            <span class="text-xs text-zinc-400">{u.email}</span>
+                            <span class="text-xs text-muted">{u.email}</span>
                           </div>
                         </div>
 
@@ -222,7 +222,7 @@ export default function Team() {
                             <button
                               type="button"
                               onClick={() => handleToggleStatus(u.id)}
-                              class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold rounded-xl transition cursor-pointer"
+                              class="px-3 py-1.5 bg-elevate hover:bg-elevate-strong text-body-soft text-xs font-semibold rounded-xl transition cursor-pointer"
                             >
                               {u.is_active ? 'Suspender' : 'Activar'}
                             </button>
@@ -235,15 +235,15 @@ export default function Team() {
               </Show>
 
               {/* Bitácora de Auditoría */}
-              <div class="p-6 rounded-3xl bg-zinc-900 border border-zinc-800 space-y-3 mt-8">
-                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <div class="p-6 rounded-3xl bg-surface border border-edge space-y-3 mt-8">
+                <h3 class="text-sm font-bold text-body flex items-center gap-2">
                   <span>🔒</span>
                   <span>Bitácora de Auditoría (Audit Logs)</span>
                 </h3>
 
-                <div class="overflow-x-auto rounded-2xl border border-zinc-800">
-                  <table class="w-full text-left text-xs text-zinc-300">
-                    <thead class="bg-zinc-950 text-zinc-500 font-bold uppercase text-[10px]">
+                <div class="overflow-x-auto rounded-2xl border border-edge">
+                  <table class="w-full text-left text-xs text-body-soft">
+                    <thead class="bg-app text-muted font-bold uppercase text-[10px]">
                       <tr>
                         <th class="p-3">Acción</th>
                         <th class="p-3">Detalles</th>
@@ -251,14 +251,14 @@ export default function Team() {
                         <th class="p-3">Fecha</th>
                       </tr>
                     </thead>
-                    <tbody class="divide-y divide-zinc-800/60 bg-zinc-950/40">
+                    <tbody class="divide-y divide-edge/60 bg-app/40">
                       <For each={auditLogs()}>
                         {(log) => (
                           <tr>
-                            <td class="p-3 font-mono font-bold text-orange-400">{log.action}</td>
+                            <td class="p-3 font-mono font-bold text-accent-text">{log.action}</td>
                             <td class="p-3 max-w-xs truncate">{log.details || '-'}</td>
-                            <td class="p-3 text-zinc-400">{log.user_name || 'Sistema'}</td>
-                            <td class="p-3 text-zinc-500 whitespace-nowrap">
+                            <td class="p-3 text-muted">{log.user_name || 'Sistema'}</td>
+                            <td class="p-3 text-muted whitespace-nowrap">
                               {new Date(log.created_at).toLocaleDateString('es-ES')}
                             </td>
                           </tr>

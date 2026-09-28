@@ -354,7 +354,7 @@ export default function LeadDetail() {
             <button
               type="button"
               onClick={() => setPreviewZoomUrl(null)}
-              class="absolute top-4 right-4 p-2.5 rounded-full bg-zinc-900/80 hover:bg-zinc-800 text-white font-bold"
+              class="absolute top-4 right-4 p-2.5 rounded-full bg-surface/80 hover:bg-elevate text-body font-bold"
             >
               ✕
             </button>
@@ -365,16 +365,16 @@ export default function LeadDetail() {
       {/* Edit Lead Modal */}
       <Show when={isEditModalOpen()}>
         <div class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-6 shadow-2xl">
-            <div class="flex items-center justify-between border-b border-zinc-800 pb-4">
-              <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <div class="bg-surface border border-edge rounded-3xl p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-6 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-edge pb-4">
+              <h3 class="text-lg font-bold text-body flex items-center gap-2">
                 <span>✏️</span>
                 <span>Editar Información del Prospecto</span>
               </h3>
               <button
                 type="button"
                 onClick={() => setIsEditModalOpen(false)}
-                class="text-zinc-400 hover:text-white p-1"
+                class="text-muted hover:text-body p-1"
               >
                 ✕
               </button>
@@ -383,85 +383,85 @@ export default function LeadDetail() {
             <form onSubmit={handleSaveEdit} class="space-y-4 text-xs">
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-zinc-300 font-bold mb-1">Nombre Completo *</label>
+                  <label class="block text-body-soft font-bold mb-1">Nombre Completo *</label>
                   <input
                     type="text"
                     required
                     value={editFullName()}
                     onInput={(e) => setEditFullName(e.currentTarget.value)}
-                    class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-white focus:outline-none focus:border-orange-500"
+                    class="w-full px-3 py-2 bg-app border border-edge rounded-xl text-body focus:outline-none focus:border-accent"
                   />
                 </div>
                 <div>
-                  <label class="block text-zinc-300 font-bold mb-1">Teléfono / WhatsApp *</label>
+                  <label class="block text-body-soft font-bold mb-1">Teléfono / WhatsApp *</label>
                   <input
                     type="text"
                     required
                     value={editPhone()}
                     onInput={(e) => setEditPhone(e.currentTarget.value)}
-                    class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-white focus:outline-none focus:border-orange-500"
+                    class="w-full px-3 py-2 bg-app border border-edge rounded-xl text-body focus:outline-none focus:border-accent"
                   />
                 </div>
                 <div>
-                  <label class="block text-zinc-300 font-bold mb-1">Correo Electrónico</label>
+                  <label class="block text-body-soft font-bold mb-1">Correo Electrónico</label>
                   <input
                     type="email"
                     value={editEmail()}
                     onInput={(e) => setEditEmail(e.currentTarget.value)}
-                    class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-white focus:outline-none focus:border-orange-500"
+                    class="w-full px-3 py-2 bg-app border border-edge rounded-xl text-body focus:outline-none focus:border-accent"
                   />
                 </div>
                 <div>
-                  <label class="block text-zinc-300 font-bold mb-1">Presupuesto Mensual (USD)</label>
+                  <label class="block text-body-soft font-bold mb-1">Presupuesto Mensual (USD)</label>
                   <input
                     type="number"
                     value={editPresupuesto()}
                     onInput={(e) => setEditPresupuesto(e.currentTarget.value)}
-                    class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-white focus:outline-none focus:border-orange-500"
+                    class="w-full px-3 py-2 bg-app border border-edge rounded-xl text-body focus:outline-none focus:border-accent"
                   />
                 </div>
                 <div>
-                  <label class="block text-zinc-300 font-bold mb-1">Programa de Interés</label>
+                  <label class="block text-body-soft font-bold mb-1">Programa de Interés</label>
                   <input
                     type="text"
                     value={editProducto()}
                     onInput={(e) => setEditProducto(e.currentTarget.value)}
-                    class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-white focus:outline-none focus:border-orange-500"
+                    class="w-full px-3 py-2 bg-app border border-edge rounded-xl text-body focus:outline-none focus:border-accent"
                   />
                 </div>
                 <div>
-                  <label class="block text-zinc-300 font-bold mb-1">Sede</label>
+                  <label class="block text-body-soft font-bold mb-1">Sede</label>
                   <input
                     type="text"
                     value={editSede()}
                     onInput={(e) => setEditSede(e.currentTarget.value)}
-                    class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-white focus:outline-none focus:border-orange-500"
+                    class="w-full px-3 py-2 bg-app border border-edge rounded-xl text-body focus:outline-none focus:border-accent"
                   />
                 </div>
               </div>
 
               <div>
-                <label class="block text-zinc-300 font-bold mb-1">Objetivo del Prospecto</label>
+                <label class="block text-body-soft font-bold mb-1">Objetivo del Prospecto</label>
                 <textarea
                   rows={2}
                   value={editObjetivo()}
                   onInput={(e) => setEditObjetivo(e.currentTarget.value)}
-                  class="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white focus:outline-none focus:border-orange-500"
+                  class="w-full p-2.5 bg-app border border-edge rounded-xl text-body focus:outline-none focus:border-accent"
                 ></textarea>
               </div>
 
-              <div class="flex justify-end gap-3 pt-3 border-t border-zinc-800">
+              <div class="flex justify-end gap-3 pt-3 border-t border-edge">
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
-                  class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl font-bold transition"
+                  class="px-4 py-2 bg-elevate hover:bg-elevate-strong text-body-soft rounded-xl font-bold transition"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={savingEdit()}
-                  class="px-5 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold transition shadow-orange-glow disabled:opacity-50"
+                  class="px-5 py-2 bg-accent hover:bg-accent-hover text-white rounded-xl font-bold transition shadow-accent-glow disabled:opacity-50"
                 >
                   {savingEdit() ? 'Guardando...' : 'Guardar Cambios'}
                 </button>
@@ -473,23 +473,23 @@ export default function LeadDetail() {
 
       {/* Loading state */}
       <Show when={loading()}>
-        <div class="flex flex-col items-center justify-center p-24 text-zinc-500 space-y-3">
-          <div class="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+        <div class="flex flex-col items-center justify-center p-24 text-muted space-y-3">
+          <div class="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
           <span class="text-xs">Cargando expediente del prospecto...</span>
         </div>
       </Show>
 
       {/* Not found state */}
       <Show when={!loading() && (notFound() || !lead())}>
-        <div class="p-16 rounded-3xl bg-zinc-900 border border-zinc-800 text-center space-y-4 max-w-lg mx-auto shadow-2xl">
+        <div class="p-16 rounded-3xl bg-surface border border-edge text-center space-y-4 max-w-lg mx-auto shadow-2xl">
           <span class="text-4xl block">🔍</span>
-          <h2 class="text-xl font-black text-white">Prospecto no encontrado</h2>
-          <p class="text-xs text-zinc-400">
+          <h2 class="text-xl font-black text-body">Prospecto no encontrado</h2>
+          <p class="text-xs text-muted">
             El prospecto no existe o no tienes los permisos suficientes asignados para consultarlo.
           </p>
           <A
             href="/leads"
-            class="inline-block px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold rounded-xl transition shadow-orange-glow"
+            class="inline-block px-5 py-2.5 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded-xl transition shadow-accent-glow"
           >
             ⬅️ Volver a la lista
           </A>
@@ -500,18 +500,18 @@ export default function LeadDetail() {
       <Show when={!loading() && lead()}>
         <div class="space-y-6 max-w-6xl mx-auto">
           {/* Header Bar */}
-          <div class="p-6 rounded-3xl bg-zinc-900 border border-zinc-800 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl">
+          <div class="p-6 rounded-3xl bg-surface border border-edge flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl">
             <div class="flex items-center gap-3.5">
               <A
                 href="/leads"
-                class="p-2.5 bg-zinc-950 border border-zinc-800 hover:bg-zinc-800 text-zinc-300 rounded-2xl transition"
+                class="p-2.5 bg-app border border-edge hover:bg-elevate text-body-soft rounded-2xl transition"
                 title="Volver a la lista"
               >
                 ⬅️
               </A>
               <div>
                 <div class="flex items-center gap-3">
-                  <h2 class="text-xl sm:text-2xl font-black text-white tracking-tight">
+                  <h2 class="text-xl sm:text-2xl font-black text-body tracking-tight">
                     {lead()?.full_name}
                   </h2>
                   <span
@@ -522,14 +522,14 @@ export default function LeadDetail() {
                         ? 'bg-blue-500/20 text-blue-400 border-blue-500/40'
                         : lead()?.segment === 'C'
                         ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
-                        : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                        : 'bg-elevate text-muted border-edge-strong'
                     }`}
                   >
                     Segmento {lead()?.segment}
                   </span>
                 </div>
-                <p class="text-xs text-zinc-400 mt-0.5">
-                  Teléfono: <strong class="text-white">{lead()?.phone}</strong> • Registrado el{' '}
+                <p class="text-xs text-muted mt-0.5">
+                  Teléfono: <strong class="text-body">{lead()?.phone}</strong> • Registrado el{' '}
                   {new Date(lead()?.created_at || '').toLocaleDateString('es-ES')}
                 </p>
               </div>
@@ -540,7 +540,7 @@ export default function LeadDetail() {
               <button
                 type="button"
                 onClick={() => setIsEditModalOpen(true)}
-                class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl text-xs font-semibold border border-zinc-700 transition cursor-pointer"
+                class="px-3 py-2 bg-elevate hover:bg-elevate-strong text-body-soft rounded-xl text-xs font-semibold border border-edge-strong transition cursor-pointer"
               >
                 ✏️ Editar
               </button>
@@ -548,7 +548,7 @@ export default function LeadDetail() {
               <button
                 type="button"
                 onClick={handleRecalculateSegment}
-                class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl text-xs font-semibold border border-zinc-700 transition cursor-pointer"
+                class="px-3 py-2 bg-elevate hover:bg-elevate-strong text-body-soft rounded-xl text-xs font-semibold border border-edge-strong transition cursor-pointer"
                 title="Recalcular segmento con reglas dinámicas"
               >
                 🔄 Segmento
@@ -567,7 +567,7 @@ export default function LeadDetail() {
               <button
                 type="button"
                 onClick={handleDeleteLead}
-                class="p-2 text-zinc-500 hover:text-red-400 rounded-xl hover:bg-red-950/40 transition cursor-pointer"
+                class="p-2 text-muted hover:text-red-400 rounded-xl hover:bg-red-950/40 transition cursor-pointer"
                 title="Eliminar prospecto"
               >
                 🗑️
@@ -580,20 +580,20 @@ export default function LeadDetail() {
             {/* Columna Izquierda: Perfil y Metadatos (1 col) */}
             <div class="space-y-6">
               {/* Tarjeta de Estado y Asignación */}
-              <div class="p-6 rounded-3xl bg-zinc-900 border border-zinc-800 space-y-4 shadow-xl">
-                <h3 class="text-xs font-bold uppercase tracking-wider text-orange-400">
+              <div class="p-6 rounded-3xl bg-surface border border-edge space-y-4 shadow-xl">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-accent-text">
                   Estado & Coach Asignado
                 </h3>
 
                 <div class="space-y-3">
                   <div>
-                    <label class="block text-[11px] text-zinc-400 mb-1 font-semibold">
+                    <label class="block text-[11px] text-muted mb-1 font-semibold">
                       Fase en el Gimnasio
                     </label>
                     <select
                       value={lead()?.status}
                       onChange={(e) => handleStatusChange(e.currentTarget.value)}
-                      class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-orange-500 cursor-pointer"
+                      class="w-full bg-app border border-edge rounded-xl px-3 py-2 text-xs text-body focus:outline-none focus:border-accent cursor-pointer"
                     >
                       <option value="nuevo">🌱 Nuevo</option>
                       <option value="contactado">💬 Contactado</option>
@@ -605,13 +605,13 @@ export default function LeadDetail() {
                   </div>
 
                   <div>
-                    <label class="block text-[11px] text-zinc-400 mb-1 font-semibold">
+                    <label class="block text-[11px] text-muted mb-1 font-semibold">
                       Coach / Asesor
                     </label>
                     <select
                       value={lead()?.assigned_to || ''}
                       onChange={(e) => handleAssignAgent(e.currentTarget.value)}
-                      class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-orange-500 cursor-pointer"
+                      class="w-full bg-app border border-edge rounded-xl px-3 py-2 text-xs text-body focus:outline-none focus:border-accent cursor-pointer"
                     >
                       <option value="">Sin Asignar</option>
                       <option value="auto">🤖 Balance Automático (Round-Robin)</option>
@@ -622,54 +622,54 @@ export default function LeadDetail() {
                   </div>
                 </div>
 
-                <div class="pt-3 border-t border-zinc-800 space-y-2 text-xs">
+                <div class="pt-3 border-t border-edge space-y-2 text-xs">
                   <div class="flex items-center justify-between">
-                    <span class="text-zinc-400">Teléfono:</span>
-                    <span class="font-bold text-white">{lead()?.phone}</span>
+                    <span class="text-muted">Teléfono:</span>
+                    <span class="font-bold text-body">{lead()?.phone}</span>
                   </div>
                   <div class="flex items-center justify-between">
-                    <span class="text-zinc-400">Correo:</span>
-                    <span class="text-zinc-200">{lead()?.email || 'No proporcionado'}</span>
+                    <span class="text-muted">Correo:</span>
+                    <span class="text-body-soft">{lead()?.email || 'No proporcionado'}</span>
                   </div>
                 </div>
               </div>
 
               {/* Metadatos Deportivos */}
-              <div class="p-6 rounded-3xl bg-zinc-900 border border-zinc-800 space-y-3 shadow-xl">
-                <h3 class="text-xs font-bold uppercase tracking-wider text-orange-400">
+              <div class="p-6 rounded-3xl bg-surface border border-edge space-y-3 shadow-xl">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-accent-text">
                   Perfil Deportivo & Metas
                 </h3>
 
                 <div class="space-y-2 text-xs">
-                  <div class="p-3 bg-zinc-950 rounded-2xl border border-zinc-800/80 space-y-1">
-                    <span class="text-[11px] text-zinc-400">Presupuesto Mensual:</span>
+                  <div class="p-3 bg-app rounded-2xl border border-edge/80 space-y-1">
+                    <span class="text-[11px] text-muted">Presupuesto Mensual:</span>
                     <p class="text-lg font-black text-emerald-400">
                       ${lead()?.metadata.presupuesto || 0} USD
                     </p>
                   </div>
 
-                  <div class="p-3 bg-zinc-950 rounded-2xl border border-zinc-800/80 space-y-1">
-                    <span class="text-[11px] text-zinc-400">Programa de Interés:</span>
-                    <p class="font-bold text-white">
+                  <div class="p-3 bg-app rounded-2xl border border-edge/80 space-y-1">
+                    <span class="text-[11px] text-muted">Programa de Interés:</span>
+                    <p class="font-bold text-body">
                       {lead()?.metadata.producto || 'Membresía General'}
                     </p>
                   </div>
 
-                  <div class="p-3 bg-zinc-950 rounded-2xl border border-zinc-800/80 space-y-1">
-                    <span class="text-[11px] text-zinc-400">Objetivo del Prospecto:</span>
-                    <p class="text-zinc-200">
+                  <div class="p-3 bg-app rounded-2xl border border-edge/80 space-y-1">
+                    <span class="text-[11px] text-muted">Objetivo del Prospecto:</span>
+                    <p class="text-body-soft">
                       {lead()?.metadata.objetivo || 'Acondicionamiento físico general'}
                     </p>
                   </div>
 
                   <div class="grid grid-cols-2 gap-2">
-                    <div class="p-3 bg-zinc-950 rounded-2xl border border-zinc-800/80">
-                      <span class="text-[11px] text-zinc-400 block">Sede:</span>
-                      <span class="font-bold text-zinc-200">{lead()?.metadata.sede || 'Principal'}</span>
+                    <div class="p-3 bg-app rounded-2xl border border-edge/80">
+                      <span class="text-[11px] text-muted block">Sede:</span>
+                      <span class="font-bold text-body-soft">{lead()?.metadata.sede || 'Principal'}</span>
                     </div>
-                    <div class="p-3 bg-zinc-950 rounded-2xl border border-zinc-800/80">
-                      <span class="text-[11px] text-zinc-400 block">Horario:</span>
-                      <span class="font-bold text-zinc-200 truncate block">
+                    <div class="p-3 bg-app rounded-2xl border border-edge/80">
+                      <span class="text-[11px] text-muted block">Horario:</span>
+                      <span class="font-bold text-body-soft truncate block">
                         {lead()?.metadata.horario_preferido || 'Flexible'}
                       </span>
                     </div>
@@ -678,16 +678,16 @@ export default function LeadDetail() {
               </div>
 
               {/* Etiquetas / Tags */}
-              <div class="p-6 rounded-3xl bg-zinc-900 border border-zinc-800 space-y-3 shadow-xl">
+              <div class="p-6 rounded-3xl bg-surface border border-edge space-y-3 shadow-xl">
                 <div class="flex items-center justify-between">
-                  <h3 class="text-xs font-bold uppercase tracking-wider text-orange-400">
+                  <h3 class="text-xs font-bold uppercase tracking-wider text-accent-text">
                     Etiquetas
                   </h3>
                   <button
                     type="button"
                     onClick={handleSuggestTags}
                     disabled={generatingTags()}
-                    class="text-xs text-orange-400 hover:underline font-bold disabled:opacity-50 cursor-pointer"
+                    class="text-xs text-accent-text hover:underline font-bold disabled:opacity-50 cursor-pointer"
                   >
                     {generatingTags() ? 'Analizando...' : '✨ Sugerir con IA'}
                   </button>
@@ -696,7 +696,7 @@ export default function LeadDetail() {
                 <div class="flex flex-wrap gap-1.5">
                   <For each={lead()?.tags}>
                     {(t) => (
-                      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-zinc-800 border border-zinc-700 text-xs font-semibold text-zinc-200">
+                      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-elevate border border-edge-strong text-xs font-semibold text-body-soft">
                         <span>#{t}</span>
                         <button
                           type="button"
@@ -712,8 +712,8 @@ export default function LeadDetail() {
 
                 {/* Sugerencias de IA */}
                 <Show when={suggestedTags().length > 0}>
-                  <div class="p-3 bg-zinc-950 rounded-2xl border border-orange-500/20 space-y-2">
-                    <span class="text-[11px] text-orange-400 font-bold block">
+                  <div class="p-3 bg-app rounded-2xl border border-accent/20 space-y-2">
+                    <span class="text-[11px] text-accent-text font-bold block">
                       💡 Sugerencias de Workers AI:
                     </span>
                     <div class="flex flex-wrap gap-1.5">
@@ -722,7 +722,7 @@ export default function LeadDetail() {
                           <button
                             type="button"
                             onClick={() => handleAddTag(st)}
-                            class="px-2 py-0.5 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-300 text-xs font-medium border border-orange-500/30 transition cursor-pointer"
+                            class="px-2 py-0.5 rounded-lg bg-accent/10 hover:bg-accent/20 text-accent-text text-xs font-medium border border-accent/30 transition cursor-pointer"
                           >
                             + #{st}
                           </button>
@@ -745,11 +745,11 @@ export default function LeadDetail() {
                     value={newTagInput()}
                     onInput={(e) => setNewTagInput(e.currentTarget.value)}
                     placeholder="Nueva etiqueta..."
-                    class="flex-1 px-3 py-1.5 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white focus:outline-none focus:border-orange-500"
+                    class="flex-1 px-3 py-1.5 bg-app border border-edge rounded-xl text-xs text-body focus:outline-none focus:border-accent"
                   />
                   <button
                     type="submit"
-                    class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl text-xs font-bold transition"
+                    class="px-3 py-1.5 bg-elevate hover:bg-elevate-strong text-body-soft rounded-xl text-xs font-bold transition"
                   >
                     Añadir
                   </button>
@@ -760,14 +760,14 @@ export default function LeadDetail() {
             {/* Columna Derecha: Pestañas de Chat WhatsApp, IA y Bitácora (2 cols) */}
             <div class="lg:col-span-2 space-y-6">
               {/* Tab Selector */}
-              <div class="p-1.5 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center gap-2">
+              <div class="p-1.5 bg-surface border border-edge rounded-2xl flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setActiveTab('chat')}
                   class={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
                     activeTab() === 'chat'
                       ? 'bg-emerald-600 text-white shadow-lg'
-                      : 'text-zinc-400 hover:text-white'
+                      : 'text-muted hover:text-body'
                   }`}
                 >
                   <span>💬</span>
@@ -779,8 +779,8 @@ export default function LeadDetail() {
                   onClick={() => setActiveTab('ai')}
                   class={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
                     activeTab() === 'ai'
-                      ? 'bg-orange-500 text-white shadow-lg'
-                      : 'text-zinc-400 hover:text-white'
+                      ? 'bg-accent text-white shadow-lg'
+                      : 'text-muted hover:text-body'
                   }`}
                 >
                   <span>✨</span>
@@ -792,8 +792,8 @@ export default function LeadDetail() {
                   onClick={() => setActiveTab('history')}
                   class={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
                     activeTab() === 'history'
-                      ? 'bg-zinc-800 text-white shadow-lg'
-                      : 'text-zinc-400 hover:text-white'
+                      ? 'bg-elevate text-body shadow-lg'
+                      : 'text-muted hover:text-body'
                   }`}
                 >
                   <span>📜</span>
@@ -803,15 +803,15 @@ export default function LeadDetail() {
 
               {/* TAB 1: CHAT WHATSAPP EN VIVO (Texto e Imágenes) */}
               <Show when={activeTab() === 'chat'}>
-                <div class="rounded-3xl bg-zinc-900 border border-zinc-800 overflow-hidden flex flex-col h-[600px] shadow-2xl">
+                <div class="rounded-3xl bg-surface border border-edge overflow-hidden flex flex-col h-[600px] shadow-2xl">
                   {/* Chat Header */}
-                  <div class="p-4 bg-zinc-950/80 border-b border-zinc-800 flex items-center justify-between">
+                  <div class="p-4 bg-app/80 border-b border-edge flex items-center justify-between">
                     <div class="flex items-center gap-3">
                       <div class="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-bold flex items-center justify-center">
                         💬
                       </div>
                       <div>
-                        <h4 class="font-bold text-white text-sm">{lead()?.full_name}</h4>
+                        <h4 class="font-bold text-body text-sm">{lead()?.full_name}</h4>
                         <p class="text-[11px] text-emerald-400 flex items-center gap-1 font-semibold">
                           <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
                           <span>WhatsApp Conectado ({lead()?.phone})</span>
@@ -830,14 +830,14 @@ export default function LeadDetail() {
                   </div>
 
                   {/* Messages Feed */}
-                  <div class="flex-1 p-4 overflow-y-auto space-y-3 bg-zinc-950/40">
+                  <div class="flex-1 p-4 overflow-y-auto space-y-3 bg-app/40">
                     <Show
                       when={messages().length > 0}
                       fallback={
-                        <div class="h-full flex flex-col items-center justify-center text-zinc-500 space-y-2 p-8 text-center">
+                        <div class="h-full flex flex-col items-center justify-center text-muted space-y-2 p-8 text-center">
                           <span class="text-3xl">💬</span>
                           <p class="text-xs font-semibold">Aún no hay mensajes en esta conversación.</p>
-                          <p class="text-[11px] text-zinc-500">
+                          <p class="text-[11px] text-muted">
                             Escribe abajo para enviar un mensaje o adjuntar una foto (comprobante, plan nutricional o de entrenamiento).
                           </p>
                         </div>
@@ -852,7 +852,7 @@ export default function LeadDetail() {
                                 class={`max-w-md p-3.5 rounded-2xl text-xs space-y-2 shadow-md ${
                                   isMe
                                     ? 'bg-emerald-700 text-white rounded-br-none'
-                                    : 'bg-zinc-800 text-zinc-100 rounded-bl-none'
+                                    : 'bg-elevate text-body rounded-bl-none'
                                 }`}
                               >
                                 {/* Image display if message_type is image */}
@@ -892,15 +892,15 @@ export default function LeadDetail() {
 
                   {/* Image attachment preview bar */}
                   <Show when={imagePreview()}>
-                    <div class="px-4 py-2 bg-zinc-950/90 border-t border-zinc-800 flex items-center justify-between">
+                    <div class="px-4 py-2 bg-app/90 border-t border-edge flex items-center justify-between">
                       <div class="flex items-center gap-3">
                         <img
                           src={imagePreview()!}
                           alt="Previsualización"
-                          class="w-12 h-12 object-cover rounded-xl border border-zinc-700"
+                          class="w-12 h-12 object-cover rounded-xl border border-edge-strong"
                         />
                         <div class="text-xs">
-                          <p class="font-bold text-white truncate max-w-xs">{selectedImage()?.name}</p>
+                          <p class="font-bold text-body truncate max-w-xs">{selectedImage()?.name}</p>
                           <p class="text-[10px] text-emerald-400">Listo para enviar como imagen</p>
                         </div>
                       </div>
@@ -910,7 +910,7 @@ export default function LeadDetail() {
                           setSelectedImage(null);
                           setImagePreview(null);
                         }}
-                        class="text-zinc-400 hover:text-white text-xs font-bold"
+                        class="text-muted hover:text-body text-xs font-bold"
                       >
                         ✕ Cancelar
                       </button>
@@ -918,16 +918,16 @@ export default function LeadDetail() {
                   </Show>
 
                   {/* Chat Input & Fast Actions */}
-                  <div class="p-3 bg-zinc-950/95 border-t border-zinc-800 space-y-2">
+                  <div class="p-3 bg-app/95 border-t border-edge space-y-2">
                     {/* Quick Plantillas Dropdown / Chips */}
                     <div class="flex items-center gap-2 overflow-x-auto pb-1 text-[11px]">
-                      <span class="text-zinc-500 shrink-0 font-bold">Plantillas:</span>
+                      <span class="text-muted shrink-0 font-bold">Plantillas:</span>
                       <For each={templates().slice(0, 3)}>
                         {(tmpl) => (
                           <button
                             type="button"
                             onClick={() => handleApplyTemplate(tmpl.content)}
-                            class="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-lg border border-zinc-800 shrink-0 truncate max-w-[150px] transition cursor-pointer"
+                            class="px-2.5 py-1 bg-surface hover:bg-elevate text-body-soft rounded-lg border border-edge shrink-0 truncate max-w-[150px] transition cursor-pointer"
                             title={tmpl.content}
                           >
                             {tmpl.title}
@@ -939,7 +939,7 @@ export default function LeadDetail() {
                     <form onSubmit={handleSendChatMessage} class="flex items-center gap-2">
                       {/* Image Attachment Button */}
                       <label
-                        class="p-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-zinc-800 transition cursor-pointer shrink-0"
+                        class="p-2.5 rounded-xl bg-surface hover:bg-elevate text-muted hover:text-body border border-edge transition cursor-pointer shrink-0"
                         title="Adjuntar imagen (comprobante, plan, etc.)"
                       >
                         <input
@@ -956,7 +956,7 @@ export default function LeadDetail() {
                         value={chatInput()}
                         onInput={(e) => setChatInput(e.currentTarget.value)}
                         placeholder="Escribe un mensaje de WhatsApp..."
-                        class="flex-1 px-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 transition"
+                        class="flex-1 px-4 py-2.5 bg-surface border border-edge rounded-xl text-xs text-body placeholder-muted focus:outline-none focus:border-emerald-500 transition"
                       />
 
                       <button
@@ -974,15 +974,15 @@ export default function LeadDetail() {
 
               {/* TAB 2: REDACTOR DE WHATSAPP CON IA */}
               <Show when={activeTab() === 'ai'}>
-                <div class="p-6 rounded-3xl bg-gradient-to-br from-zinc-900 via-zinc-900 to-orange-950/20 border border-orange-500/30 space-y-4 shadow-xl">
+                <div class="p-6 rounded-3xl bg-gradient-to-br from-surface via-surface to-accent-deep/20 border border-accent/30 space-y-4 shadow-xl">
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2.5">
                       <span class="text-xl">🤖</span>
                       <div>
-                        <h3 class="text-base font-extrabold text-white">
+                        <h3 class="text-base font-extrabold text-body">
                           Generador de WhatsApp con IA
                         </h3>
-                        <p class="text-xs text-zinc-400">
+                        <p class="text-xs text-muted">
                           Redacta mensajes persuasivos usando Cloudflare Workers AI (Llama 3.1)
                         </p>
                       </div>
@@ -992,7 +992,7 @@ export default function LeadDetail() {
                       type="button"
                       onClick={handleGenerateBriefing}
                       disabled={generatingBriefing()}
-                      class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold rounded-xl transition border border-zinc-700 disabled:opacity-50 cursor-pointer"
+                      class="px-3 py-1.5 bg-elevate hover:bg-elevate-strong text-body-soft text-xs font-semibold rounded-xl transition border border-edge-strong disabled:opacity-50 cursor-pointer"
                     >
                       {generatingBriefing() ? 'Generando...' : '📄 Resumen Ejecutivo IA'}
                     </button>
@@ -1000,11 +1000,11 @@ export default function LeadDetail() {
 
                   {/* Briefing expandible */}
                   <Show when={aiBriefing()}>
-                    <div class="p-4 rounded-2xl bg-zinc-950/80 border border-orange-500/40 text-xs space-y-1.5 animate-fade-in">
-                      <span class="font-extrabold text-orange-400 block">
+                    <div class="p-4 rounded-2xl bg-app/80 border border-accent/40 text-xs space-y-1.5 animate-fade-in">
+                      <span class="font-extrabold text-accent-text block">
                         📌 Resumen Ejecutivo del Prospecto:
                       </span>
-                      <p class="text-zinc-300 whitespace-pre-wrap leading-relaxed">
+                      <p class="text-body-soft whitespace-pre-wrap leading-relaxed">
                         {aiBriefing()}
                       </p>
                     </div>
@@ -1012,7 +1012,7 @@ export default function LeadDetail() {
 
                   {/* Selector de Tono */}
                   <div class="flex flex-wrap items-center gap-2">
-                    <span class="text-xs text-zinc-400 font-bold">Tono del mensaje:</span>
+                    <span class="text-xs text-muted font-bold">Tono del mensaje:</span>
                     {[
                       { id: 'bienvenida', label: '👋 Bienvenida & Cortesía' },
                       { id: 'seguimiento', label: '🏋️ Recordatorio / Cita' },
@@ -1024,8 +1024,8 @@ export default function LeadDetail() {
                         onClick={() => setAiTone(t.id)}
                         class={`px-3 py-1.5 rounded-xl text-xs font-semibold transition border cursor-pointer ${
                           aiTone() === t.id
-                            ? 'bg-orange-500 border-orange-500 text-white'
-                            : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-white'
+                            ? 'bg-accent border-accent text-white'
+                            : 'bg-app border-edge text-muted hover:text-body'
                         }`}
                       >
                         {t.label}
@@ -1039,7 +1039,7 @@ export default function LeadDetail() {
                       type="button"
                       onClick={handleGenerateAiMessage}
                       disabled={generatingAi()}
-                      class="w-full py-3 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white font-bold text-xs rounded-2xl shadow-orange-glow transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+                      class="w-full py-3 bg-gradient-to-r from-accent-deep to-accent hover:from-accent hover:to-accent-hover text-white font-bold text-xs rounded-2xl shadow-accent-glow transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
                     >
                       <span>✨</span>
                       <span>
@@ -1057,7 +1057,7 @@ export default function LeadDetail() {
                         setChatInput(e.currentTarget.value);
                       }}
                       placeholder="El mensaje generado aparecerá aquí..."
-                      class="w-full p-4 bg-zinc-950 border border-zinc-800 rounded-2xl text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-orange-500 transition"
+                      class="w-full p-4 bg-app border border-edge rounded-2xl text-xs text-body-soft placeholder-muted focus:outline-none focus:border-accent transition"
                     ></textarea>
 
                     <div class="flex gap-2">
@@ -1068,7 +1068,7 @@ export default function LeadDetail() {
                           setChatInput(aiMessage());
                         }}
                         disabled={!aiMessage().trim()}
-                        class="flex-1 py-3 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs rounded-xl transition disabled:opacity-50 cursor-pointer"
+                        class="flex-1 py-3 bg-elevate hover:bg-elevate-strong text-body font-bold text-xs rounded-xl transition disabled:opacity-50 cursor-pointer"
                       >
                         💬 Pegar en Chat en Vivo
                       </button>
@@ -1090,13 +1090,13 @@ export default function LeadDetail() {
 
               {/* TAB 3: BITÁCORA Y HISTORIAL */}
               <Show when={activeTab() === 'history'}>
-                <div class="p-6 rounded-3xl bg-zinc-900 border border-zinc-800 space-y-4 shadow-xl">
+                <div class="p-6 rounded-3xl bg-surface border border-edge space-y-4 shadow-xl">
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
                       <span class="text-lg">📜</span>
-                      <h3 class="text-base font-bold text-white">Historial y Bitácora</h3>
+                      <h3 class="text-base font-bold text-body">Historial y Bitácora</h3>
                     </div>
-                    <span class="text-xs text-zinc-400">
+                    <span class="text-xs text-muted">
                       {activities().length} registros
                     </span>
                   </div>
@@ -1108,13 +1108,13 @@ export default function LeadDetail() {
                       value={newNote()}
                       onInput={(e) => setNewNote(e.currentTarget.value)}
                       placeholder="Escribe una nota rápida (ej: Vino a clase muestra, interesado en membresía anual)..."
-                      class="w-full p-3.5 bg-zinc-950 border border-zinc-800 rounded-2xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-orange-500 transition"
+                      class="w-full p-3.5 bg-app border border-edge rounded-2xl text-xs text-body placeholder-muted focus:outline-none focus:border-accent transition"
                     ></textarea>
                     <div class="flex justify-end">
                       <button
                         type="submit"
                         disabled={savingNote() || !newNote().trim()}
-                        class="px-5 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition disabled:opacity-50 cursor-pointer"
+                        class="px-5 py-2 bg-accent hover:bg-accent-hover text-white rounded-xl text-xs font-bold transition disabled:opacity-50 cursor-pointer"
                       >
                         {savingNote() ? 'Guardando...' : '➕ Anotar en Bitácora'}
                       </button>
@@ -1122,20 +1122,20 @@ export default function LeadDetail() {
                   </form>
 
                   {/* Feed */}
-                  <div class="space-y-3 pt-4 border-t border-zinc-800/80 max-h-96 overflow-y-auto">
+                  <div class="space-y-3 pt-4 border-t border-edge/80 max-h-96 overflow-y-auto">
                     <Show
                       when={activities().length > 0}
                       fallback={
-                        <div class="p-8 text-center text-zinc-500 text-xs">
+                        <div class="p-8 text-center text-muted text-xs">
                           No hay actividades previas registradas.
                         </div>
                       }
                     >
                       <For each={activities()}>
                         {(act) => (
-                          <div class="p-4 rounded-2xl bg-zinc-950/60 border border-zinc-800/80 space-y-1.5">
+                          <div class="p-4 rounded-2xl bg-app/60 border border-edge/80 space-y-1.5">
                             <div class="flex items-center justify-between">
-                              <span class="px-2 py-0.5 rounded-lg bg-zinc-800 text-[10px] font-bold text-zinc-300 uppercase tracking-wide">
+                              <span class="px-2 py-0.5 rounded-lg bg-elevate text-[10px] font-bold text-body-soft uppercase tracking-wide">
                                 {act.action_type === 'whatsapp_sent'
                                   ? '💬 WhatsApp'
                                   : act.action_type === 'status_change'
@@ -1146,15 +1146,15 @@ export default function LeadDetail() {
                                   ? '✨ Asistente IA'
                                   : '📝 Nota'}
                               </span>
-                              <span class="text-[10px] text-zinc-500">
+                              <span class="text-[10px] text-muted">
                                 {new Date(act.created_at).toLocaleString('es-ES', {
                                   dateStyle: 'short',
                                   timeStyle: 'short',
                                 })}
                               </span>
                             </div>
-                            <p class="text-xs text-zinc-200 whitespace-pre-wrap">{act.details}</p>
-                            <div class="text-[10px] text-zinc-400 font-medium">
+                            <p class="text-xs text-body-soft whitespace-pre-wrap">{act.details}</p>
+                            <div class="text-[10px] text-muted font-medium">
                               Por: {act.user_name || 'Sistema'}
                             </div>
                           </div>

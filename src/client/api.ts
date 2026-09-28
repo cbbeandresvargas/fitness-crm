@@ -92,9 +92,12 @@ export const api = {
   },
 
   async createLead(data: {
-    full_name: string;
+    full_name?: string;
+    first_name?: string;
+    last_name?: string;
     phone: string;
     email?: string;
+    ci?: string;
     status?: string;
     assigned_to?: string;
     tags?: string[];

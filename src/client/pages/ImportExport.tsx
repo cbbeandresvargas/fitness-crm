@@ -134,9 +134,9 @@ export default function ImportExport() {
     <Layout title="Subir o Bajar Excel (CSV / R2)">
       <div class="space-y-8 max-w-6xl mx-auto">
         {/* Cabecera descriptiva */}
-        <div class="p-8 rounded-3xl bg-zinc-900 border border-zinc-800 space-y-3">
-          <h2 class="text-2xl font-black text-white">Importación Masiva & Respaldos R2</h2>
-          <p class="text-xs text-zinc-400 max-w-2xl leading-relaxed">
+        <div class="p-8 rounded-3xl bg-surface border border-edge space-y-3">
+          <h2 class="text-2xl font-black text-body">Importación Masiva & Respaldos R2</h2>
+          <p class="text-xs text-muted max-w-2xl leading-relaxed">
             Sube listas de contactos desde Meta Ads, Excel o campañas externas. Nuestro motor detecta duplicados por número telefónico, evalúa el segmento dinámico y distribuye los prospectos de forma balanceada.
           </p>
         </div>
@@ -144,11 +144,11 @@ export default function ImportExport() {
         {/* Sección de Carga */}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Opción 1: CSV de prueba */}
-          <div class="p-6 rounded-3xl bg-zinc-900 border border-zinc-800 space-y-4 flex flex-col justify-between">
+          <div class="p-6 rounded-3xl bg-surface border border-edge space-y-4 flex flex-col justify-between">
             <div class="space-y-2">
               <span class="text-2xl block">⚡</span>
-              <h3 class="font-extrabold text-white text-base">Probar con Datos Demo</h3>
-              <p class="text-xs text-zinc-400">
+              <h3 class="font-extrabold text-body text-base">Probar con Datos Demo</h3>
+              <p class="text-xs text-muted">
                 Carga un dataset prearmado de 5 prospectos con presupuestos, metas deportivas y sedes en CDMX, Guadalajara y Monterrey.
               </p>
             </div>
@@ -157,23 +157,23 @@ export default function ImportExport() {
               type="button"
               onClick={loadSample}
               disabled={loading()}
-              class="w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold rounded-2xl border border-zinc-700 transition cursor-pointer disabled:opacity-50"
+              class="w-full py-3 bg-elevate hover:bg-elevate-strong text-body-soft text-xs font-bold rounded-2xl border border-edge-strong transition cursor-pointer disabled:opacity-50"
             >
               {loading() ? 'Cargando...' : 'Cargar CSV Demo (1 Clic)'}
             </button>
           </div>
 
           {/* Opción 2: Subir archivo propio */}
-          <div class="p-6 rounded-3xl bg-zinc-900 border border-zinc-800 space-y-4 flex flex-col justify-between">
+          <div class="p-6 rounded-3xl bg-surface border border-edge space-y-4 flex flex-col justify-between">
             <div class="space-y-2">
               <span class="text-2xl block">📁</span>
-              <h3 class="font-extrabold text-white text-base">Subir Archivo CSV</h3>
-              <p class="text-xs text-zinc-400">
+              <h3 class="font-extrabold text-body text-base">Subir Archivo CSV</h3>
+              <p class="text-xs text-muted">
                 Selecciona cualquier archivo exportado de Google Sheets, Meta Ads o tu CRM anterior.
               </p>
             </div>
 
-            <label class="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold rounded-2xl shadow-orange-glow transition text-center cursor-pointer block">
+            <label class="w-full py-3 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded-2xl shadow-accent-glow transition text-center cursor-pointer block">
               <span>Seleccionar Archivo CSV</span>
               <input
                 type="file"
@@ -187,21 +187,21 @@ export default function ImportExport() {
 
         {/* Previsualización y Mapeo si hay archivo cargado */}
         <Show when={headers().length > 0}>
-          <div class="p-6 rounded-3xl bg-zinc-900 border border-zinc-800 space-y-6">
+          <div class="p-6 rounded-3xl bg-surface border border-edge space-y-6">
             <div class="flex items-center justify-between">
               <div>
-                <h3 class="text-base font-bold text-white">Mapeo Dinámico de Columnas</h3>
-                <p class="text-xs text-zinc-400">
-                  Total de filas detectadas: <span class="font-bold text-orange-400">{totalRows()}</span>
+                <h3 class="text-base font-bold text-body">Mapeo Dinámico de Columnas</h3>
+                <p class="text-xs text-muted">
+                  Total de filas detectadas: <span class="font-bold text-accent-text">{totalRows()}</span>
                 </p>
               </div>
 
               <div>
-                <label class="text-xs font-bold text-zinc-400 mr-2">Asignar a:</label>
+                <label class="text-xs font-bold text-muted mr-2">Asignar a:</label>
                 <select
                   value={assignedTo()}
                   onChange={(e) => setAssignedTo(e.currentTarget.value)}
-                  class="px-3 py-1.5 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white"
+                  class="px-3 py-1.5 bg-app border border-edge rounded-xl text-xs text-body"
                 >
                   <option value="auto">🤖 Balance Automático (Round-Robin)</option>
                   <For each={agents()}>
@@ -224,12 +224,12 @@ export default function ImportExport() {
                 { label: 'Sede', val: colBranch, set: setColBranch },
                 { label: 'Etiquetas / Tags', val: colTags, set: setColTags },
               ].map((field) => (
-                <div class="p-3 bg-zinc-950 rounded-2xl border border-zinc-800/80 space-y-1">
-                  <label class="block text-[11px] font-bold text-zinc-400">{field.label}</label>
+                <div class="p-3 bg-app rounded-2xl border border-edge/80 space-y-1">
+                  <label class="block text-[11px] font-bold text-muted">{field.label}</label>
                   <select
                     value={field.val()}
                     onChange={(e) => field.set(e.currentTarget.value)}
-                    class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-2.5 py-1.5 text-xs text-zinc-200"
+                    class="w-full bg-surface border border-edge rounded-xl px-2.5 py-1.5 text-xs text-body-soft"
                   >
                     <For each={headers()}>
                       {(h) => <option value={h}>{h}</option>}
@@ -241,17 +241,17 @@ export default function ImportExport() {
 
             {/* Muestra de Primeras 5 Filas */}
             <div class="space-y-2">
-              <span class="text-xs font-bold text-zinc-400">Previsualización (Primeras filas):</span>
-              <div class="overflow-x-auto rounded-2xl border border-zinc-800">
-                <table class="w-full text-left text-xs text-zinc-300">
-                  <thead class="bg-zinc-950 text-zinc-500 font-bold uppercase text-[10px]">
+              <span class="text-xs font-bold text-muted">Previsualización (Primeras filas):</span>
+              <div class="overflow-x-auto rounded-2xl border border-edge">
+                <table class="w-full text-left text-xs text-body-soft">
+                  <thead class="bg-app text-muted font-bold uppercase text-[10px]">
                     <tr>
                       <For each={headers()}>
-                        {(h) => <th class="p-3 border-b border-zinc-800">{h}</th>}
+                        {(h) => <th class="p-3 border-b border-edge">{h}</th>}
                       </For>
                     </tr>
                   </thead>
-                  <tbody class="divide-y divide-zinc-800/60 bg-zinc-950/40">
+                  <tbody class="divide-y divide-edge/60 bg-app/40">
                     <For each={previewRows()}>
                       {(row) => (
                         <tr>
@@ -267,7 +267,7 @@ export default function ImportExport() {
             </div>
 
             {/* Botón de Ejecución */}
-            <div class="flex items-center justify-end gap-3 pt-4 border-t border-zinc-800">
+            <div class="flex items-center justify-end gap-3 pt-4 border-t border-edge">
               <button
                 type="button"
                 onClick={handleProcess}
@@ -299,11 +299,11 @@ export default function ImportExport() {
         </Show>
 
         {/* Sección de Exportación & Respaldo */}
-        <div class="p-6 rounded-3xl bg-zinc-900 border border-zinc-800 space-y-4">
+        <div class="p-6 rounded-3xl bg-surface border border-edge space-y-4">
           <div class="flex items-center justify-between">
             <div>
-              <h3 class="font-extrabold text-white text-base">Exportar Datos & Respaldos en Cloudflare R2</h3>
-              <p class="text-xs text-zinc-400">
+              <h3 class="font-extrabold text-body text-base">Exportar Datos & Respaldos en Cloudflare R2</h3>
+              <p class="text-xs text-muted">
                 Descarga tus prospectos en formatos estándar o almacena una instantánea en tu bucket R2.
               </p>
             </div>
@@ -312,7 +312,7 @@ export default function ImportExport() {
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <a
               href="/api/export/csv"
-              class="p-4 rounded-2xl bg-zinc-950 border border-zinc-800 hover:border-orange-500/50 transition flex items-center justify-center gap-2 text-xs font-bold text-zinc-200"
+              class="p-4 rounded-2xl bg-app border border-edge hover:border-accent/50 transition flex items-center justify-center gap-2 text-xs font-bold text-body-soft"
             >
               <span>📊</span>
               <span>Descargar CSV</span>
@@ -320,7 +320,7 @@ export default function ImportExport() {
 
             <a
               href="/api/export/json"
-              class="p-4 rounded-2xl bg-zinc-950 border border-zinc-800 hover:border-orange-500/50 transition flex items-center justify-center gap-2 text-xs font-bold text-zinc-200"
+              class="p-4 rounded-2xl bg-app border border-edge hover:border-accent/50 transition flex items-center justify-center gap-2 text-xs font-bold text-body-soft"
             >
               <span>📦</span>
               <span>Descargar JSON</span>
@@ -330,7 +330,7 @@ export default function ImportExport() {
               type="button"
               onClick={handleR2Backup}
               disabled={backingUp()}
-              class="p-4 rounded-2xl bg-zinc-950 border border-zinc-800 hover:border-emerald-500/50 transition flex items-center justify-center gap-2 text-xs font-bold text-emerald-400 cursor-pointer disabled:opacity-50"
+              class="p-4 rounded-2xl bg-app border border-edge hover:border-emerald-500/50 transition flex items-center justify-center gap-2 text-xs font-bold text-emerald-400 cursor-pointer disabled:opacity-50"
             >
               <span>☁️</span>
               <span>{backingUp() ? 'Guardando en R2...' : 'Generar Copia en R2'}</span>
@@ -339,7 +339,7 @@ export default function ImportExport() {
 
           <Show when={backupKey()}>
             <p class="text-xs text-emerald-400/90 pt-2 font-mono">
-              ✓ Respaldo creado en R2: <span class="text-white font-bold">{backupKey()}</span>
+              ✓ Respaldo creado en R2: <span class="text-body font-bold">{backupKey()}</span>
             </p>
           </Show>
         </div>

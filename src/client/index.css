@@ -1,12 +1,67 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+
+  /* Light: warm cream */
+  --bg: #faf9f7;
+  --surface: #ffffff;
+  --elevate: #f3f1ee;
+  --elevate-strong: #ece9e4;
+  --edge: #e7e4df;
+  --edge-strong: #d6d2cb;
+  --text: #1c1917;
+  --text-soft: #44403c;
+  --muted: #78716c;
+  --accent: #ff9933;
+  --accent-hover: #ff6666;
+  --accent-deep: #cc3333;
+  --accent-text: #cc3333;
+}
+
+.dark {
+  /* Dark: carbon black */
+  --bg: #09090b;
+  --surface: #121215;
+  --elevate: #18181b;
+  --elevate-strong: #27272a;
+  --edge: #27272a;
+  --edge-strong: #3f3f46;
+  --text: #f4f4f5;
+  --text-soft: #d4d4d8;
+  --muted: #a1a1aa;
+  --accent: #ff9933;
+  --accent-hover: #ff6666;
+  --accent-deep: #cc3333;
+  --accent-text: #ff9933;
+}
+
+@theme inline {
+  --color-app: var(--bg);
+  --color-surface: var(--surface);
+  --color-elevate: var(--elevate);
+  --color-elevate-strong: var(--elevate-strong);
+  --color-edge: var(--edge);
+  --color-edge-strong: var(--edge-strong);
+  --color-body: var(--text);
+  --color-body-soft: var(--text-soft);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-deep: var(--accent-deep);
+  --color-accent-text: var(--accent-text);
 }
 
 body {
-  background-color: #09090b;
-  color: #f4f4f5;
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+::selection {
+  background: var(--accent);
+  color: #ffffff;
 }
 
 /* Custom scrollbar */
@@ -15,25 +70,25 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #09090b;
+  background: var(--bg);
 }
 ::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: var(--edge-strong);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #f97316;
+  background: var(--accent);
 }
 
 /* Glass and glow helpers */
 .glass-panel {
-  background: rgba(18, 18, 21, 0.85);
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(39, 39, 42, 0.8);
+  border: 1px solid color-mix(in srgb, var(--edge) 80%, transparent);
 }
 
-.orange-glow {
-  box-shadow: 0 0 25px -5px rgba(249, 115, 22, 0.35);
+@utility shadow-accent-glow {
+  box-shadow: 0 0 25px -5px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 .green-glow {

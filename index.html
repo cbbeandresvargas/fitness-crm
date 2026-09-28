@@ -10,8 +10,17 @@
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('theme');
+          var dark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+          document.documentElement.classList.toggle('dark', dark);
+        } catch (e) {}
+      })();
+    </script>
   </head>
-  <body class="bg-zinc-950 text-zinc-100 min-h-screen antialiased selection:bg-orange-500 selection:text-white">
+  <body class="min-h-screen antialiased">
     <div id="root"></div>
     <script type="module" src="/src/client/index.tsx"></script>
   </body>

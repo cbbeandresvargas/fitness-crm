@@ -37,14 +37,14 @@ export default function Dashboard() {
     <Layout title="Dashboard General">
       <div class="space-y-8 max-w-6xl mx-auto">
         {/* Banner de Bienvenida y Acción Rápida */}
-        <div class="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-zinc-900 via-zinc-900 to-zinc-800 border border-zinc-800 flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden shadow-2xl">
+        <div class="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-surface via-surface to-elevate border border-edge flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden shadow-2xl">
           <div class="space-y-1 relative z-10">
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/20 text-orange-400 text-xs font-bold mb-1 border border-orange-500/30">
-              <span class="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/20 text-accent-text text-xs font-bold mb-1 border border-accent/30">
+              <span class="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
               <span>Hola, {user()?.name.split(' ')[0] || 'Coach'} • Panel de Rendimiento</span>
             </div>
-            <h2 class="text-2xl sm:text-3xl font-black text-white tracking-tight">¿A quién vamos a inscribir hoy?</h2>
-            <p class="text-zinc-400 text-xs sm:text-sm max-w-xl leading-relaxed">
+            <h2 class="text-2xl sm:text-3xl font-black text-body tracking-tight">¿A quién vamos a inscribir hoy?</h2>
+            <p class="text-muted text-xs sm:text-sm max-w-xl leading-relaxed">
               Monitoreo en tiempo real de tus prospectos de gimnasio, clasificación por potencial de compra y atención urgente.
             </p>
           </div>
@@ -54,14 +54,14 @@ export default function Dashboard() {
               type="button"
               onClick={loadData}
               disabled={loading()}
-              class="p-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-2xl text-xs font-bold transition border border-zinc-700 cursor-pointer disabled:opacity-50"
+              class="p-3 bg-elevate hover:bg-elevate-strong text-body-soft rounded-2xl text-xs font-bold transition border border-edge-strong cursor-pointer disabled:opacity-50"
               title="Refrescar métricas"
             >
               🔄
             </button>
             <A
               href="/leads/new"
-              class="px-5 sm:px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl text-xs sm:text-sm font-bold shadow-orange-glow transition transform hover:scale-105 flex items-center gap-2 cursor-pointer"
+              class="px-5 sm:px-6 py-3 bg-accent hover:bg-accent-hover text-white rounded-2xl text-xs sm:text-sm font-bold shadow-accent-glow transition transform hover:scale-105 flex items-center gap-2 cursor-pointer"
             >
               <span class="text-base">➕</span>
               <span>Anotar Prospecto</span>
@@ -72,8 +72,8 @@ export default function Dashboard() {
         <Show
           when={!loading()}
           fallback={
-            <div class="flex flex-col items-center justify-center p-20 text-zinc-500 space-y-3">
-              <div class="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+            <div class="flex flex-col items-center justify-center p-20 text-muted space-y-3">
+              <div class="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
               <span class="text-xs">Cargando métricas en vivo...</span>
             </div>
           }
@@ -83,22 +83,22 @@ export default function Dashboard() {
             {/* Total */}
             <A
               href="/leads"
-              class="p-5 sm:p-6 rounded-3xl bg-zinc-900 border border-zinc-800 hover:border-orange-500/50 transition group shadow-lg"
+              class="p-5 sm:p-6 rounded-3xl bg-surface border border-edge hover:border-accent/50 transition group shadow-lg"
             >
               <div class="flex items-center justify-between">
-                <span class="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Total Prospectos</span>
+                <span class="text-[11px] font-bold uppercase tracking-wider text-muted">Total Prospectos</span>
                 <span class="text-2xl group-hover:scale-110 transition-transform">👥</span>
               </div>
               <div class="mt-4 flex items-baseline justify-between">
-                <span class="text-4xl font-black text-white">{data()?.totalLeads || 0}</span>
-                <span class="text-xs text-zinc-400">Cartera total</span>
+                <span class="text-4xl font-black text-body">{data()?.totalLeads || 0}</span>
+                <span class="text-xs text-muted">Cartera total</span>
               </div>
             </A>
 
             {/* Segmento A - VIP */}
             <A
               href="/leads?segment=A"
-              class="p-5 sm:p-6 rounded-3xl bg-zinc-900 border border-zinc-800 hover:border-emerald-500/50 transition group shadow-lg"
+              class="p-5 sm:p-6 rounded-3xl bg-surface border border-edge hover:border-emerald-500/50 transition group shadow-lg"
             >
               <div class="flex items-center justify-between">
                 <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-400">Segmento A (VIP)</span>
@@ -115,7 +115,7 @@ export default function Dashboard() {
             {/* Segmento B - Tibio */}
             <A
               href="/leads?segment=B"
-              class="p-5 sm:p-6 rounded-3xl bg-zinc-900 border border-zinc-800 hover:border-blue-500/50 transition group shadow-lg"
+              class="p-5 sm:p-6 rounded-3xl bg-surface border border-edge hover:border-blue-500/50 transition group shadow-lg"
             >
               <div class="flex items-center justify-between">
                 <span class="text-[11px] font-bold uppercase tracking-wider text-blue-400">Segmento B (Tibio)</span>
@@ -132,7 +132,7 @@ export default function Dashboard() {
             {/* Segmento C - Atención */}
             <A
               href="/leads?segment=C"
-              class="p-5 sm:p-6 rounded-3xl bg-zinc-900 border border-zinc-800 hover:border-amber-500/50 transition group shadow-lg"
+              class="p-5 sm:p-6 rounded-3xl bg-surface border border-edge hover:border-amber-500/50 transition group shadow-lg"
             >
               <div class="flex items-center justify-between">
                 <span class="text-[11px] font-bold uppercase tracking-wider text-amber-400">Segmento C (Atención)</span>
@@ -148,18 +148,18 @@ export default function Dashboard() {
           </div>
 
           {/* Embudo de Ventas / Estados y Barra de Conversión */}
-          <div class="p-6 rounded-3xl bg-zinc-900 border border-zinc-800 space-y-5 shadow-xl">
+          <div class="p-6 rounded-3xl bg-surface border border-edge space-y-5 shadow-xl">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+                <h3 class="text-base font-extrabold text-body flex items-center gap-2">
                   <span>🎯</span>
                   <span>Embudo de Conversión Comercial</span>
                 </h3>
-                <p class="text-xs text-zinc-400 mt-0.5">Distribución de prospectos por fase en el ciclo de inscripción</p>
+                <p class="text-xs text-muted mt-0.5">Distribución de prospectos por fase en el ciclo de inscripción</p>
               </div>
 
-              <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs">
-                <span class="text-zinc-400 font-medium">Tasa de Conversión:</span>
+              <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-app border border-edge text-xs">
+                <span class="text-muted font-medium">Tasa de Conversión:</span>
                 <span class="font-extrabold text-emerald-400">{getConversionRate()}%</span>
               </div>
             </div>
@@ -167,7 +167,7 @@ export default function Dashboard() {
             {/* Tarjetas de Fases del Embudo */}
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               {[
-                { key: 'nuevo', label: 'Nuevo', icon: '🌱', color: 'text-zinc-300', border: 'hover:border-zinc-500' },
+                { key: 'nuevo', label: 'Nuevo', icon: '🌱', color: 'text-body-soft', border: 'hover:border-edge-strong' },
                 { key: 'contactado', label: 'Contactado', icon: '💬', color: 'text-blue-400', border: 'hover:border-blue-500' },
                 { key: 'cita_agendada', label: 'Cita Agendada', icon: '📅', color: 'text-amber-400', border: 'hover:border-amber-500' },
                 { key: 'negociacion', label: 'Negociación', icon: '🤝', color: 'text-purple-400', border: 'hover:border-purple-500' },
@@ -176,13 +176,13 @@ export default function Dashboard() {
               ].map((stage) => (
                 <A
                   href={`/leads?status=${stage.key}`}
-                  class={`p-4 rounded-2xl bg-zinc-800/40 border border-zinc-800/90 hover:bg-zinc-800/80 ${stage.border} transition text-center space-y-1 block`}
+                  class={`p-4 rounded-2xl bg-elevate/40 border border-edge/90 hover:bg-elevate/80 ${stage.border} transition text-center space-y-1 block`}
                 >
                   <div class="text-xl">{stage.icon}</div>
                   <div class={`text-2xl font-black ${stage.color}`}>
                     {data()?.statusCount[stage.key] || 0}
                   </div>
-                  <div class="text-[11px] font-bold text-zinc-400 truncate">{stage.label}</div>
+                  <div class="text-[11px] font-bold text-muted truncate">{stage.label}</div>
                 </A>
               ))}
             </div>
@@ -191,13 +191,13 @@ export default function Dashboard() {
           {/* Grid de 2 Columnas: Prospectos Urgentes y Bitácora */}
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Prospectos que requieren atención */}
-            <div class="p-6 rounded-3xl bg-zinc-900 border border-zinc-800 space-y-4 shadow-xl">
+            <div class="p-6 rounded-3xl bg-surface border border-edge space-y-4 shadow-xl">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
                   <span class="text-lg">🚨</span>
-                  <h3 class="text-base font-bold text-white">Requieren atención hoy</h3>
+                  <h3 class="text-base font-bold text-body">Requieren atención hoy</h3>
                 </div>
-                <A href="/leads?segment=C" class="text-xs text-orange-400 hover:underline font-semibold">
+                <A href="/leads?segment=C" class="text-xs text-accent-text hover:underline font-semibold">
                   Ver todos los inactivos
                 </A>
               </div>
@@ -206,19 +206,19 @@ export default function Dashboard() {
                 <Show
                   when={(data()?.leadsNeedingAttention || []).length > 0}
                   fallback={
-                    <div class="p-8 text-center text-zinc-500 text-xs">
+                    <div class="p-8 text-center text-muted text-xs">
                       🎉 ¡Todo al día! No hay prospectos descuidados o fríos.
                     </div>
                   }
                 >
                   <For each={data()?.leadsNeedingAttention}>
                     {(lead) => (
-                      <div class="p-4 rounded-2xl bg-zinc-800/50 border border-zinc-800/80 flex items-center justify-between gap-4 hover:border-zinc-700 transition">
+                      <div class="p-4 rounded-2xl bg-elevate/50 border border-edge/80 flex items-center justify-between gap-4 hover:border-edge-strong transition">
                         <div class="space-y-1 overflow-hidden min-w-0">
                           <div class="flex items-center gap-2">
                             <A
                               href={`/leads/${lead.id}`}
-                              class="font-bold text-white hover:text-orange-400 text-sm truncate"
+                              class="font-bold text-body hover:text-accent-text text-sm truncate"
                             >
                               {lead.full_name}
                             </A>
@@ -230,13 +230,13 @@ export default function Dashboard() {
                                   ? 'bg-blue-500/20 text-blue-400'
                                   : lead.segment === 'C'
                                   ? 'bg-amber-500/20 text-amber-400'
-                                  : 'bg-zinc-800 text-zinc-400'
+                                  : 'bg-elevate text-muted'
                               }`}
                             >
                               Seg {lead.segment}
                             </span>
                           </div>
-                          <p class="text-xs text-zinc-400 truncate">
+                          <p class="text-xs text-muted truncate">
                             {lead.notes_summary || lead.metadata.objetivo || 'Sin notas registradas'}
                           </p>
                         </div>
@@ -253,7 +253,7 @@ export default function Dashboard() {
                           </a>
                           <A
                             href={`/leads/${lead.id}`}
-                            class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold rounded-xl transition"
+                            class="px-3 py-1.5 bg-elevate hover:bg-elevate-strong text-body-soft text-xs font-semibold rounded-xl transition"
                           >
                             Ver
                           </A>
@@ -266,11 +266,11 @@ export default function Dashboard() {
             </div>
 
             {/* Actividad Reciente */}
-            <div class="p-6 rounded-3xl bg-zinc-900 border border-zinc-800 space-y-4 shadow-xl">
+            <div class="p-6 rounded-3xl bg-surface border border-edge space-y-4 shadow-xl">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
                   <span class="text-lg">⚡</span>
-                  <h3 class="text-base font-bold text-white">Últimos movimientos del equipo</h3>
+                  <h3 class="text-base font-bold text-body">Últimos movimientos del equipo</h3>
                 </div>
               </div>
 
@@ -278,15 +278,15 @@ export default function Dashboard() {
                 <Show
                   when={(data()?.recentActivities || []).length > 0}
                   fallback={
-                    <div class="p-8 text-center text-zinc-500 text-xs">
+                    <div class="p-8 text-center text-muted text-xs">
                       No hay actividades registradas aún.
                     </div>
                   }
                 >
                   <For each={data()?.recentActivities}>
                     {(act) => (
-                      <div class="p-3.5 rounded-2xl bg-zinc-800/30 border border-zinc-800/60 flex items-start gap-3">
-                        <div class="w-8 h-8 rounded-xl bg-orange-500/10 text-orange-400 flex items-center justify-center shrink-0 text-sm mt-0.5">
+                      <div class="p-3.5 rounded-2xl bg-elevate/30 border border-edge/60 flex items-start gap-3">
+                        <div class="w-8 h-8 rounded-xl bg-accent/10 text-accent-text flex items-center justify-center shrink-0 text-sm mt-0.5">
                           {act.action_type === 'whatsapp_sent'
                             ? '💬'
                             : act.action_type === 'status_change'
@@ -296,11 +296,11 @@ export default function Dashboard() {
                             : '📝'}
                         </div>
                         <div class="flex-1 overflow-hidden min-w-0">
-                          <p class="text-xs text-zinc-200 line-clamp-2">{act.details}</p>
-                          <div class="flex items-center gap-2 text-[10px] text-zinc-400 mt-1">
-                            <span class="font-semibold text-zinc-300">{act.user_name || 'Sistema'}</span>
+                          <p class="text-xs text-body-soft line-clamp-2">{act.details}</p>
+                          <div class="flex items-center gap-2 text-[10px] text-muted mt-1">
+                            <span class="font-semibold text-body-soft">{act.user_name || 'Sistema'}</span>
                             <span>•</span>
-                            <A href={`/leads/${act.lead_id}`} class="text-orange-400/80 hover:underline truncate">
+                            <A href={`/leads/${act.lead_id}`} class="text-accent-text/80 hover:underline truncate">
                               {act.lead_name || 'Prospecto'}
                             </A>
                           </div>

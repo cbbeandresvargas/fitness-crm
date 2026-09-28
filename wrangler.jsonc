@@ -1,34 +1,42 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "fitness-crm",
-  "main": "src/index.ts",
-  "compatibility_date": "2024-09-23",
-  "compatibility_flags": ["nodejs_compat"],
-  "assets": {
-    "directory": "./dist",
-    "binding": "ASSETS",
-    "not_found_handling": "single-page-application"
-  },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "fitness-crm-db",
-      "database_id": "7194fec3-c400-421c-a9d7-edfa89e3f912"
-    }
-  ],
-  "kv_namespaces": [
-    {
-      "binding": "KV",
-      "id": "ca43ee0f72ba4bfd84fddfa3491e4851"
-    }
-  ],
-  "r2_buckets": [
-    {
-      "binding": "STORAGE",
-      "bucket_name": "fitness-crm-storage"
-    }
-  ],
-  "ai": {
-    "binding": "AI"
-  }
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "fitness-crm",
+	"main": "src/index.ts",
+	"compatibility_date": "2024-09-23",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"assets": {
+		"directory": "./dist",
+		"binding": "ASSETS",
+		"not_found_handling": "single-page-application"
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "fitness-crm-db",
+			"database_id": "7194fec3-c400-421c-a9d7-edfa89e3f912"
+		},
+		{
+			"binding": "fitness_crm_db",
+			"database_name": "fitness-crm-db",
+			"database_id": "ca9fae22-d16d-490b-bb27-fcd854fdd328",
+			"remote": true
+		}
+	],
+	"kv_namespaces": [
+		{
+			"binding": "KV",
+			"id": "ca43ee0f72ba4bfd84fddfa3491e4851"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "STORAGE",
+			"bucket_name": "fitness-crm-storage"
+		}
+	],
+	"ai": {
+		"binding": "AI"
+	}
 }

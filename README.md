@@ -5,9 +5,12 @@ Plataforma CRM de alto rendimiento desarrollada para el sector fitness y gestió
 ---
 
 ## 🎨 Diseño & Estética
-- **Paleta Atlética**: Fondo negro carbón (`#09090b`), superficies elevadas (`#121215`), acentos naranja vibrante (`#f97316` / `#ff5500`), bordes sutiles y micro-animaciones.
+- **Paleta Fuego**: Acento primario naranja vibrante (`#FF9933`), acento hover coral (`#FF6666`) y acento profundo rojo (`#CC3333`) para gradientes y estados fuertes.
+- **Modo Claro / Oscuro**: Conmutador de tema en la cabecera (y en `/login`) con persistencia en `localStorage` y detección automática de la preferencia del sistema (`prefers-color-scheme`).
+  - **Oscuro**: Fondo negro carbón (`#09090b`), superficies elevadas (`#121215`), bordes sutiles y micro-animaciones.
+  - **Claro**: Superficies blancas y crema cálida (`#FAF9F7`) con texto gris cálido, manteniendo la paleta de acentos fuego.
 - **Tipografía**: Plus Jakarta Sans.
-- **Tailwind CSS**: Integración ligera en tiempo de ejecución (CDN) optimizada para serverless rendering con TSX/JSX en Cloudflare Workers.
+- **Tailwind CSS 4**: Compilado en tiempo de build vía `@tailwindcss/vite`, con tokens semánticos (`bg-app`, `bg-surface`, `bg-accent`, etc.) definidos como variables CSS en `src/client/index.css` — un único origen de verdad para ambos temas.
 
 ---
 
