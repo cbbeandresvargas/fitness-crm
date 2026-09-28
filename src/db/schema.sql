@@ -24,6 +24,10 @@ CREATE TABLE IF NOT EXISTS leads (
   metadata TEXT NOT NULL DEFAULT '{}',
   notes_summary TEXT,
   last_contacted_at TEXT,
+  last_inbound_at TEXT,
+  ai_enabled INTEGER NOT NULL DEFAULT 1,
+  handoff_at TEXT,
+  handoff_reason TEXT,
   created_by TEXT REFERENCES users(id),
   updated_by TEXT REFERENCES users(id),
   created_at TEXT NOT NULL DEFAULT (DATETIME('now')),
@@ -68,8 +72,41 @@ CREATE TABLE IF NOT EXISTS whatsapp_messages (
   content TEXT NOT NULL,
   media_url TEXT,
   status TEXT NOT NULL DEFAULT 'sent' CHECK(status IN ('pending', 'sent', 'delivered', 'read', 'failed')),
-  whatsapp_message_id TEXT,
+  whatsapp_message_id TEXT UNIQUE,
+  ai_generated INTEGER NOT NULL DEFAULT 0,
+  raw_payload TEXT,
   created_at TEXT NOT NULL DEFAULT (DATETIME('now'))
+);
+
+CREATE TABLE IF NOT EXISTS whatsapp_settings (
+  id TEXT PRIMARY KEY,
+  waba_id TEXT,
+  phone_number_id TEXT,
+  display_phone_number TEXT,
+  verified_name TEXT,
+  access_token_cipher TEXT,
+  access_token_iv TEXT,
+  access_token_tag TEXT,
+  access_token_last4 TEXT,
+  verify_token TEXT,
+  app_secret TEXT,
+  status TEXT NOT NULL DEFAULT 'disconnected' CHECK(status IN ('connected', 'disconnected', 'reconnect_required')),
+  ai_enabled INTEGER NOT NULL DEFAULT 1,
+  ai_model TEXT NOT NULL DEFAULT '@cf/meta/llama-3.1-8b-instruct',
+  ai_tone TEXT DEFAULT 'motivador, consultivo y enfocado en cierre de ventas',
+  ai_instructions TEXT,
+  created_at TEXT NOT NULL DEFAULT (DATETIME('now')),
+  updated_at TEXT NOT NULL DEFAULT (DATETIME('now'))
+);
+
+CREATE TABLE IF NOT EXISTS knowledge_base (
+  id TEXT PRIMARY KEY,
+  category TEXT NOT NULL CHECK(category IN ('plan_precio', 'horario_sede', 'politica', 'objecion_frecuente', 'entrenadores')),
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  is_active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT (DATETIME('now')),
+  updated_at TEXT NOT NULL DEFAULT (DATETIME('now'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_leads_phone ON leads(phone);
@@ -80,3 +117,5 @@ CREATE INDEX IF NOT EXISTS idx_activities_lead ON activity_logs(lead_id);
 CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at);
 CREATE INDEX IF NOT EXISTS idx_whatsapp_lead ON whatsapp_messages(lead_id);
 CREATE INDEX IF NOT EXISTS idx_whatsapp_created ON whatsapp_messages(created_at);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_wa_id ON whatsapp_messages(whatsapp_message_id);
+CREATE INDEX IF NOT EXISTS idx_kb_category ON knowledge_base(category);

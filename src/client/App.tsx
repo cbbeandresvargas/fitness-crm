@@ -9,6 +9,8 @@ import Templates from './pages/Templates';
 import ImportExport from './pages/ImportExport';
 import Team from './pages/Team';
 import Login from './pages/Login';
+import WhatsAppInbox from './pages/WhatsAppInbox';
+import WhatsAppSettings from './pages/WhatsAppSettings';
 
 export function App() {
   return (
@@ -19,8 +21,10 @@ export function App() {
           <Route path="/leads" component={LeadsList} />
           <Route path="/leads/new" component={LeadForm} />
           <Route path="/leads/:id" component={LeadDetail} />
+          <Route path="/inbox" component={WhatsAppInbox} />
           <Route path="/templates" component={Templates} />
           <Route path="/import-export" component={ImportExport} />
+          <Route path="/settings/whatsapp" component={WhatsAppSettings} />
           <Route path="/team" component={Team} />
           <Route path="/login" component={Login} />
         </Router>

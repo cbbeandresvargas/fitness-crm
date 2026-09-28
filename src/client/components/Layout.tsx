@@ -88,6 +88,24 @@ export function Layout(props: { children: JSX.Element; title?: string }) {
           </A>
 
           <A
+            href="/inbox"
+            onClick={closeMobileMenu}
+            class={`flex items-center gap-3 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all ${
+              isCurrent('/inbox')
+                ? 'bg-emerald-600 text-white shadow-lg'
+                : 'text-muted hover:text-body hover:bg-elevate/60'
+            }`}
+          >
+            <span class="text-base">💬</span>
+            <div class="flex items-center justify-between flex-1">
+              <span>Chat WhatsApp</span>
+              <span class="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                v25.0
+              </span>
+            </div>
+          </A>
+
+          <A
             href="/templates"
             onClick={closeMobileMenu}
             class={`flex items-center gap-3 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all ${
@@ -96,7 +114,7 @@ export function Layout(props: { children: JSX.Element; title?: string }) {
                 : 'text-muted hover:text-body hover:bg-elevate/60'
             }`}
           >
-            <span class="text-base">💬</span>
+            <span class="text-base">📑</span>
             <span>Plantillas WhatsApp</span>
           </A>
 
@@ -117,6 +135,20 @@ export function Layout(props: { children: JSX.Element; title?: string }) {
             <div class="pt-3 pb-1">
               <div class="border-t border-edge/80 my-1"></div>
             </div>
+            
+            <A
+              href="/settings/whatsapp"
+              onClick={closeMobileMenu}
+              class={`flex items-center gap-3 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all ${
+                isCurrent('/settings/whatsapp')
+                  ? 'bg-accent text-white shadow-accent-glow'
+                  : 'text-muted hover:text-body hover:bg-elevate/60'
+              }`}
+            >
+              <span class="text-base">⚙️</span>
+              <span>Ajustes WhatsApp & IA</span>
+            </A>
+
             <A
               href="/team"
               onClick={closeMobileMenu}

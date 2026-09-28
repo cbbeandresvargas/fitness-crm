@@ -7,6 +7,10 @@ import {
   MessageTemplate,
   AuditLog,
   WhatsAppMessage,
+  WhatsAppSettings,
+  WebhookInfo,
+  KnowledgeBaseEntry,
+  ConversationSummary,
 } from './types';
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
@@ -371,5 +375,100 @@ export const api = {
 
   async triggerR2Backup(): Promise<{ success: boolean; key: string; count: number }> {
     return fetchJson('/api/export/r2-backup', { method: 'POST' });
+  },
+
+  // --- WHATSAPP CLOUD API & KNOWLEDGE BASE ---
+  async getWhatsAppConfig(): Promise<{ settings: WhatsAppSettings; webhook: WebhookInfo }> {
+    return fetchJson('/api/whatsapp/config');
+  },
+
+  async saveWhatsAppConfig(data: {
+    waba_id?: string;
+    phone_number_id?: string;
+    access_token?: string;
+    verify_token?: string;
+    app_secret?: string;
+    ai_enabled?: boolean;
+    ai_model?: string;
+    ai_tone?: string;
+    ai_instructions?: string;
+  }): Promise<{ success: boolean; status: string; verified_name?: string; display_phone_number?: string }> {
+    return fetchJson('/api/whatsapp/config', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async testWhatsAppConnection(data: {
+    phone_number_id?: string;
+    access_token?: string;
+  }): Promise<{ success: boolean; details?: any; error?: string }> {
+    return fetchJson('/api/whatsapp/test-connection', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async getWhatsAppInbox(): Promise<{ conversations: ConversationSummary[] }> {
+    return fetchJson('/api/whatsapp/inbox');
+  },
+
+  async getWhatsAppChat(leadId: string, since?: string): Promise<{
+    lead: {
+      id: string;
+      full_name: string;
+      phone: string;
+      status: string;
+      segment: string;
+      ai_enabled: boolean;
+      is_handoff: boolean;
+      handoff_reason?: string;
+    };
+    messages: WhatsAppMessage[];
+  }> {
+    const url = `/api/whatsapp/leads/${leadId}/chat${since ? '?since=' + encodeURIComponent(since) : ''}`;
+    return fetchJson(url);
+  },
+
+  async sendWhatsAppDirect(
+    leadId: string,
+    text: string,
+    imageUrl?: string
+  ): Promise<{ success: boolean; messageId: string; waMessageId?: string; metaSendError?: string }> {
+    return fetchJson(`/api/whatsapp/leads/${leadId}/send`, {
+      method: 'POST',
+      body: JSON.stringify({ text, image_url: imageUrl }),
+    });
+  },
+
+  async toggleLeadAi(
+    leadId: string,
+    options: { enabled?: boolean; resumeHandoff?: boolean }
+  ): Promise<{ success: boolean; ai_enabled: boolean; is_handoff: boolean }> {
+    return fetchJson(`/api/whatsapp/leads/${leadId}/toggle-ai`, {
+      method: 'POST',
+      body: JSON.stringify(options),
+    });
+  },
+
+  async getKnowledgeBase(): Promise<{ entries: KnowledgeBaseEntry[] }> {
+    return fetchJson('/api/knowledge-base');
+  },
+
+  async saveKnowledgeBaseEntry(entry: {
+    id?: string;
+    category: string;
+    title: string;
+    content: string;
+    is_active?: number;
+  }): Promise<{ success: boolean; id: string }> {
+    return fetchJson('/api/knowledge-base', {
+      method: 'POST',
+      body: JSON.stringify(entry),
+    });
+  },
+
+  async deleteKnowledgeBaseEntry(id: string): Promise<{ success: boolean; deletedId: string }> {
+    return fetchJson(`/api/knowledge-base/${id}`, { method: 'DELETE' });
   },
 };

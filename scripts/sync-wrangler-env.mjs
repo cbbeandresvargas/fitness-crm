@@ -72,6 +72,41 @@ const config = {
     envFile.ADMIN_SECRET ||
     devVarsFile.ADMIN_SECRET ||
     '',
+  META_GRAPH_API_VERSION:
+    process.env.META_GRAPH_API_VERSION ||
+    envFile.META_GRAPH_API_VERSION ||
+    devVarsFile.META_GRAPH_API_VERSION ||
+    'v25.0',
+  META_GRAPH_BASE_URL:
+    process.env.META_GRAPH_BASE_URL ||
+    envFile.META_GRAPH_BASE_URL ||
+    devVarsFile.META_GRAPH_BASE_URL ||
+    'https://graph.facebook.com',
+  META_WA_PHONE_NUMBER_ID:
+    process.env.META_WA_PHONE_NUMBER_ID ||
+    envFile.META_WA_PHONE_NUMBER_ID ||
+    devVarsFile.META_WA_PHONE_NUMBER_ID ||
+    '',
+  META_WA_ACCESS_TOKEN:
+    process.env.META_WA_ACCESS_TOKEN ||
+    envFile.META_WA_ACCESS_TOKEN ||
+    devVarsFile.META_WA_ACCESS_TOKEN ||
+    '',
+  META_WA_WABA_ID:
+    process.env.META_WA_WABA_ID ||
+    envFile.META_WA_WABA_ID ||
+    devVarsFile.META_WA_WABA_ID ||
+    '',
+  META_WA_VERIFY_TOKEN:
+    process.env.META_WA_VERIFY_TOKEN ||
+    envFile.META_WA_VERIFY_TOKEN ||
+    devVarsFile.META_WA_VERIFY_TOKEN ||
+    'ironpeak_secure_verify_token_2026',
+  META_APP_SECRET:
+    process.env.META_APP_SECRET ||
+    envFile.META_APP_SECRET ||
+    devVarsFile.META_APP_SECRET ||
+    '',
 };
 
 // 2. Leer wrangler.template.jsonc
@@ -100,6 +135,13 @@ const devVarsContent = [
   `CLOUDFLARE_ACCOUNT_ID=${config.CLOUDFLARE_ACCOUNT_ID}`,
   config.CLOUDFLARE_API_TOKEN ? `CLOUDFLARE_API_TOKEN=${config.CLOUDFLARE_API_TOKEN}` : '',
   config.ADMIN_SECRET ? `ADMIN_SECRET=${config.ADMIN_SECRET}` : '',
+  `META_GRAPH_API_VERSION=${config.META_GRAPH_API_VERSION}`,
+  `META_GRAPH_BASE_URL=${config.META_GRAPH_BASE_URL}`,
+  config.META_WA_PHONE_NUMBER_ID ? `META_WA_PHONE_NUMBER_ID=${config.META_WA_PHONE_NUMBER_ID}` : '',
+  config.META_WA_ACCESS_TOKEN ? `META_WA_ACCESS_TOKEN=${config.META_WA_ACCESS_TOKEN}` : '',
+  config.META_WA_WABA_ID ? `META_WA_WABA_ID=${config.META_WA_WABA_ID}` : '',
+  `META_WA_VERIFY_TOKEN=${config.META_WA_VERIFY_TOKEN}`,
+  config.META_APP_SECRET ? `META_APP_SECRET=${config.META_APP_SECRET}` : '',
 ]
   .filter(Boolean)
   .join('\n');

@@ -196,23 +196,48 @@ export default function LeadDetail() {
         mediaUrl = uploadRes.media_url;
       }
 
-      const res = await api.sendChatMessage(currentLead.id, {
-        content: text || (imageFile ? 'Foto enviada' : ''),
-        message_type: messageType,
-        media_url: mediaUrl,
-        sender: 'agent',
-      });
+      try {
+        await api.sendWhatsAppDirect(currentLead.id, text, mediaUrl);
+      } catch {
+        await api.sendChatMessage(currentLead.id, {
+          content: text || (imageFile ? 'Foto enviada' : ''),
+          message_type: messageType,
+          media_url: mediaUrl,
+          sender: 'agent',
+        });
+      }
 
-      setMessages((prev) => [...prev, res.message]);
+      const chatRes = await api.getWhatsAppChat(currentLead.id);
+      setMessages(chatRes.messages || []);
       setChatInput('');
       setSelectedImage(null);
       setImagePreview(null);
-      showToast('Mensaje registrado en WhatsApp', 'success');
+      showToast('Mensaje enviado por WhatsApp Cloud API v25.0', 'success');
       loadLead();
     } catch (err: any) {
       showToast(err.message || 'Error al enviar mensaje', 'error');
     } finally {
       setSendingMsg(false);
+    }
+  };
+
+  const handleToggleLeadAi = async (resumeHandoff = false) => {
+    const currentLead = lead();
+    if (!currentLead) return;
+    try {
+      const res = await api.toggleLeadAi(currentLead.id, {
+        enabled: resumeHandoff ? true : !(currentLead.ai_enabled === 1),
+        resumeHandoff,
+      });
+      setLead({
+        ...currentLead,
+        ai_enabled: res.ai_enabled ? 1 : 0,
+        handoff_at: res.is_handoff ? new Date().toISOString() : null,
+      });
+      showToast(res.ai_enabled ? 'IA de ventas activada para este chat' : 'IA pausada, control manual tomado', 'success');
+      loadLead();
+    } catch (err: any) {
+      showToast(err.message || 'Error alternando IA', 'error');
     }
   };
 
@@ -807,11 +832,16 @@ export default function LeadDetail() {
                   {/* Chat Header */}
                   <div class="p-4 bg-app/80 border-b border-edge flex items-center justify-between">
                     <div class="flex items-center gap-3">
-                      <div class="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-bold flex items-center justify-center">
+                      <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-bold flex items-center justify-center">
                         💬
                       </div>
                       <div>
-                        <h4 class="font-bold text-body text-sm">{lead()?.full_name}</h4>
+                        <h4 class="font-bold text-body text-sm flex items-center gap-2">
+                          <span>{lead()?.full_name}</span>
+                          <span class="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                            Meta v25.0
+                          </span>
+                        </h4>
                         <p class="text-[11px] text-emerald-400 flex items-center gap-1 font-semibold">
                           <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
                           <span>WhatsApp Conectado ({lead()?.phone})</span>
@@ -819,14 +849,43 @@ export default function LeadDetail() {
                       </div>
                     </div>
 
-                    <a
-                      href={`https://wa.me/${lead()?.phone.replace(/^\+/, '')}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition"
-                    >
-                      Abrir en WhatsApp
-                    </a>
+                    <div class="flex items-center gap-2">
+                      {/* AI Status / Toggle */}
+                      <Show
+                        when={lead()?.handoff_at}
+                        fallback={
+                          <button
+                            type="button"
+                            onClick={() => handleToggleLeadAi(false)}
+                            class={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer ${
+                              lead()?.ai_enabled === 1
+                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
+                                : 'bg-elevate text-muted border-edge hover:text-body'
+                            }`}
+                            title="Alternar atención automática con IA"
+                          >
+                            <span>🤖</span>
+                            <span>{lead()?.ai_enabled === 1 ? 'IA Ventas Activa' : 'IA Pausada'}</span>
+                          </button>
+                        }
+                      >
+                        <button
+                          type="button"
+                          onClick={() => handleToggleLeadAi(true)}
+                          class="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-black text-xs font-black rounded-xl transition cursor-pointer"
+                        >
+                          ⚠️ Reactivar IA (Fin Handoff)
+                        </button>
+                      </Show>
+
+                      <A
+                        href={`/inbox?leadId=${lead()?.id}`}
+                        class="px-3 py-1.5 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded-xl transition flex items-center gap-1"
+                      >
+                        <span>Abrir en Live Inbox</span>
+                        <span>↗</span>
+                      </A>
+                    </div>
                   </div>
 
                   {/* Messages Feed */}
@@ -866,6 +925,17 @@ export default function LeadDetail() {
                                     />
                                   </div>
                                 </Show>
+
+                                {/* Sender Badge */}
+                                <div class="flex items-center justify-between gap-2 text-[10px] opacity-80 pb-0.5">
+                                  <span class="font-bold">
+                                    {isMe
+                                      ? msg.ai_generated === 1
+                                        ? '🤖 IA Ventas (Workers AI)'
+                                        : msg.user_name || 'Asesor Comercial'
+                                      : lead()?.full_name || 'Prospecto'}
+                                  </span>
+                                </div>
 
                                 <p class="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
 
