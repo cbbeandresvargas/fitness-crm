@@ -22,7 +22,10 @@
     "lucide-solid": "^1.47.0",
     "papaparse": "^5.5.2",
     "solid-js": "^1.9.15",
-    "xlsx": "^0.18.5"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+  },
+  "overrides": {
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260921.1",

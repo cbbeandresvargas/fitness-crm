@@ -4,7 +4,7 @@ import { requireAuth } from '../lib/auth';
 
 export const templatesRoutes = new Hono<{ Bindings: Env; Variables: { user: SessionData } }>();
 
-templatesRoutes.use('*', requireAuth);
+templatesRoutes.use('/api/*', requireAuth);
 
 templatesRoutes.get('/api/templates', async (c) => {
   const templatesRes = await c.env.DB.prepare('SELECT * FROM message_templates ORDER BY created_at DESC')

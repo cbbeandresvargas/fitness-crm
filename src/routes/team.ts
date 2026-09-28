@@ -4,8 +4,8 @@ import { requireAuth, requireAdmin, hashPassword } from '../lib/auth';
 
 export const teamRoutes = new Hono<{ Bindings: Env; Variables: { user: SessionData } }>();
 
-teamRoutes.use('*', requireAuth);
-teamRoutes.use('*', requireAdmin);
+teamRoutes.use('/api/*', requireAuth);
+teamRoutes.use('/api/*', requireAdmin);
 
 /**
  * Vista de equipo, gestión RBAC y bitácora de auditoría

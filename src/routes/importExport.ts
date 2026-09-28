@@ -14,7 +14,7 @@ import {
 
 export const importExportRoutes = new Hono<{ Bindings: Env; Variables: { user: SessionData } }>();
 
-importExportRoutes.use('*', requireAuth);
+importExportRoutes.use('/api/*', requireAuth);
 
 /**
  * Carga de CSV de prueba precargado

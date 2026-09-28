@@ -88,8 +88,24 @@ export async function requireAuth(
   c: Context<{ Bindings: Env; Variables: { user?: SessionData } }>,
   next: Next
 ) {
+  const path = c.req.path;
+
+  // Rutas públicas, assets estáticos o inicio de sesión
+  if (
+    path === '/login' ||
+    path.startsWith('/auth') ||
+    path.startsWith('/api/auth') ||
+    path.startsWith('/assets') ||
+    path.includes('.')
+  ) {
+    return next();
+  }
+
   const user = c.get('user');
   if (!user) {
+    if (path.startsWith('/api/')) {
+      return c.json({ error: 'No autorizado. Inicia sesión.' }, 401);
+    }
     return c.redirect('/login');
   }
   await next();
@@ -101,7 +117,10 @@ export async function requireAdmin(
 ) {
   const user = c.get('user');
   if (!user || user.role !== 'admin') {
-    return c.text('Acceso Denegado: Esta acción requiere rol de Administrador', 403);
+    if (c.req.path.startsWith('/api/')) {
+      return c.json({ error: 'Acceso Denegado: Esta acción requiere rol de Administrador' }, 403);
+    }
+    return c.redirect('/login');
   }
   await next();
 }
