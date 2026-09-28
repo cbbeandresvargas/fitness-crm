@@ -59,19 +59,162 @@ Plataforma CRM de alto rendimiento desarrollada para el sector fitness y gestió
 
 ---
 
-## 💻 Inicio Rápido en Local
+## 💻 Guía de Ejecución Local para el Equipo
+
+Esta sección explica paso a paso cómo clonar, configurar y ejecutar el proyecto en cualquier máquina local con soporte para cuentas independientes de Cloudflare.
+
+---
+
+### 1. Requisitos Previos
+
+- **Node.js**: v18.0.0 o superior (recomendado v20+).
+- **npm**: v9+ (incluido con Node.js).
+- **Cuenta de Cloudflare**: Gratuita o de pago.
+- **Wrangler CLI**: Autenticado en tu máquina ejecutando:
+  ```bash
+  npx wrangler login
+  ```
+  *(Se abrirá el navegador para autorizar el acceso de Wrangler a tu cuenta de Cloudflare)*.
+
+---
+
+### 2. Instalación y Puesta en Marcha (Paso a Paso)
+
+#### Paso 1: Instalar dependencias
+```bash
+npm install
+```
+> **Nota:** Al ejecutar `npm install`, el hook `postinstall` creará automáticamente tu archivo `.env` a partir de `.env.example` si aún no existe.
+
+#### Paso 2: Crear o Identificar tus Recursos en Cloudflare
+
+Si es la primera vez que configuras tu cuenta de Cloudflare para este proyecto, crea tus recursos con los siguientes comandos:
 
 ```bash
-# 1. Instalar dependencias
-npm install
+# 1. Obtener tu Account ID
+npx wrangler whoami
 
-# 2. Iniciar servidor local con Cloudflare Wrangler
+# 2. Crear la base de datos D1
+npx wrangler d1 create fitness-crm-db
+
+# 3. Crear el Namespace KV
+npx wrangler kv namespace create KV
+
+# 4. Crear el Bucket R2
+npx wrangler r2 bucket create fitness-crm-storage
+```
+
+> 💡 **Si ya tienes los recursos creados**, puedes consultar sus IDs en cualquier momento:
+> - Ver base de datos D1: `npx wrangler d1 list`
+> - Ver namespaces KV: `npx wrangler kv namespace list`
+> - Ver buckets R2: `npx wrangler r2 bucket list`
+
+#### Paso 3: Configurar tus Variables de Entorno (`.env`)
+
+Abre el archivo `.env` en la raíz del proyecto y coloca los valores de tu propia cuenta:
+
+```env
+CLOUDFLARE_ACCOUNT_ID=tu_account_id_aqui
+D1_DATABASE_ID=tu_d1_database_uuid_aqui
+D1_DATABASE_NAME=fitness-crm-db
+KV_NAMESPACE_ID=tu_kv_id_aqui
+R2_BUCKET_NAME=fitness-crm-storage
+
+# Opcional (para llamadas directas a Workers AI REST API)
+CLOUDFLARE_API_TOKEN=
+ADMIN_SECRET=
+```
+
+> 🔒 **Seguridad y Colaboración:** El archivo `.env` está en `.gitignore`. Cada desarrollador mantiene sus propios IDs en su máquina sin interferir ni pisar las configuraciones del resto del equipo.
+
+#### Paso 4: Inicializar la Base de Datos Local
+
+Aplica el esquema SQL y los datos de prueba iniciales en tu base de datos SQLite local:
+
+```bash
+npm run d1:init
+```
+
+#### Paso 5: Iniciar el Servidor de Desarrollo
+
+```bash
 npm run dev
 ```
 
-El servidor iniciará en `http://127.0.0.1:8787`.
+El servidor local de Cloudflare Workers iniciará en:
+👉 **`http://127.0.0.1:8787`**
 
-### Credenciales de Demostración:
-- **Director (Admin)**: `admin@ironpeak.fit` / `admin123`
-- **Coach Ventas (Agente)**: `valeria@ironpeak.fit` / `agent123`
-*(También disponibles mediante botones de acceso rápido de 1-click en `/login`)*.
+---
+
+### 🔑 Credenciales de Acceso Local (Demostración)
+
+La base de datos local incluye usuarios de prueba precargados:
+
+| Rol | Correo Electrónico | Contraseña | Permisos |
+| :--- | :--- | :--- | :--- |
+| **Director General (Admin)** | `admin@ironpeak.fit` | `admin123` | Control total, reasignación masiva, importación/exportación, gestión de equipo y auditoría. |
+| **Head Coach (Admin)** | `carlos@ironpeak.fit` | `admin123` | Mismos accesos administrativos. |
+| **Coach Comercial (Agente)** | `valeria@ironpeak.fit` | `agent123` | Vista filtrada a sus prospectos asignados, registro de notas, WhatsApp y llamadas. |
+| **Asesora Fitness (Agente)** | `sofia@ironpeak.fit` | `agent123` | Gestión exclusiva de su cartera de prospectos. |
+
+> ⚡ En la pantalla de login (`http://127.0.0.1:8787/login`) encontrarás **botones de acceso rápido de 1-click** para iniciar sesión como Admin o Agente sin necesidad de escribir las credenciales manualmente.
+
+---
+
+### 🛠️ Scripts Disponibles en `package.json`
+
+| Comando | Descripción |
+| :--- | :--- |
+| `npm run dev` | Sincroniza variables de entorno e inicia el servidor local con Wrangler y recarga en vivo. |
+| `npm run build` | Sincroniza variables, compila la SPA cliente (SolidJS/Vite) y valida tipos de TypeScript (`tsc --noEmit`). |
+| `npm run deploy` | Compila el cliente y despliega la aplicación a tu cuenta de Cloudflare Workers. |
+| `npm run config:sync` | Regenera manualmente `wrangler.jsonc` y `.dev.vars` a partir de tu archivo `.env`. |
+| `npm run d1:init` | Aplica `schema.sql` y `seed.sql` en la base de datos local SQLite de D1. |
+
+---
+
+### 📂 Estructura Limpia del Proyecto
+
+```text
+fitness-crm/
+├── .dev.vars                  # Variables locales para wrangler dev (auto-generado)
+├── .env                       # Variables de tu cuenta local (ignorado en git)
+├── .env.example               # Plantilla para que nuevos miembros creen su .env
+├── .gitignore                 # Exclusiones de Git (.env, .dev.vars, node_modules, etc.)
+├── index.html                 # Punto de entrada HTML de la aplicación web
+├── package.json               # Dependencias y scripts del proyecto
+├── README.md                  # Documentación oficial del CRM
+├── tsconfig.json              # Configuración de TypeScript
+├── vite.config.ts             # Configuración de Vite para SolidJS y TailwindCSS
+├── wrangler.jsonc             # Configuración activa de Cloudflare (auto-generada)
+├── wrangler.template.jsonc    # Plantilla de configuración con marcadores de variables
+├── scripts/
+│   └── sync-wrangler-env.mjs  # Sincronizador automático .env -> wrangler.jsonc
+└── src/
+    ├── index.ts               # Servidor Hono y Worker principal en el Edge
+    ├── client/                # Frontend SPA con SolidJS y Tailwind CSS 4
+    │   ├── App.tsx            # Enrutamiento de vistas y layout principal
+    │   ├── api.ts             # Cliente HTTP tipado hacia los endpoints de Hono
+    │   ├── index.css          # Sistema de diseño, tokens de color fuego y temas
+    │   ├── index.tsx          # Renderizado inicial en el DOM
+    │   ├── types.ts           # Interfaces de datos del cliente
+    │   ├── components/        # Componentes UI reutilizables (Layout, modales)
+    │   ├── context/           # Contextos globales (AuthContext, ThemeContext)
+    │   └── pages/             # Vistas: Dashboard, Leads, LeadDetail, Team, etc.
+    ├── db/
+    │   ├── schema.sql         # Esquema D1 relacional (users, leads, activity, etc.)
+    │   └── seed.sql           # Datos iniciales de demostración para el CRM
+    ├── lib/
+    │   ├── ai.ts              # Integración con Cloudflare Workers AI
+    │   ├── auth.ts            # Autenticación con cookies y sesiones en KV
+    │   ├── fcImport.ts        # Adaptador del modelo de datos de leads
+    │   ├── rules.ts           # Reglas de negocio (segmentación y normalización)
+    │   └── types.ts           # Tipos de TypeScript del backend y entorno (Env)
+    └── routes/
+        ├── auth.ts            # Rutas de autenticación (/auth)
+        ├── importExport.ts    # Importación y exportación de prospectos (/import-export)
+        ├── leads.ts           # Pipeline y gestión comercial de prospectos (/leads)
+        ├── team.ts            # Gestión de asesores y auditoría (/team)
+        └── templates.ts       # Plantillas de mensajes para WhatsApp (/templates)
+```
+
