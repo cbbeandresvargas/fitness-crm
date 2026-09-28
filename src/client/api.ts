@@ -31,6 +31,59 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+async function postFormData<T>(url: string, formData: FormData): Promise<T> {
+  const res = await fetch(url, { method: 'POST', body: formData });
+  if (!res.ok) {
+    let err = 'Error en la solicitud';
+    try {
+      const d = (await res.json()) as any;
+      if (d && d.error) err = d.error;
+    } catch {}
+    throw new Error(err);
+  }
+  return res.json() as Promise<T>;
+}
+
+// FC Excel import (.xlsx, hoja "Clientes") — la columna "Estado" del Excel es Estado de Membresía,
+// independiente del Estado del Lead.
+export interface FcRowData {
+  nro?: string | number;
+  firstName: string;
+  lastName: string;
+  whatsapp?: string;
+  email?: string;
+  emailVerified?: boolean;
+  ci?: string;
+  membershipCount?: number;
+  membershipStatus?: string;
+}
+
+export interface FcImportRow {
+  rowNumber: number;
+  type: 'new' | 'existing' | 'invalid';
+  reason?: string;
+  data: FcRowData;
+  leadStatus: string;
+  matchedLead?: { id: string; full_name: string; phone: string };
+  matchedBy?: 'whatsapp' | 'email' | 'ci';
+  syncFields?: string[];
+}
+
+export interface FcImportPreviewResult {
+  success: boolean;
+  sheetName: string;
+  headers: string[];
+  summary: { totalRows: number; newCount: number; existingCount: number; invalidCount: number };
+  rows: FcImportRow[];
+}
+
+export interface FcImportCommitResult {
+  success: boolean;
+  sheetName: string;
+  summary: { totalRows: number; created: number; updated: number; unchanged: number; invalid: number };
+  invalidRows: { rowNumber: number; name: string; reason: string }[];
+}
+
 export const api = {
   // Auth
   async getMe(): Promise<{ user: SessionData | null }> {
@@ -302,6 +355,18 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     });
+  },
+
+  async fcImportPreview(file: File): Promise<FcImportPreviewResult> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return postFormData<FcImportPreviewResult>('/api/import/fc/preview', formData);
+  },
+
+  async fcImportCommit(file: File): Promise<FcImportCommitResult> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return postFormData<FcImportCommitResult>('/api/import/fc/commit', formData);
   },
 
   async triggerR2Backup(): Promise<{ success: boolean; key: string; count: number }> {

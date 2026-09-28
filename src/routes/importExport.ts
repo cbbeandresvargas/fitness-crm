@@ -1,8 +1,16 @@
-import { Hono } from 'hono';
+import { Hono, Context } from 'hono';
 import Papa from 'papaparse';
 import { Env, User, Lead, SessionData } from '../lib/types';
 import { requireAuth } from '../lib/auth';
 import { normalizePhone, checkDuplicatePhone, calculateDynamicSegment, autoAssignAgent } from '../lib/rules';
+import {
+  parseFcWorkbook,
+  classifyFcRows,
+  buildImportedMetadata,
+  FcImportError,
+  FcExistingLeadRef,
+  FcRowClassification,
+} from '../lib/fcImport';
 
 export const importExportRoutes = new Hono<{ Bindings: Env; Variables: { user: SessionData } }>();
 
@@ -227,6 +235,233 @@ importExportRoutes.post('/api/import/process', async (c) => {
     skippedDuplicates,
     errorsCount,
     totalRows: parsed.data.length,
+  });
+});
+
+/**
+ * FC: Parsear el Excel subido y obtener los leads existentes clasificados.
+ * Compartido por preview y commit para que ambos deriven el mismo resultado del mismo archivo.
+ */
+async function parseAndClassifyFc(
+  c: Context<{ Bindings: Env; Variables: { user: SessionData } }>
+): Promise<
+  { ok: true; parsed: ReturnType<typeof parseFcWorkbook>; classifications: FcRowClassification[] }
+  | { ok: false; error: string; status: number }
+> {
+  const body = await c.req.parseBody();
+  const file = body['file'];
+  if (!file || typeof file !== 'object' || !('arrayBuffer' in file)) {
+    return { ok: false, error: 'No se recibió ningún archivo Excel (.xlsx).', status: 400 };
+  }
+
+  let parsed: ReturnType<typeof parseFcWorkbook>;
+  try {
+    parsed = parseFcWorkbook(new Uint8Array(await (file as File).arrayBuffer()));
+  } catch (err: any) {
+    if (err instanceof FcImportError) {
+      return { ok: false, error: err.message, status: 400 };
+    }
+    console.error('FC import parse error:', err);
+    return { ok: false, error: err.message || 'Error al procesar el archivo Excel.', status: 500 };
+  }
+
+  const leadsRes = await c.env.DB.prepare(
+    'SELECT id, full_name, phone, email, status, metadata FROM leads'
+  ).all<Lead>();
+
+  const existingLeads: FcExistingLeadRef[] = (leadsRes.results || []).map((l) => ({
+    id: l.id,
+    full_name: l.full_name,
+    phone: l.phone,
+    email: l.email,
+    status: l.status,
+    metadata: typeof l.metadata === 'string' ? JSON.parse(l.metadata || '{}') : l.metadata || {},
+  }));
+
+  return { ok: true, parsed, classifications: classifyFcRows(parsed, existingLeads) };
+}
+
+/**
+ * FC: Previsualizar importación de Excel (.xlsx, hoja "Clientes").
+ * No escribe nada en la base de datos: sólo clasifica filas (nuevas / existentes / inválidas).
+ *
+ * Distinción clave: la columna "Estado" del Excel es el Estado de Membresía (metadata.estado_membresia)
+ * y NUNCA el Estado del Lead (columna status). Los leads nuevos importados inician en 'nuevo'.
+ */
+importExportRoutes.post('/api/import/fc/preview', async (c) => {
+  const user = c.get('user');
+  if (user.role !== 'admin') {
+    return c.json({ error: 'Acceso Denegado: La importación masiva está reservada para administradores.' }, 403);
+  }
+
+  const result = await parseAndClassifyFc(c);
+  if (!result.ok) {
+    return c.json({ error: result.error }, result.status as any);
+  }
+
+  const { parsed, classifications } = result;
+
+  return c.json({
+    success: true,
+    sheetName: parsed.sheetName,
+    headers: parsed.headers,
+    summary: {
+      totalRows: parsed.rows.length,
+      newCount: classifications.filter((r) => r.type === 'new').length,
+      existingCount: classifications.filter((r) => r.type === 'existing').length,
+      invalidCount: classifications.filter((r) => r.type === 'invalid').length,
+    },
+    rows: classifications,
+  });
+});
+
+/**
+ * FC: Confirmar importación del Excel (hoja "Clientes").
+ * - Filas nuevas: se crean con Estado del Lead = 'nuevo' preservando todos los valores del Excel.
+ * - Filas existentes (match por WhatsApp/Email/CI): NO se sobrescribe información no vacía;
+ *   sólo se completan campos vacíos del CRM con los valores del Excel.
+ * - Filas inválidas: se omiten y se reportan con su razón.
+ */
+importExportRoutes.post('/api/import/fc/commit', async (c) => {
+  const user = c.get('user');
+  if (user.role !== 'admin') {
+    return c.json({ error: 'Acceso Denegado: La importación masiva está reservada para administradores.' }, 403);
+  }
+
+  const result = await parseAndClassifyFc(c);
+  if (!result.ok) {
+    return c.json({ error: result.error }, result.status as any);
+  }
+
+  const { parsed, classifications } = result;
+
+  let created = 0;
+  let updated = 0;
+  let unchanged = 0;
+  const invalidRows: { rowNumber: number; name: string; reason: string }[] = [];
+
+  for (const row of classifications) {
+    const now = new Date().toISOString();
+    const fullName = `${row.data.firstName} ${row.data.lastName}`.trim();
+
+    if (row.type === 'invalid') {
+      invalidRows.push({ rowNumber: row.rowNumber, name: fullName, reason: row.reason || 'Fila inválida' });
+      continue;
+    }
+
+    if (row.type === 'new') {
+      const phone = normalizePhone(row.data.whatsapp || '');
+      const email = row.data.email || null;
+      const metadata = buildImportedMetadata(row.data);
+      const dynamicSeg = calculateDynamicSegment({ status: 'nuevo', metadata });
+      const assignedTo = await autoAssignAgent(c.env.DB);
+      const leadId = `lead_${crypto.randomUUID().slice(0, 8)}`;
+
+      await c.env.DB.prepare(`
+        INSERT INTO leads (
+          id, full_name, phone, email, status, segment, assigned_to, tags, metadata, created_by, updated_by, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, 'nuevo', ?, ?, '[]', ?, ?, ?, ?, ?)
+      `)
+        .bind(
+          leadId,
+          fullName,
+          phone,
+          email,
+          dynamicSeg.segment,
+          assignedTo,
+          JSON.stringify(metadata),
+          user.userId,
+          user.userId,
+          now,
+          now
+        )
+        .run();
+
+      const detailParts = [`Importado desde Excel FC (hoja "Clientes", fila ${row.rowNumber}).`];
+      if (row.data.membershipStatus) detailParts.push(`Estado de Membresía: "${row.data.membershipStatus}".`);
+      if (row.data.membershipCount !== undefined) detailParts.push(`Cantidad de Membresías: ${row.data.membershipCount}.`);
+
+      await c.env.DB.prepare(`
+        INSERT INTO activity_logs (id, lead_id, user_id, action_type, details, created_at)
+        VALUES (?, ?, ?, 'creation', ?, ?)
+      `)
+        .bind(
+          `act_${crypto.randomUUID().slice(0, 8)}`,
+          leadId,
+          user.userId,
+          detailParts.join(' '),
+          now
+        )
+        .run();
+
+      created++;
+      continue;
+    }
+
+    // Fila existente: sincronizar SOLO campos vacíos del CRM (nunca sobrescribir datos válidos)
+    const lead = row.matchedLead!;
+    const metadata = { ...lead.metadata };
+    const fills: string[] = [];
+
+    if (!lead.email && row.data.email) fills.push('email');
+    if (metadata.ci === undefined && row.data.ci) { metadata.ci = row.data.ci; fills.push('ci'); }
+    if (metadata.nro === undefined && row.data.nro !== undefined) { metadata.nro = row.data.nro; fills.push('nro'); }
+    if (metadata.first_name === undefined) { metadata.first_name = row.data.firstName; fills.push('nombre'); }
+    if (metadata.last_name === undefined) { metadata.last_name = row.data.lastName; fills.push('apellido'); }
+    if (metadata.email_verificado === undefined && row.data.emailVerified !== undefined) { metadata.email_verificado = row.data.emailVerified; fills.push('email verificado'); }
+    if (metadata.cantidad_membresias === undefined && row.data.membershipCount !== undefined) { metadata.cantidad_membresias = row.data.membershipCount; fills.push('cantidad de membresías'); }
+    if (metadata.estado_membresia === undefined && row.data.membershipStatus) { metadata.estado_membresia = row.data.membershipStatus; fills.push('estado de membresía'); }
+
+    if (fills.length === 0) {
+      unchanged++;
+      continue;
+    }
+
+    const sets: string[] = [];
+    const params: any[] = [];
+    if (fills.includes('email')) {
+      sets.push('email = ?');
+      params.push(row.data.email);
+    }
+    sets.push('metadata = ?');
+    params.push(JSON.stringify(metadata));
+    sets.push('updated_by = ?');
+    params.push(user.userId);
+    sets.push('updated_at = ?');
+    params.push(now);
+    params.push(lead.id);
+
+    await c.env.DB.prepare(`UPDATE leads SET ${sets.join(', ')} WHERE id = ?`)
+      .bind(...params)
+      .run();
+
+    await c.env.DB.prepare(`
+      INSERT INTO activity_logs (id, lead_id, user_id, action_type, details, created_at)
+      VALUES (?, ?, ?, 'update', ?, ?)
+    `)
+      .bind(
+        `act_${crypto.randomUUID().slice(0, 8)}`,
+        lead.id,
+        user.userId,
+        `Sincronizado desde Excel FC (fila ${row.rowNumber}, coincidencia por ${row.matchedBy}): se completaron campos vacíos (${fills.join(', ')}).`,
+        now
+      )
+      .run();
+
+    updated++;
+  }
+
+  return c.json({
+    success: true,
+    sheetName: parsed.sheetName,
+    summary: {
+      totalRows: parsed.rows.length,
+      created,
+      updated,
+      unchanged,
+      invalid: invalidRows.length,
+    },
+    invalidRows,
   });
 });
 

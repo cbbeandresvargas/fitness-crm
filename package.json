@@ -16,7 +16,8 @@
     "hono": "^4.7.2",
     "lucide-solid": "^1.47.0",
     "papaparse": "^5.5.2",
-    "solid-js": "^1.9.15"
+    "solid-js": "^1.9.15",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260921.1",
