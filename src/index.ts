@@ -102,7 +102,7 @@ app.use('*', async (c, next) => {
         // Seed only 1 admin user (clean setup)
         c.env.DB.prepare(`
           INSERT OR IGNORE INTO users (id, name, email, password_hash, role, avatar_url, is_active) VALUES
-          ('usr_admin_1', 'Administrador', 'admin@ironpeak.fit', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'admin', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80', 1);
+          ('usr_admin_1', 'Administrador', 'admin@fitnessclub.fit', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'admin', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80', 1);
         `),
         c.env.DB.prepare(`
           INSERT OR IGNORE INTO audit_logs (id, user_id, entity_type, entity_id, action, details) VALUES
@@ -110,6 +110,17 @@ app.use('*', async (c, next) => {
         `),
       ]);
       console.log('✅ Base de datos inicializada limpia con 1 usuario administrador.');
+    }
+
+    // Migration updates for existing database branding
+    try {
+      await c.env.DB.batch([
+        c.env.DB.prepare("UPDATE users SET email = 'admin@fitnessclub.fit' WHERE role = 'admin' AND email != 'admin@fitnessclub.fit';"),
+        c.env.DB.prepare("UPDATE whatsapp_settings SET verified_name = 'Fitness Club Center' WHERE id = 'ws_default';"),
+        c.env.DB.prepare("UPDATE whatsapp_settings SET verify_token = 'fitnessclub_secure_verify_token_2026' WHERE id = 'ws_default';"),
+      ]);
+    } catch {
+      // Ignored if tables do not exist yet
     }
     
     // Ensure whatsapp tables and knowledge base exist in all runs
@@ -169,7 +180,7 @@ app.use('*', async (c, next) => {
           verify_token, status, ai_enabled, ai_model, ai_tone, ai_instructions
         ) VALUES (
           'ws_default', '109283746591029', '551234567890123', '+52 55 1234 5678',
-          'IronPeak Fitness Center', 'ironpeak_secure_verify_token_2026', 'disconnected', 1,
+          'Fitness Club Center', 'fitnessclub_secure_verify_token_2026', 'disconnected', 1,
           '@cf/meta/llama-3.1-8b-instruct',
           'enérgico, motivador, empático y altamente enfocado en agendar valoraciones y cerrar ventas',
           'Siempre busca descubrir el objetivo deportivo principal del prospecto (pérdida de grasa, hipertrofia o salud). Ofrece una clase de valoración diagnóstica sin costo en su sede más cercana y propón dos horarios alternativos para concretar la cita. Si el cliente pregunta por precios, presenta el Plan Élite o Pase Black destacando beneficios antes de dar la cifra.'
@@ -177,13 +188,13 @@ app.use('*', async (c, next) => {
       `),
       c.env.DB.prepare(`
         INSERT OR IGNORE INTO knowledge_base (id, category, title, content, is_active) VALUES
-        ('kb_1', 'plan_precio', 'Membresía General IronPeak (Acceso Total)', 'Precio mensual: $75 USD / mes. Incluye: Acceso ilimitado a zona de peso libre, máquinas de última generación, cardio y vestidores premium con sauna en cualquiera de nuestras sedes.', 1),
+        ('kb_1', 'plan_precio', 'Membresía General Fitness Club (Acceso Total)', 'Precio mensual: $75 USD / mes. Incluye: Acceso ilimitado a zona de peso libre, máquinas de última generación, cardio y vestidores premium con sauna en cualquiera de nuestras sedes.', 1),
         ('kb_2', 'plan_precio', 'Programa CrossFit Pro + Nutrición Deportiva', 'Precio mensual: $140 USD / mes. Incluye: Clases guiadas en grupos reducidos con Head Coaches certificados, programación WOD personalizada, pesajes quincenales y plan nutricional adaptado.', 1),
         ('kb_3', 'plan_precio', 'Pase Black Anual (Todo Incluido VIP)', 'Precio de contado o 12 MSI: $699 USD anual ($58 USD/mes equivalente, ahorro del 25%). Incluye: Acceso a todas las sedes nacionales, 5 pases de invitado por mes, toallas, casillero fijo y 2 sesiones mensuales con entrenador personal.', 1),
         ('kb_4', 'plan_precio', 'Plan Élite Personal Trainer 1-on-1', 'Paquete de 12 sesiones: $220 USD. Paquete de 20 sesiones: $340 USD. Cada sesión dura 60 minutos con un coach deportivo dedicado exclusivamente a tu técnica, progresión de cargas y objetivos.', 1),
         ('kb_5', 'horario_sede', 'Sedes y Horarios de Apertura', 'Polanco (CDMX): Lun-Vie 5:30am-11pm. Sáb-Dom 7am-6pm. Roma Norte: Lun-Vie 6am-10:30pm. Guadalajara: Lun-Sáb 6am-10pm. Monterrey: Lun-Dom 5:30am-10pm.', 1),
         ('kb_6', 'objecion_frecuente', 'Manejo de Objeción: "No tengo tiempo para entrenar"', 'Argumento de cierre: "Comprendo totalmente tu ritmo. Diseñamos entrenamientos HIIT Express de 45 minutos efectivos a las 6:00 AM o a las 8:00 PM. ¿Qué horario se adaptaría mejor a tu jornada?"', 1),
-        ('kb_7', 'objecion_frecuente', 'Manejo de Objeción: "Se me hace caro / fuera de presupuesto"', 'Argumento de cierre: "En IronPeak tienes seguimiento continuo de coaches para ver resultados desde el primer mes. Además hoy congelamos tu inscripción gratis. ¿Te parece si vienes a una valoración diagnóstica gratuita antes de decidir?"', 1);
+        ('kb_7', 'objecion_frecuente', 'Manejo de Objeción: "Se me hace caro / fuera de presupuesto"', 'Argumento de cierre: "En Fitness Club tienes seguimiento continuo de coaches para ver resultados desde el primer mes. Además hoy congelamos tu inscripción gratis. ¿Te parece si vienes a una valoración diagnóstica gratuita antes de decidir?"', 1);
       `),
     ]);
   } catch (err) {

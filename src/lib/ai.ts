@@ -102,7 +102,7 @@ export function buildLeadContextPrompt(options: {
     .map(([k, v]) => `- ${k}: ${v}`)
     .join('\n');
 
-  const systemPrompt = `Eres el asistente de ventas de élite con inteligencia artificial de "IronPeak Fitness", un centro de entrenamiento de alto rendimiento.
+  const systemPrompt = `Eres el asistente de ventas de élite con inteligencia artificial de "Fitness Club", un centro de entrenamiento de alto rendimiento.
 Tu función es generar mensajes de WhatsApp personalizados, altamente persuasivos y empáticos para prospectos deportivos.
 Reglas:
 1. Sé conciso y directo (máximo 4 párrafos cortos).
@@ -167,11 +167,11 @@ export async function generateAiWhatsAppMessage(
   const nombre = lead.full_name.split(' ')[0];
 
   if (lead.segment === 'A') {
-    return `¡Hola ${nombre}! 💪 Te escribe ${agentName} de IronPeak Fitness. Estuve revisando tu perfil enfocado en ${objetivo} y aparté una sesión de valoración personalizada con nuestro head coach en ${ciudad}. ¿Te queda bien pasar hoy por la tarde o prefieres agendar para mañana temprano? 🚀`;
+    return `¡Hola ${nombre}! 💪 Te escribe ${agentName} de Fitness Club. Estuve revisando tu perfil enfocado en ${objetivo} y aparté una sesión de valoración personalizada con nuestro head coach en ${ciudad}. ¿Te queda bien pasar hoy por la tarde o prefieres agendar para mañana temprano? 🚀`;
   } else if (lead.segment === 'C') {
-    return `Hola ${nombre}, ¿cómo estás? Te saluda ${agentName} de IronPeak. Sé que los horarios a veces se complican, pero no quería que te quedaras sin conocer nuestras opciones para ${objetivo}. Esta semana tenemos un pase de cortesía en ${ciudad}. ¿Aún estás interesado en retomar tu meta este mes? 🏋️`;
+    return `Hola ${nombre}, ¿cómo estás? Te saluda ${agentName} de Fitness Club. Sé que los horarios a veces se complican, pero no quería que te quedaras sin conocer nuestras opciones para ${objetivo}. Esta semana tenemos un pase de cortesía en ${ciudad}. ¿Aún estás interesado en retomar tu meta este mes? 🏋️`;
   } else {
-    return `¡Hola ${nombre}! Te saluda ${agentName} de IronPeak Fitness. Vi que tienes interés en ${producto}. Me encantaría mostrarte las instalaciones en ${ciudad} y armarte un plan a tu medida para ${objetivo}. ¿Qué horario te queda más cómodo para platicar un par de minutos?`;
+    return `¡Hola ${nombre}! Te saluda ${agentName} de Fitness Club. Vi que tienes interés en ${producto}. Me encantaría mostrarte las instalaciones en ${ciudad} y armarte un plan a tu medida para ${objetivo}. ¿Qué horario te queda más cómodo para platicar un par de minutos?`;
   }
 }
 
@@ -186,7 +186,7 @@ export async function generateAiLeadBriefing(
   const metaStr = JSON.stringify(lead.metadata || {});
   const notesStr = activities.slice(0, 6).map((a) => a.details).join(' | ');
 
-  const systemPrompt = `Eres un estratega comercial senior de IronPeak Fitness. Resume el perfil del prospecto en exactamente 2 oraciones concisas para el asesor de ventas: 1) Quién es y qué busca, 2) Siguiente paso sugerido y nivel de urgencia.`;
+  const systemPrompt = `Eres un estratega comercial senior de Fitness Club. Resume el perfil del prospecto en exactamente 2 oraciones concisas para el asesor de ventas: 1) Quién es y qué busca, 2) Siguiente paso sugerido y nivel de urgencia.`;
   const userPrompt = `Prospecto: ${lead.full_name}, Estado: ${lead.status}, Segmento: ${lead.segment}. Metadatos: ${metaStr}. Historial notas: ${notesStr || 'Sin historial'}.`;
 
   const aiOutput = await callCloudflareWorkersAi(

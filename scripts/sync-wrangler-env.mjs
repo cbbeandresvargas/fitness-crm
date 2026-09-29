@@ -101,7 +101,7 @@ const config = {
     process.env.META_WA_VERIFY_TOKEN ||
     envFile.META_WA_VERIFY_TOKEN ||
     devVarsFile.META_WA_VERIFY_TOKEN ||
-    'ironpeak_secure_verify_token_2026',
+    'fitnessclub_secure_verify_token_2026',
   META_APP_SECRET:
     process.env.META_APP_SECRET ||
     envFile.META_APP_SECRET ||

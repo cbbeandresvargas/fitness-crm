@@ -6,7 +6,7 @@ export type EncryptedValue = {
   tag: string;    // base64
 };
 
-const DEFAULT_SECRET_FALLBACK = 'ironpeak_fitness_crm_secret_key_32b_2026!'; // Exact 32 bytes
+const DEFAULT_SECRET_FALLBACK = 'fitnessclub_crm_secret_key_32b_!'; // Exact 32 bytes
 
 function getMasterKey(customKey?: string): Buffer {
   if (customKey && customKey.trim().length > 0) {

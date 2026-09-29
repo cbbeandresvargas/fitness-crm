@@ -131,7 +131,7 @@ export default function Templates() {
                   required
                   value={content()}
                   onInput={(e) => setContent(e.currentTarget.value)}
-                  placeholder="¡Hola {nombre}! Te saluda {agente} de IronPeak..."
+                  placeholder="¡Hola {nombre}! Te saluda {agente} de Fitness Club..."
                   class="w-full p-3.5 bg-app border border-edge rounded-2xl text-xs text-body focus:outline-none focus:border-accent"
                 ></textarea>
               </div>

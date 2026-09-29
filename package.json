@@ -9,6 +9,8 @@
     "postinstall": "npm run config:sync",
     "predev": "npm run config:sync",
     "dev": "wrangler dev",
+    "predev:remote": "npm run config:sync",
+    "dev:remote": "wrangler dev --remote",
     "build:client": "vite build",
     "prebuild": "npm run config:sync",
     "build": "vite build && tsc --noEmit",

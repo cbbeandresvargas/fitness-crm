@@ -198,7 +198,7 @@ export default function WhatsAppInbox() {
                 </span>
               </h1>
               <p class="text-xs text-muted">
-                Respuestas automáticas con IA y gestión de prospectos de IronPeak Fitness
+                Respuestas automáticas con IA y gestión de prospectos de Fitness Club
               </p>
             </div>
           </div>
@@ -457,7 +457,7 @@ export default function WhatsAppInbox() {
                                 <span class="font-bold">
                                   {isOutbound
                                     ? msg.ai_generated === 1
-                                      ? '🤖 IA Ventas (IronPeak)'
+                                      ? '🤖 IA Ventas (Fitness Club)'
                                       : msg.user_name || 'Asesor Comercial'
                                     : activeLead()?.full_name || 'Prospecto'}
                                 </span>

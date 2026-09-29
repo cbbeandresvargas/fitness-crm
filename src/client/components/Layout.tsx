@@ -40,7 +40,7 @@ export function Layout(props: { children: JSX.Element; title?: string }) {
             </div>
             <div>
               <span class="font-black text-lg tracking-tight text-body flex items-center gap-1">
-                IRON<span class="text-accent-text">PEAK</span>
+                FITNESS<span class="text-accent-text">CLUB</span>
               </span>
               <span class="text-[11px] text-muted font-semibold block">
                 CRM & Pipeline

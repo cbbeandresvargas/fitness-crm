@@ -54,7 +54,7 @@ export default function Login() {
             ⚡
           </div>
           <h1 class="text-3xl font-black tracking-tight text-body flex items-center justify-center gap-1.5">
-            IRON<span class="text-accent-text">PEAK</span>
+            FITNESS<span class="text-accent-text">CLUB</span>
           </h1>
           <p class="text-xs text-muted">
             Plataforma de gestión comercial y seguimiento para gimnasios
@@ -123,7 +123,7 @@ export default function Login() {
                 required
                 value={email()}
                 onInput={(e) => setEmail(e.currentTarget.value)}
-                placeholder="admin@ironpeak.fit"
+                placeholder="admin@fitnessclub.fit"
                 class="w-full px-4 py-2.5 bg-app border border-edge rounded-2xl text-xs text-body focus:outline-none focus:border-accent"
               />
             </div>
@@ -147,7 +147,7 @@ export default function Login() {
               disabled={submitting()}
               class="w-full py-3 bg-accent hover:bg-accent-hover text-white font-extrabold text-xs rounded-2xl shadow-accent-glow transition disabled:opacity-50 cursor-pointer"
             >
-              {submitting() ? 'Iniciando sesión...' : 'Entrar a IronPeak'}
+              {submitting() ? 'Iniciando sesión...' : 'Entrar a Fitness Club'}
             </button>
           </form>
         </div>

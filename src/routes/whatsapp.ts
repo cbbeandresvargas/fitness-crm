@@ -25,7 +25,7 @@ async function getActiveMetaCredentials(env: Env): Promise<{
 } | null> {
   const token = env.META_WA_ACCESS_TOKEN?.trim() || '';
   const phoneNumberId = env.META_WA_PHONE_NUMBER_ID?.trim() || '';
-  const verifyToken = env.META_WA_VERIFY_TOKEN?.trim() || 'ironpeak_secure_verify_token_2026';
+  const verifyToken = env.META_WA_VERIFY_TOKEN?.trim() || 'fitnessclub_secure_verify_token_2026';
   const appSecret = env.META_APP_SECRET?.trim() || undefined;
   const wabaId = env.META_WA_WABA_ID?.trim() || undefined;
 
@@ -53,7 +53,7 @@ whatsappRoutes.get('/api/whatsapp/webhook', async (c) => {
   console.log(`[Meta Webhook GET] mode: ${mode}, token: ${token}`);
 
   const creds = await getActiveMetaCredentials(c.env);
-  const expectedToken = creds?.verifyToken || c.env.META_WA_VERIFY_TOKEN || 'ironpeak_secure_verify_token_2026';
+  const expectedToken = creds?.verifyToken || c.env.META_WA_VERIFY_TOKEN || 'fitnessclub_secure_verify_token_2026';
 
   if (mode === 'subscribe' && token === expectedToken) {
     console.log('[Meta Webhook GET] Verificación de webhook exitosa ✅');
@@ -266,7 +266,7 @@ whatsappRoutes.get('/api/whatsapp/config', async (c) => {
       verified_name: settings?.verified_name || '',
       tokenLast4: tokenLast4(envToken),
       status: isEnvConfigured ? 'connected' : 'disconnected',
-      verify_token: c.env.META_WA_VERIFY_TOKEN || 'ironpeak_secure_verify_token_2026',
+      verify_token: c.env.META_WA_VERIFY_TOKEN || 'fitnessclub_secure_verify_token_2026',
       ai_enabled: settings?.ai_enabled ?? 1,
       ai_model: settings?.ai_model || '@cf/meta/llama-3.1-8b-instruct',
       ai_tone: settings?.ai_tone || 'enérgico, motivador, empático y altamente enfocado en cerrar ventas',
@@ -275,7 +275,7 @@ whatsappRoutes.get('/api/whatsapp/config', async (c) => {
     },
     webhook: {
       url: webhookUrl,
-      verify_token: c.env.META_WA_VERIFY_TOKEN || 'ironpeak_secure_verify_token_2026',
+      verify_token: c.env.META_WA_VERIFY_TOKEN || 'fitnessclub_secure_verify_token_2026',
       graph_version: c.env.META_GRAPH_API_VERSION || 'v25.0',
     },
   });

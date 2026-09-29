@@ -127,7 +127,7 @@ export default function Team() {
                     required
                     value={email()}
                     onInput={(e) => setEmail(e.currentTarget.value)}
-                    placeholder="sofia@ironpeak.fit"
+                    placeholder="sofia@fitnessclub.fit"
                     class="w-full px-3.5 py-2.5 bg-app border border-edge rounded-2xl text-xs text-body focus:outline-none focus:border-accent"
                   />
                 </div>

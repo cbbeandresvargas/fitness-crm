@@ -1,4 +1,4 @@
-# ⚡ IronPeak Fitness CRM
+# ⚡ Fitness Club CRM
 
 Plataforma CRM de alto rendimiento desarrollada para el sector fitness y gestión de prospectos de alto valor, construida sobre arquitectura edge con **Hono**, **Cloudflare Workers**, **Cloudflare D1** (SQLite relacional), **Cloudflare KV** (sesiones ultra-rápidas), **Cloudflare R2** (almacenamiento de importaciones y adjuntos) y **Cloudflare Workers AI** (mensajería inteligente para WhatsApp).
 
@@ -152,10 +152,10 @@ La base de datos local incluye usuarios de prueba precargados:
 
 | Rol | Correo Electrónico | Contraseña | Permisos |
 | :--- | :--- | :--- | :--- |
-| **Director General (Admin)** | `admin@ironpeak.fit` | `admin123` | Control total, reasignación masiva, importación/exportación, gestión de equipo y auditoría. |
-| **Head Coach (Admin)** | `carlos@ironpeak.fit` | `admin123` | Mismos accesos administrativos. |
-| **Coach Comercial (Agente)** | `valeria@ironpeak.fit` | `agent123` | Vista filtrada a sus prospectos asignados, registro de notas, WhatsApp y llamadas. |
-| **Asesora Fitness (Agente)** | `sofia@ironpeak.fit` | `agent123` | Gestión exclusiva de su cartera de prospectos. |
+| **Director General (Admin)** | `admin@fitnessclub.fit` | `admin123` | Control total, reasignación masiva, importación/exportación, gestión de equipo y auditoría. |
+| **Head Coach (Admin)** | `carlos@fitnessclub.fit` | `admin123` | Mismos accesos administrativos. |
+| **Coach Comercial (Agente)** | `valeria@fitnessclub.fit` | `agent123` | Vista filtrada a sus prospectos asignados, registro de notas, WhatsApp y llamadas. |
+| **Asesora Fitness (Agente)** | `sofia@fitnessclub.fit` | `agent123` | Gestión exclusiva de su cartera de prospectos. |
 
 > ⚡ En la pantalla de login (`http://127.0.0.1:8787/login`) encontrarás **botones de acceso rápido de 1-click** para iniciar sesión como Admin o Agente sin necesidad de escribir las credenciales manualmente.
 

@@ -86,7 +86,7 @@ export default function WhatsAppSettings() {
       if (res.success) {
         setTestResult({
           success: true,
-          message: `¡Conexión Exitosa con Meta Graph API v25.0! Número verificado: ${res.details?.display_phone_number || settings()?.phone_number_id} (${res.details?.verified_name || 'IronPeak Fitness'})`,
+          message: `¡Conexión Exitosa con Meta Graph API v25.0! Número verificado: ${res.details?.display_phone_number || settings()?.phone_number_id} (${res.details?.verified_name || 'Fitness Club'})`,
         });
       } else {
         setTestResult({
@@ -324,7 +324,7 @@ export default function WhatsAppSettings() {
                       <input
                         type="text"
                         readonly
-                        value={settings()?.verify_token || 'ironpeak_secure_verify_token_2026'}
+                        value={settings()?.verify_token || 'fitnessclub_secure_verify_token_2026'}
                         class="flex-1 px-3 py-2 bg-app border border-edge rounded-xl text-xs font-mono text-body select-all"
                       />
                       <button
@@ -354,7 +354,7 @@ META_GRAPH_BASE_URL=https://graph.facebook.com
 META_WA_PHONE_NUMBER_ID=109283746591029
 META_WA_ACCESS_TOKEN=EAAB...tu_token_permanente...
 META_WA_WABA_ID=109283746591029
-META_WA_VERIFY_TOKEN=ironpeak_secure_verify_token_2026
+META_WA_VERIFY_TOKEN=fitnessclub_secure_verify_token_2026
 META_APP_SECRET=opcional_para_firma_hmac`}
                 </pre>
               </div>
