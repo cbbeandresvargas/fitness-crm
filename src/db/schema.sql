@@ -109,6 +109,39 @@ CREATE TABLE IF NOT EXISTS knowledge_base (
   updated_at TEXT NOT NULL DEFAULT (DATETIME('now'))
 );
 
+-- Catálogo central de Actividades de interés (fuente de verdad de nombres).
+-- name_norm (minúsculas, sin acentos) previene duplicados (Pilates/pilates/PILATES).
+-- is_active = borrado lógico (patrón existente de users/knowledge_base):
+-- las relaciones de prospectos se preservan (nunca quedan referencias rotas).
+CREATE TABLE IF NOT EXISTS activities (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  name_norm TEXT NOT NULL UNIQUE,
+  is_active INTEGER NOT NULL DEFAULT 1,
+  created_by TEXT REFERENCES users(id),
+  created_at TEXT NOT NULL DEFAULT (DATETIME('now')),
+  updated_at TEXT NOT NULL DEFAULT (DATETIME('now'))
+);
+
+-- Relación Prospecto <-> Actividad (N:M). Un prospecto no puede tener la
+-- misma actividad dos veces (UNIQUE) y eliminar una actividad o prospecto
+-- no deja referencias huérfanas (ON DELETE CASCADE).
+CREATE TABLE IF NOT EXISTS prospect_activities (
+  id TEXT PRIMARY KEY,
+  lead_id TEXT NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+  activity_id TEXT NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
+  created_by TEXT REFERENCES users(id),
+  created_at TEXT NOT NULL DEFAULT (DATETIME('now'))
+);
+
+-- Semilla del catálogo inicial de actividades (idempotente)
+INSERT OR IGNORE INTO activities (id, name, name_norm, is_active) VALUES
+  ('act_gym', 'Gym', 'gym', 1),
+  ('act_crossfit', 'CrossFit', 'crossfit', 1),
+  ('act_natacion', 'Natación', 'natacion', 1),
+  ('act_escalada', 'Escalada', 'escalada', 1),
+  ('act_pilates', 'Pilates', 'pilates', 1);
+
 CREATE INDEX IF NOT EXISTS idx_leads_phone ON leads(phone);
 CREATE INDEX IF NOT EXISTS idx_leads_assigned_to ON leads(assigned_to);
 CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
@@ -119,3 +152,7 @@ CREATE INDEX IF NOT EXISTS idx_whatsapp_lead ON whatsapp_messages(lead_id);
 CREATE INDEX IF NOT EXISTS idx_whatsapp_created ON whatsapp_messages(created_at);
 CREATE INDEX IF NOT EXISTS idx_whatsapp_wa_id ON whatsapp_messages(whatsapp_message_id);
 CREATE INDEX IF NOT EXISTS idx_kb_category ON knowledge_base(category);
+CREATE INDEX IF NOT EXISTS idx_activities_name_norm ON activities(name_norm);
+CREATE INDEX IF NOT EXISTS idx_prospect_activities_lead ON prospect_activities(lead_id);
+CREATE INDEX IF NOT EXISTS idx_prospect_activities_activity ON prospect_activities(activity_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_prospect_activities_unique ON prospect_activities(lead_id, activity_id);

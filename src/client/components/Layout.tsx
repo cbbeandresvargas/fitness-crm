@@ -131,6 +131,19 @@ export function Layout(props: { children: JSX.Element; title?: string }) {
             <span>Importar / Exportar</span>
           </A>
 
+          <A
+            href="/activities"
+            onClick={closeMobileMenu}
+            class={`flex items-center gap-3 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all ${
+              isCurrent('/activities')
+                ? 'bg-accent text-white shadow-accent-glow'
+                : 'text-muted hover:text-body hover:bg-elevate/60'
+            }`}
+          >
+            <span class="text-base">🏃</span>
+            <span>Catálogo de actividades</span>
+          </A>
+
           <Show when={user()?.role === 'admin'}>
             <div class="pt-3 pb-1">
               <div class="border-t border-edge/80 my-1"></div>

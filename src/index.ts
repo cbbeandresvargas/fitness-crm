@@ -7,6 +7,7 @@ import { templatesRoutes } from './routes/templates';
 import { importExportRoutes } from './routes/importExport';
 import { teamRoutes } from './routes/team';
 import { whatsappRoutes } from './routes/whatsapp';
+import { activitiesRoutes } from './routes/activities';
 
 const app = new Hono<{ Bindings: Env; Variables: { user?: SessionData } }>();
 
@@ -192,9 +193,48 @@ app.use('*', async (c, next) => {
         ('kb_2', 'plan_precio', 'Programa CrossFit Pro + Nutrición Deportiva', 'Precio mensual: $140 USD / mes. Incluye: Clases guiadas en grupos reducidos con Head Coaches certificados, programación WOD personalizada, pesajes quincenales y plan nutricional adaptado.', 1),
         ('kb_3', 'plan_precio', 'Pase Black Anual (Todo Incluido VIP)', 'Precio de contado o 12 MSI: $699 USD anual ($58 USD/mes equivalente, ahorro del 25%). Incluye: Acceso a todas las sedes nacionales, 5 pases de invitado por mes, toallas, casillero fijo y 2 sesiones mensuales con entrenador personal.', 1),
         ('kb_4', 'plan_precio', 'Plan Élite Personal Trainer 1-on-1', 'Paquete de 12 sesiones: $220 USD. Paquete de 20 sesiones: $340 USD. Cada sesión dura 60 minutos con un coach deportivo dedicado exclusivamente a tu técnica, progresión de cargas y objetivos.', 1),
-        ('kb_5', 'horario_sede', 'Sedes y Horarios de Apertura', 'Polanco (CDMX): Lun-Vie 5:30am-11pm. Sáb-Dom 7am-6pm. Roma Norte: Lun-Vie 6am-10:30pm. Guadalajara: Lun-Sáb 6am-10pm. Monterrey: Lun-Dom 5:30am-10pm.', 1),
+        ('kb_5', 'horario_sede', 'Sedes y Horarios de Apertura', 'Polanco (CDMX): Lun-Vie 5:30am-11pm. Sáb-Dom 7am-6pm. Roma Norte: Lun-Vie 6am-10:30pm. Guadalajara: Lun-Vie 6am-10pm. Monterrey: Lun-Dom 5:30am-10pm.', 1),
         ('kb_6', 'objecion_frecuente', 'Manejo de Objeción: "No tengo tiempo para entrenar"', 'Argumento de cierre: "Comprendo totalmente tu ritmo. Diseñamos entrenamientos HIIT Express de 45 minutos efectivos a las 6:00 AM o a las 8:00 PM. ¿Qué horario se adaptaría mejor a tu jornada?"', 1),
         ('kb_7', 'objecion_frecuente', 'Manejo de Objeción: "Se me hace caro / fuera de presupuesto"', 'Argumento de cierre: "En Fitness Club tienes seguimiento continuo de coaches para ver resultados desde el primer mes. Además hoy congelamos tu inscripción gratis. ¿Te parece si vienes a una valoración diagnóstica gratuita antes de decidir?"', 1);
+      `),
+      // Catálogo central de Actividades de interés (relación N:M con prospectos)
+      c.env.DB.prepare(`
+        CREATE TABLE IF NOT EXISTS activities (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          name_norm TEXT NOT NULL UNIQUE,
+          is_active INTEGER NOT NULL DEFAULT 1,
+          created_by TEXT,
+          created_at TEXT NOT NULL DEFAULT (DATETIME('now')),
+          updated_at TEXT NOT NULL DEFAULT (DATETIME('now'))
+        );
+      `),
+      c.env.DB.prepare(`
+        CREATE TABLE IF NOT EXISTS prospect_activities (
+          id TEXT PRIMARY KEY,
+          lead_id TEXT NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+          activity_id TEXT NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
+          created_by TEXT,
+          created_at TEXT NOT NULL DEFAULT (DATETIME('now'))
+        );
+      `),
+      c.env.DB.prepare(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_prospect_activities_unique ON prospect_activities(lead_id, activity_id);
+      `),
+      c.env.DB.prepare(`
+        CREATE INDEX IF NOT EXISTS idx_prospect_activities_lead ON prospect_activities(lead_id);
+      `),
+      c.env.DB.prepare(`
+        CREATE INDEX IF NOT EXISTS idx_prospect_activities_activity ON prospect_activities(activity_id);
+      `),
+      // Semilla del catálogo inicial de actividades (idempotente)
+      c.env.DB.prepare(`
+        INSERT OR IGNORE INTO activities (id, name, name_norm, is_active) VALUES
+        ('act_gym', 'Gym', 'gym', 1),
+        ('act_crossfit', 'CrossFit', 'crossfit', 1),
+        ('act_natacion', 'Natación', 'natacion', 1),
+        ('act_escalada', 'Escalada', 'escalada', 1),
+        ('act_pilates', 'Pilates', 'pilates', 1);
       `),
     ]);
   } catch (err) {
@@ -213,6 +253,7 @@ app.route('/', templatesRoutes);
 app.route('/', importExportRoutes);
 app.route('/', teamRoutes);
 app.route('/', whatsappRoutes);
+app.route('/', activitiesRoutes);
 
 // Servir estáticos o SPA de SolidJS para rutas que no son de API
 app.all('*', async (c) => {

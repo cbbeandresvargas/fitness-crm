@@ -108,6 +108,26 @@ export interface DashboardData {
 }
 
 export type MessageSender = 'agent' | 'lead' | 'system';
+
+/** Actividad del catálogo central (fuente de verdad de nombres) */
+export interface Activity {
+  id: string;
+  name: string;
+  name_norm?: string;
+  is_active: number;
+  created_at?: string;
+  updated_at?: string;
+  prospect_count?: number;
+}
+
+/** Actividad de interés asociada a un prospecto (relación N:M) */
+export interface LeadInterest {
+  id: string;
+  name: string;
+  is_active: number;
+  assigned_at?: string;
+}
+
 export type MessageType = 'text' | 'image' | 'document' | 'audio';
 export type MessageStatus = 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
 

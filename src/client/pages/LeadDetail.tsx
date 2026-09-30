@@ -5,7 +5,7 @@ import { LeadFormFields } from '../components/LeadFormFields';
 import { cityFromMetadata } from '../../lib/locations';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
-import { Lead, ActivityLog, User, WhatsAppMessage, MessageTemplate } from '../types';
+import { Lead, ActivityLog, User, WhatsAppMessage, MessageTemplate, Activity, LeadInterest } from '../types';
 
 export default function LeadDetail() {
   const params = useParams();
@@ -68,6 +68,7 @@ export default function LeadDetail() {
       const res = await api.getLead(params.id);
       setLead(res.lead);
       setActivities(res.activities);
+      setInterests(res.interests || []);
 
       // Populate edit fields (mismos campos que el formulario de nuevo prospecto)
       const meta = res.lead.metadata || {};
@@ -366,6 +367,98 @@ export default function LeadDetail() {
     } catch (err: any) {
       showToast(err.message || 'Error eliminando tag', 'error');
     }
+  };
+
+  // Actividades de interés (catálogo central, relación N:M con el prospecto)
+  const [interests, setInterests] = createSignal<LeadInterest[]>([]);
+  const [activityCatalog, setActivityCatalog] = createSignal<Activity[]>([]);
+  const [showActivityPicker, setShowActivityPicker] = createSignal(false);
+  const [activitySearch, setActivitySearch] = createSignal('');
+  const [activityBusy, setActivityBusy] = createSignal(false);
+
+  const loadActivities = async () => {
+    try {
+      const res = await api.getActivities();
+      setActivityCatalog(res.activities || []);
+    } catch {}
+  };
+
+  const handleToggleActivityPicker = async () => {
+    const next = !showActivityPicker();
+    setShowActivityPicker(next);
+    setActivitySearch('');
+    if (next && activityCatalog().length === 0) {
+      await loadActivities();
+    }
+  };
+
+  const handleAddInterest = async (activityId: string) => {
+    if (!lead() || activityBusy()) return;
+    try {
+      setActivityBusy(true);
+      const res = await api.addLeadActivity(lead()!.id, { activity_id: activityId });
+      setInterests((prev) => [...prev, res.interest]);
+      showToast(`Actividad "${res.interest.name}" añadida`, 'success');
+      loadActivities();
+    } catch (err: any) {
+      showToast(err.message || 'Error añadiendo actividad', 'error');
+    } finally {
+      setActivityBusy(false);
+    }
+  };
+
+  // Flujo único: si no existe, se crea en el catálogo y se asocia de una vez
+  const handleCreateAndAssignInterest = async (name: string) => {
+    if (!lead() || !name.trim() || activityBusy()) return;
+    try {
+      setActivityBusy(true);
+      const res = await api.addLeadActivity(lead()!.id, { name: name.trim() });
+      setInterests((prev) => [...prev, res.interest]);
+      setActivitySearch('');
+      showToast(
+        res.createdNew
+          ? `Actividad "${res.interest.name}" creada en el catálogo y asociada`
+          : `Se asoció la actividad existente "${res.interest.name}"`,
+        'success'
+      );
+      loadActivities();
+    } catch (err: any) {
+      showToast(err.message || 'Error creando actividad', 'error');
+    } finally {
+      setActivityBusy(false);
+    }
+  };
+
+  const handleRemoveInterest = async (activityId: string) => {
+    if (!lead() || activityBusy()) return;
+    try {
+      setActivityBusy(true);
+      const res = await api.removeLeadActivity(lead()!.id, activityId);
+      setInterests((prev) => prev.filter((i) => i.id !== res.removedActivityId));
+      showToast('Actividad retirada de este prospecto', 'info');
+      loadActivities();
+    } catch (err: any) {
+      showToast(err.message || 'Error retirando actividad', 'error');
+    } finally {
+      setActivityBusy(false);
+    }
+  };
+
+  const filteredActivities = () => {
+    const q = activitySearch().trim().toLowerCase();
+    const assigned = new Set(interests().map((i) => i.id));
+    return activityCatalog()
+      .filter((a) => a.is_active && (!q || a.name.toLowerCase().includes(q)))
+      .map((a) => ({ ...a, alreadyAssigned: assigned.has(a.id) }));
+  };
+
+  // "+ Crear" sólo cuando la búsqueda no coincide exactamente con algo del catálogo
+  const canCreateFromSearch = () => {
+    const q = activitySearch().trim();
+    if (!q) return false;
+    const norm = (s: string) =>
+      s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ');
+    return !activityCatalog().some((a) => norm(a.name) === norm(q));
   };
 
   return (
@@ -671,6 +764,112 @@ export default function LeadDetail() {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Actividades de interés (catálogo central N:M) */}
+              <div class="p-6 rounded-3xl bg-surface border border-edge space-y-3 shadow-xl">
+                <div class="flex items-center justify-between">
+                  <h3 class="text-xs font-bold uppercase tracking-wider text-accent-text">
+                    Actividades de interés
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={handleToggleActivityPicker}
+                    class="px-3 py-1.5 bg-accent hover:bg-accent-hover text-white text-[11px] font-bold rounded-xl transition cursor-pointer"
+                  >
+                    {showActivityPicker() ? '✕ Cerrar' : '+ Agregar actividad'}
+                  </button>
+                </div>
+
+                <Show
+                  when={interests().length > 0}
+                  fallback={
+                    <p class="text-xs text-muted">Sin actividades de interés registradas.</p>
+                  }
+                >
+                  <div class="flex flex-wrap gap-1.5">
+                    <For each={interests()}>
+                      {(interest) => (
+                        <span
+                          class={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl border text-xs font-semibold transition ${
+                            interest.is_active
+                              ? 'bg-accent/20 border-accent/40 text-accent-text'
+                              : 'bg-elevate border-edge-strong text-muted'
+                          }`}
+                          title={
+                            interest.is_active
+                              ? 'Quitar de este prospecto (la actividad permanece en el catálogo)'
+                              : 'Eliminada del catálogo (atenuada)'
+                          }
+                        >
+                          <span>{interest.name}</span>
+                          <Show when={interest.is_active}>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveInterest(interest.id)}
+                              disabled={activityBusy()}
+                              class="hover:text-red-400 transition cursor-pointer disabled:opacity-50"
+                            >
+                              ✕
+                            </button>
+                          </Show>
+                        </span>
+                      )}
+                    </For>
+                  </div>
+                </Show>
+
+                {/* Selector y creador en un solo flujo */}
+                <Show when={showActivityPicker()}>
+                  <div class="p-3 bg-app rounded-2xl border border-edge space-y-2">
+                    <input
+                      type="text"
+                      value={activitySearch()}
+                      onInput={(e) => setActivitySearch(e.currentTarget.value)}
+                      placeholder="Buscar actividad... (ej. Yoga)"
+                      class="w-full px-3 py-2 bg-surface border border-edge rounded-xl text-xs text-body focus:outline-none focus:border-accent"
+                    />
+
+                    <div class="max-h-44 overflow-y-auto space-y-1">
+                      <For each={filteredActivities()}>
+                        {(act) => (
+                          <button
+                            type="button"
+                            onClick={() => handleAddInterest(act.id)}
+                            disabled={act.alreadyAssigned || activityBusy()}
+                            class={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition ${
+                              act.alreadyAssigned
+                                ? 'bg-elevate/60 text-muted cursor-not-allowed'
+                                : 'bg-surface border border-edge hover:border-accent/50 text-body-soft cursor-pointer'
+                            }`}
+                          >
+                            <span class="font-semibold">{act.name}</span>
+                            <span class="text-[10px] text-muted">
+                              {act.alreadyAssigned
+                                ? '✓ ya asociada'
+                                : `${act.prospect_count || 0} prospectos`}
+                            </span>
+                          </button>
+                        )}
+                      </For>
+
+                      <Show when={canCreateFromSearch()}>
+                        <button
+                          type="button"
+                          onClick={() => handleCreateAndAssignInterest(activitySearch().trim())}
+                          disabled={activityBusy()}
+                          class="w-full text-left px-3 py-2 rounded-xl bg-accent/10 hover:bg-accent/20 border border-accent/30 text-accent-text text-xs font-bold transition cursor-pointer"
+                        >
+                          + Crear "{activitySearch().trim()}" y asociarla a este prospecto
+                        </button>
+                      </Show>
+
+                      <Show when={filteredActivities().length === 0 && !canCreateFromSearch()}>
+                        <p class="text-[11px] text-muted px-1">Sin resultados en el catálogo.</p>
+                      </Show>
+                    </div>
+                  </div>
+                </Show>
               </div>
 
               {/* Etiquetas / Tags */}

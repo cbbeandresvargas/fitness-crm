@@ -244,9 +244,21 @@ leadsRoutes.get('/api/leads/:id', async (c) => {
     .bind(leadId)
     .all<ActivityLog>();
 
+  // Actividades de interés del prospecto (catálogo central, relación N:M)
+  const interestsRes = await c.env.DB.prepare(`
+    SELECT a.id, a.name, a.is_active, pa.created_at as assigned_at
+    FROM prospect_activities pa
+    JOIN activities a ON a.id = pa.activity_id
+    WHERE pa.lead_id = ?
+    ORDER BY pa.created_at ASC
+  `)
+    .bind(leadId)
+    .all<{ id: string; name: string; is_active: number; assigned_at: string }>();
+
   return c.json({
     lead: parsedLead,
     activities: activitiesRes.results || [],
+    interests: interestsRes.results || [],
   });
 });
 

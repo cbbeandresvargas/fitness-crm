@@ -11,6 +11,8 @@ import {
   WebhookInfo,
   KnowledgeBaseEntry,
   ConversationSummary,
+  Activity,
+  LeadInterest,
 } from './types';
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
@@ -144,7 +146,7 @@ export const api = {
     return fetchJson(`/api/leads${query}`);
   },
 
-  async getLead(id: string): Promise<{ lead: Lead; activities: ActivityLog[] }> {
+  async getLead(id: string): Promise<{ lead: Lead; activities: ActivityLog[]; interests: LeadInterest[] }> {
     return fetchJson(`/api/leads/${id}`);
   },
 
@@ -227,6 +229,57 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ tag }),
     });
+  },
+
+  // Actividades de interés (catálogo central + relación N:M con prospectos)
+  async getActivities(): Promise<{ activities: Activity[] }> {
+    return fetchJson('/api/activities');
+  },
+
+  async createActivity(
+    name: string
+  ): Promise<{ success: boolean; activity: Activity; reactivated?: boolean }> {
+    return fetchJson('/api/activities', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+  },
+
+  async updateActivity(
+    id: string,
+    name: string
+  ): Promise<{ success: boolean; activity: { id: string; name: string } }> {
+    return fetchJson(`/api/activities/${id}/update`, {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+  },
+
+  async deleteActivity(
+    id: string
+  ): Promise<{ success: boolean; deletedId: string; prospectCount: number }> {
+    return fetchJson(`/api/activities/${id}`, { method: 'DELETE' });
+  },
+
+  async getLeadActivities(leadId: string): Promise<{ interests: LeadInterest[] }> {
+    return fetchJson(`/api/leads/${leadId}/activities`);
+  },
+
+  async addLeadActivity(
+    leadId: string,
+    payload: { activity_id?: string; name?: string }
+  ): Promise<{ success: boolean; interest: LeadInterest; createdNew: boolean }> {
+    return fetchJson(`/api/leads/${leadId}/activities`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async removeLeadActivity(
+    leadId: string,
+    activityId: string
+  ): Promise<{ success: boolean; removedActivityId: string }> {
+    return fetchJson(`/api/leads/${leadId}/activities/${activityId}`, { method: 'DELETE' });
   },
 
   async updateLead(
