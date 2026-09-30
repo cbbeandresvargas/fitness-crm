@@ -2,6 +2,7 @@ import { createSignal, onMount, Show, For } from 'solid-js';
 import { useParams, useNavigate, A } from '@solidjs/router';
 import { Layout } from '../components/Layout';
 import { LeadFormFields } from '../components/LeadFormFields';
+import { SegmentBadge } from '../components/SegmentBadge';
 import { cityFromMetadata } from '../../lib/locations';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
@@ -584,23 +585,11 @@ export default function LeadDetail() {
                 ⬅️
               </A>
               <div>
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-3 flex-wrap">
                   <h2 class="text-xl sm:text-2xl font-black text-body tracking-tight">
                     {lead()?.full_name}
                   </h2>
-                  <span
-                    class={`px-3 py-1 rounded-full text-xs font-extrabold border ${
-                      lead()?.segment === 'A'
-                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-                        : lead()?.segment === 'B'
-                        ? 'bg-blue-500/20 text-blue-400 border-blue-500/40'
-                        : lead()?.segment === 'C'
-                        ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
-                        : 'bg-elevate text-muted border-edge-strong'
-                    }`}
-                  >
-                    Segmento {lead()?.segment}
-                  </span>
+                  <SegmentBadge segment={lead()?.segment} />
                 </div>
                 <p class="text-xs text-muted mt-0.5">
                   Teléfono: <strong class="text-body">{lead()?.phone}</strong> • Registrado el{' '}
@@ -651,7 +640,7 @@ export default function LeadDetail() {
 
           {/* Grid de 2 Columnas */}
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Columna Izquierda: Perfil y Metadatos (1 col) */}
+            {/* Columna Izquierda: Estado, contacto y actividades (1 col) */}
             <div class="space-y-6">
               {/* Tarjeta de Estado y Asignación */}
               <div class="p-6 rounded-3xl bg-surface border border-edge space-y-4 shadow-xl">
@@ -705,6 +694,14 @@ export default function LeadDetail() {
                     <span class="text-body-soft">{lead()?.email || 'No proporcionado'}</span>
                   </div>
                   <div class="flex items-center justify-between">
+                    <span class="text-muted">Ciudad:</span>
+                    <span class="text-body-soft">
+                      {cityFromMetadata(lead()?.metadata) || (
+                        <span class="text-muted">—</span>
+                      )}
+                    </span>
+                  </div>
+                  <div class="flex items-center justify-between">
                     <span class="text-muted">Estado de Membresía:</span>
                     <Show
                       when={lead()?.metadata?.estado_membresia}
@@ -717,51 +714,6 @@ export default function LeadDetail() {
                         </Show>
                       </span>
                     </Show>
-                  </div>
-                </div>
-              </div>
-
-              {/* Metadatos Deportivos */}
-              <div class="p-6 rounded-3xl bg-surface border border-edge space-y-3 shadow-xl">
-                <h3 class="text-xs font-bold uppercase tracking-wider text-accent-text">
-                  Perfil Deportivo & Metas
-                </h3>
-
-                <div class="space-y-2 text-xs">
-                  <div class="p-3 bg-app rounded-2xl border border-edge/80 space-y-1">
-                    <span class="text-[11px] text-muted">Presupuesto Mensual:</span>
-                    <p class="text-lg font-black text-emerald-400">
-                      ${lead()?.metadata.presupuesto || 0} USD
-                    </p>
-                  </div>
-
-                  <div class="p-3 bg-app rounded-2xl border border-edge/80 space-y-1">
-                    <span class="text-[11px] text-muted">Programa de Interés:</span>
-                    <p class="font-bold text-body">
-                      {lead()?.metadata.producto || 'Membresía General'}
-                    </p>
-                  </div>
-
-                  <div class="p-3 bg-app rounded-2xl border border-edge/80 space-y-1">
-                    <span class="text-[11px] text-muted">Objetivo del Prospecto:</span>
-                    <p class="text-body-soft">
-                      {lead()?.metadata.objetivo || 'Acondicionamiento físico general'}
-                    </p>
-                  </div>
-
-                  <div class="grid grid-cols-2 gap-2">
-                    <div class="p-3 bg-app rounded-2xl border border-edge/80">
-                      <span class="text-[11px] text-muted block">Ciudad:</span>
-                      <span class="font-bold text-body-soft">
-                        {cityFromMetadata(lead()?.metadata) || 'Sin especificar'}
-                      </span>
-                    </div>
-                    <div class="p-3 bg-app rounded-2xl border border-edge/80">
-                      <span class="text-[11px] text-muted block">Horario:</span>
-                      <span class="font-bold text-body-soft truncate block">
-                        {lead()?.metadata.horario_preferido || 'Flexible'}
-                      </span>
-                    </div>
                   </div>
                 </div>
               </div>
