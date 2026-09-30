@@ -184,6 +184,29 @@ leadsRoutes.get('/api/leads', async (c) => {
 
   const leadsRes = await c.env.DB.prepare(query).bind(...params).all<Lead>();
 
+  // Actividades de interés: UNA sola consulta por lotes para toda la lista
+  // (catálogo central + relación N:M; nunca una petición individual por prospecto)
+  const leadIds = (leadsRes.results || []).map((l) => l.id);
+  const interestsByLead = new Map<string, { id: string; name: string; is_active: number }[]>();
+  if (leadIds.length > 0) {
+    const placeholders = leadIds.map(() => '?').join(', ');
+    const interestsRes = await c.env.DB.prepare(
+      `SELECT pa.lead_id, a.id, a.name, a.is_active
+       FROM prospect_activities pa
+       JOIN activities a ON a.id = pa.activity_id
+       WHERE pa.lead_id IN (${placeholders})
+       ORDER BY pa.created_at ASC`
+    )
+      .bind(...leadIds)
+      .all<{ lead_id: string; id: string; name: string; is_active: number }>();
+
+    for (const row of interestsRes.results || []) {
+      const arr = interestsByLead.get(row.lead_id) || [];
+      arr.push({ id: row.id, name: row.name, is_active: row.is_active });
+      interestsByLead.set(row.lead_id, arr);
+    }
+  }
+
   let leads = (leadsRes.results || []).map((lead) => ({
     ...lead,
     tags: typeof lead.tags === 'string' ? JSON.parse(lead.tags || '[]') : lead.tags,
@@ -191,6 +214,8 @@ leadsRoutes.get('/api/leads', async (c) => {
     // Segmento comercial DERIVADO (única fuente de verdad: lib/segments).
     // La columna `segment` de la BD es sólo caché de escritura.
     segment: computeFcSegment(lead).segment,
+    // Actividades de interés asociadas (registros reales del catálogo)
+    interests: interestsByLead.get(lead.id) || [],
   }));
 
   // Filtro por segmento derivado (identificadores internos A/B/C)
