@@ -184,20 +184,23 @@ leadsRoutes.get('/api/leads', async (c) => {
 
   const leadsRes = await c.env.DB.prepare(query).bind(...params).all<Lead>();
 
-  // Actividades de interés: UNA sola consulta por lotes para toda la lista
-  // (catálogo central + relación N:M; nunca una petición individual por prospecto)
-  const leadIds = (leadsRes.results || []).map((l) => l.id);
+  // Actividades de interés: UNA sola consulta que JOINea las relaciones de los
+  // prospectos ya filtrados, reutilizando las MISMAS condiciones (whereSql/params)
+  // de la consulta principal de leads. Cero variables SQL dependientes de la
+  // cantidad de prospectos (D1 limita los parámetros enlazados por consulta;
+  // un IN(?) con un placeholder por lead excedía el límite con cientos de leads).
+  const hasLeads = (leadsRes.results || []).length > 0;
   const interestsByLead = new Map<string, { id: string; name: string; is_active: number }[]>();
-  if (leadIds.length > 0) {
-    const placeholders = leadIds.map(() => '?').join(', ');
+  if (hasLeads) {
     const interestsRes = await c.env.DB.prepare(
       `SELECT pa.lead_id, a.id, a.name, a.is_active
-       FROM prospect_activities pa
+       FROM leads l
+       JOIN prospect_activities pa ON pa.lead_id = l.id
        JOIN activities a ON a.id = pa.activity_id
-       WHERE pa.lead_id IN (${placeholders})
+       ${whereSql}
        ORDER BY pa.created_at ASC`
     )
-      .bind(...leadIds)
+      .bind(...params)
       .all<{ lead_id: string; id: string; name: string; is_active: number }>();
 
     for (const row of interestsRes.results || []) {
