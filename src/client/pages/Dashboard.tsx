@@ -95,54 +95,54 @@ export default function Dashboard() {
               </div>
             </A>
 
-            {/* Segmento A - VIP */}
+            {/* Segmento A — Antiguos pagadores */}
             <A
               href="/leads?segment=A"
-              class="p-5 sm:p-6 rounded-3xl bg-surface border border-edge hover:border-emerald-500/50 transition group shadow-lg"
+              class="p-5 sm:p-6 rounded-3xl bg-surface border border-edge hover:border-accent/50 transition group shadow-lg"
             >
               <div class="flex items-center justify-between">
-                <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-400">Segmento A (VIP)</span>
+                <span class="text-[11px] font-bold uppercase tracking-wider text-accent-text">A · Antiguos pagadores</span>
                 <span class="text-2xl group-hover:scale-110 transition-transform">🔥</span>
               </div>
               <div class="mt-4 flex items-baseline justify-between">
-                <span class="text-4xl font-black text-emerald-400">
+                <span class="text-4xl font-black text-accent-text">
                   {data()?.segmentsCount.A || 0}
                 </span>
-                <span class="text-[11px] text-emerald-500/80 font-semibold">Alta Intención</span>
+                <span class="text-[11px] text-accent-text/80 font-semibold">Ya compraron ≥ 1 membresía</span>
               </div>
             </A>
 
-            {/* Segmento B - Tibio */}
+            {/* Segmento B — Registrados que nunca pagaron */}
             <A
               href="/leads?segment=B"
-              class="p-5 sm:p-6 rounded-3xl bg-surface border border-edge hover:border-blue-500/50 transition group shadow-lg"
+              class="p-5 sm:p-6 rounded-3xl bg-surface border border-edge hover:border-orange-500/50 transition group shadow-lg"
             >
               <div class="flex items-center justify-between">
-                <span class="text-[11px] font-bold uppercase tracking-wider text-blue-400">Segmento B (Tibio)</span>
-                <span class="text-2xl group-hover:scale-110 transition-transform">⚡</span>
+                <span class="text-[11px] font-bold uppercase tracking-wider text-orange-400">B · Registrados que nunca pagaron</span>
+                <span class="text-2xl group-hover:scale-110 transition-transform">🟠</span>
               </div>
               <div class="mt-4 flex items-baseline justify-between">
-                <span class="text-4xl font-black text-blue-400">
+                <span class="text-4xl font-black text-orange-400">
                   {data()?.segmentsCount.B || 0}
                 </span>
-                <span class="text-[11px] text-blue-400/80 font-semibold">Seguimiento Regular</span>
+                <span class="text-[11px] text-orange-400/80 font-semibold">Registrados en FC, sin compras</span>
               </div>
             </A>
 
-            {/* Segmento C - Atención */}
+            {/* Segmento C — Usuarios con actividad/interés reciente */}
             <A
               href="/leads?segment=C"
               class="p-5 sm:p-6 rounded-3xl bg-surface border border-edge hover:border-amber-500/50 transition group shadow-lg"
             >
               <div class="flex items-center justify-between">
-                <span class="text-[11px] font-bold uppercase tracking-wider text-amber-400">Segmento C (Atención)</span>
-                <span class="text-2xl group-hover:scale-110 transition-transform">⏳</span>
+                <span class="text-[11px] font-bold uppercase tracking-wider text-amber-400">C · Usuarios con interés reciente</span>
+                <span class="text-2xl group-hover:scale-110 transition-transform">🟡</span>
               </div>
               <div class="mt-4 flex items-baseline justify-between">
                 <span class="text-4xl font-black text-amber-400">
                   {data()?.segmentsCount.C || 0}
                 </span>
-                <span class="text-[11px] text-amber-400/80 font-semibold">Reactivar &gt; 14d</span>
+                <span class="text-[11px] text-amber-400/80 font-semibold">Actividad en los últimos 30 días</span>
               </div>
             </A>
           </div>
@@ -198,7 +198,7 @@ export default function Dashboard() {
                   <h3 class="text-base font-bold text-body">Requieren atención hoy</h3>
                 </div>
                 <A href="/leads?segment=C" class="text-xs text-accent-text hover:underline font-semibold">
-                  Ver todos los inactivos
+                  Ver todos
                 </A>
               </div>
 

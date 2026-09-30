@@ -20,7 +20,7 @@ export type LeadStatus =
   | 'ganado'
   | 'perdido';
 
-export type LeadSegment = 'A' | 'B' | 'C' | 'D';
+export type LeadSegment = 'A' | 'B' | 'C';
 
 export interface Lead {
   id: string;

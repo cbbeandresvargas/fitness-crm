@@ -2,6 +2,7 @@ import { Hono, Context } from 'hono';
 import { Env, Lead, User, ActivityLog, SessionData, WhatsAppMessage } from '../lib/types';
 import { requireAuth } from '../lib/auth';
 import { normalizePhone, checkDuplicatePhone, calculateDynamicSegment, autoAssignAgent } from '../lib/rules';
+import { computeFcSegment } from '../lib/segments';
 import {
   buildLeadContextPrompt,
   generateAiWhatsAppMessage,
@@ -42,17 +43,19 @@ leadsRoutes.get('/api/dashboard', async (c) => {
     .first<{ count: number }>();
   const totalLeads = totalLeadsRes?.count || 0;
 
-  // Segment counts
-  const segmentsRes = await c.env.DB.prepare(
-    `SELECT segment, COUNT(*) as count FROM leads ${leadWhere} GROUP BY segment`
+  // Segment counts — derivados con la única fuente de verdad de segmentación
+  // (misma lógica que la lista de prospectos: lib/segments -> computeFcSegment)
+  const segmentLeadsRes = await c.env.DB.prepare(
+    `SELECT metadata, created_at, last_contacted_at, last_inbound_at FROM leads ${leadWhere}`
   )
     .bind(...leadParams)
-    .all<{ segment: string; count: number }>();
+    .all<Lead>();
 
-  const segmentsCount = { A: 0, B: 0, C: 0, D: 0 };
-  for (const row of segmentsRes.results || []) {
-    if (row.segment in segmentsCount) {
-      segmentsCount[row.segment as keyof typeof segmentsCount] = row.count;
+  const segmentsCount = { A: 0, B: 0, C: 0 };
+  for (const row of segmentLeadsRes.results || []) {
+    const computed = computeFcSegment(row);
+    if (computed.segment) {
+      segmentsCount[computed.segment]++;
     }
   }
 
@@ -93,28 +96,32 @@ leadsRoutes.get('/api/dashboard', async (c) => {
     .bind(...leadParams)
     .all<ActivityLog & { lead_name: string }>();
 
-  // Leads needing attention (Segment C or status 'nuevo')
+  // Leads needing attention (segmento C derivado o status 'nuevo'):
+  // se traen los más recientes y se filtra con la segmentación derivada
   const attentionQuery = isAgent
     ? `SELECT l.*, u.name as assigned_name 
        FROM leads l 
        LEFT JOIN users u ON u.id = l.assigned_to
-       WHERE l.assigned_to = ? AND (l.segment = 'C' OR l.status = 'nuevo') 
-       ORDER BY l.created_at DESC LIMIT 6`
+       WHERE l.assigned_to = ? 
+       ORDER BY l.created_at DESC LIMIT 50`
     : `SELECT l.*, u.name as assigned_name 
        FROM leads l 
        LEFT JOIN users u ON u.id = l.assigned_to
-       WHERE l.segment = 'C' OR l.status = 'nuevo' 
-       ORDER BY l.created_at DESC LIMIT 6`;
+       ORDER BY l.created_at DESC LIMIT 50`;
 
   const attentionLeadsRes = await c.env.DB.prepare(attentionQuery)
     .bind(...leadParams)
     .all<Lead>();
 
-  const parsedAttention = (attentionLeadsRes.results || []).map((l) => ({
-    ...l,
-    tags: typeof l.tags === 'string' ? JSON.parse(l.tags || '[]') : l.tags,
-    metadata: typeof l.metadata === 'string' ? JSON.parse(l.metadata || '{}') : l.metadata,
-  }));
+  const parsedAttention = (attentionLeadsRes.results || [])
+    .map((l) => ({
+      ...l,
+      segment: computeFcSegment(l).segment,
+      tags: typeof l.tags === 'string' ? JSON.parse(l.tags || '[]') : l.tags,
+      metadata: typeof l.metadata === 'string' ? JSON.parse(l.metadata || '{}') : l.metadata,
+    }))
+    .filter((l) => l.segment === 'C' || l.status === 'nuevo')
+    .slice(0, 6);
 
   return c.json({
     totalLeads,
@@ -148,10 +155,8 @@ leadsRoutes.get('/api/leads', async (c) => {
     params.push(agentId);
   }
 
-  if (segment) {
-    whereClauses.push('l.segment = ?');
-    params.push(segment);
-  }
+  // Nota: el filtro por segmento se aplica post-consulta sobre el segmento
+  // DERIVADO (identificadores A/B/C) — misma lógica que el dashboard.
 
   if (status) {
     whereClauses.push('l.status = ?');
@@ -179,11 +184,19 @@ leadsRoutes.get('/api/leads', async (c) => {
 
   const leadsRes = await c.env.DB.prepare(query).bind(...params).all<Lead>();
 
-  const leads = (leadsRes.results || []).map((lead) => ({
+  let leads = (leadsRes.results || []).map((lead) => ({
     ...lead,
     tags: typeof lead.tags === 'string' ? JSON.parse(lead.tags || '[]') : lead.tags,
     metadata: typeof lead.metadata === 'string' ? JSON.parse(lead.metadata || '{}') : lead.metadata,
+    // Segmento comercial DERIVADO (única fuente de verdad: lib/segments).
+    // La columna `segment` de la BD es sólo caché de escritura.
+    segment: computeFcSegment(lead).segment,
   }));
+
+  // Filtro por segmento derivado (identificadores internos A/B/C)
+  if (segment) {
+    leads = leads.filter((l) => l.segment === segment);
+  }
 
   return c.json({ leads });
 });
@@ -217,6 +230,7 @@ leadsRoutes.get('/api/leads/:id', async (c) => {
     ...lead,
     tags: typeof lead.tags === 'string' ? JSON.parse(lead.tags || '[]') : lead.tags,
     metadata: typeof lead.metadata === 'string' ? JSON.parse(lead.metadata || '{}') : lead.metadata,
+    segment: computeFcSegment(lead).segment,
   };
 
   // Actividades
@@ -441,6 +455,8 @@ leadsRoutes.post('/api/leads/:id/status', async (c) => {
     status: newStatus,
     metadata: currentLead.metadata,
     last_contacted_at: now,
+    last_inbound_at: currentLead.last_inbound_at,
+    created_at: currentLead.created_at,
   });
 
   await c.env.DB.prepare(`
@@ -864,6 +880,7 @@ const handleUpdateLead = async (c: Context<{ Bindings: Env; Variables: { user: S
     status: currentLead.status,
     metadata,
     last_contacted_at: currentLead.last_contacted_at,
+    last_inbound_at: currentLead.last_inbound_at,
     created_at: currentLead.created_at,
   });
 

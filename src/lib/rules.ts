@@ -1,5 +1,6 @@
 import { D1Database } from '@cloudflare/workers-types';
 import { Lead, LeadSegment, User } from './types';
+import { computeFcSegment } from './segments';
 
 /**
  * Normaliza un número telefónico para comparación estricta y formato WhatsApp
@@ -48,72 +49,26 @@ export async function checkDuplicatePhone(
 }
 
 /**
- * Motor de Segmentación Dinámica:
- * Calcula automáticamente si el lead pertenece a Segmento A, B, C o D
+ * Motor de Segmentación Comercial FC — delega en la única fuente de verdad
+ * (`computeFcSegment` de lib/segments). Ver reglas y prioridad allí.
+ *
+ * La columna `segment` de la BD es NOT NULL y actúa como caché del valor derivado:
+ * las lecturas (lista, detalle, dashboard, export) siempre re-derivan con
+ * computeFcSegment, por lo que el segmento cambia solo cuando cambia la
+ * relación del prospecto con FC (p. ej. B pasa a A al comprar su primera
+ * membresía). Si el lead no califica para ningún segmento, se cachea 'C'.
  */
 export function calculateDynamicSegment(lead: {
   status: string;
   metadata?: Record<string, any> | string;
   last_contacted_at?: string | null;
+  last_inbound_at?: string | null;
   created_at?: string | null;
 }): { segment: LeadSegment; reason: string } {
-  const meta: Record<string, any> =
-    typeof lead.metadata === 'string'
-      ? (() => {
-          try {
-            return JSON.parse(lead.metadata);
-          } catch {
-            return {};
-          }
-        })()
-      : lead.metadata || {};
-
-  const presupuesto = Number(meta.presupuesto) || 0;
-  const status = lead.status;
-
-  // Cálculo de días desde el último contacto
-  const referenceDateStr = lead.last_contacted_at || lead.created_at || new Date().toISOString();
-  const lastContactDate = new Date(referenceDateStr);
-  const now = new Date();
-  const diffDays = Math.max(0, Math.floor((now.getTime() - lastContactDate.getTime()) / (1000 * 60 * 60 * 24)));
-
-  // Regla 1: Descartado / Perdido o inactividad severa > 30 días
-  if (status === 'perdido' || diffDays > 30 || (presupuesto > 0 && presupuesto < 35)) {
-    return {
-      segment: 'D',
-      reason: status === 'perdido' ? 'Lead marcado como Perdido' : diffDays > 30 ? `Inactividad de ${diffDays} días (>30d)` : 'Presupuesto por debajo del mínimo',
-    };
-  }
-
-  // Regla 2: Segmento A (VIP / Alto Valor / Caliente)
-  if (
-    status === 'ganado' ||
-    presupuesto >= 150 ||
-    (status === 'cita_agendada' && diffDays <= 3) ||
-    (status === 'negociacion' && diffDays <= 2)
-  ) {
-    return {
-      segment: 'A',
-      reason: status === 'ganado'
-        ? 'Cliente ganado / Activo'
-        : presupuesto >= 150
-        ? `Presupuesto alto ($${presupuesto} USD)`
-        : `En fase ${status} con contacto reciente (${diffDays}d)`,
-    };
-  }
-
-  // Regla 3: Segmento C (Frío / Requiere reactivación)
-  if (diffDays >= 14 || status === 'contactado' && diffDays >= 7) {
-    return {
-      segment: 'C',
-      reason: `Sin contacto en ${diffDays} días (Reactivación necesaria)`,
-    };
-  }
-
-  // Regla 4: Segmento B (Tibio / Seguimiento estándar)
+  const computed = computeFcSegment(lead);
   return {
-    segment: 'B',
-    reason: `Seguimiento regular activo (${diffDays} días desde último contacto)`,
+    segment: (computed.segment ?? 'C') as LeadSegment,
+    reason: computed.reason,
   };
 }
 

@@ -238,7 +238,7 @@ export async function suggestAiTags(env: Env, lead: Lead): Promise<string[]> {
   const meta = lead.metadata || {};
   const defaults = ['Fitness'];
   if (meta.producto) defaults.push(meta.producto.split(' ')[0]);
-  if (lead.segment === 'A') defaults.push('VIP');
+  if (lead.segment === 'A') defaults.push('AntiguoPagador');
   if (meta.objetivo?.toLowerCase().includes('grasa') || meta.objetivo?.toLowerCase().includes('peso')) defaults.push('Pérdida de Peso');
   if (meta.objetivo?.toLowerCase().includes('musculo') || meta.objetivo?.toLowerCase().includes('fuerza')) defaults.push('Hipertrofia');
   return defaults;

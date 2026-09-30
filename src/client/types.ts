@@ -17,7 +17,7 @@ export type LeadStatus =
   | 'ganado'
   | 'perdido';
 
-export type LeadSegment = 'A' | 'B' | 'C' | 'D';
+export type LeadSegment = 'A' | 'B' | 'C';
 
 export interface Lead {
   id: string;
@@ -25,7 +25,8 @@ export interface Lead {
   phone: string;
   email?: string | null;
   status: LeadStatus;
-  segment: LeadSegment;
+  /** Segmento comercial DERIVADO (A/B/C) — null si no califica para ninguno */
+  segment?: LeadSegment | null;
   assigned_to?: string | null;
   assigned_name?: string | null;
   tags: string[];
@@ -101,7 +102,7 @@ export interface SessionData {
 
 export interface DashboardData {
   totalLeads: number;
-  segmentsCount: { A: number; B: number; C: number; D: number };
+  segmentsCount: { A: number; B: number; C: number };
   statusCount: Record<string, number>;
   recentActivities: ActivityLog[];
   leadsNeedingAttention: Lead[];

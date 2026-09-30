@@ -295,7 +295,12 @@ export function classifyFcRows(
       if (matched.metadata?.first_name === undefined) syncFields.push('nombre');
       if (matched.metadata?.last_name === undefined) syncFields.push('apellido');
       if (matched.metadata?.email_verificado === undefined && data.emailVerified !== undefined) syncFields.push('email verificado');
-      if (matched.metadata?.cantidad_membresias === undefined && data.membershipCount !== undefined) syncFields.push('cantidad de membresías');
+      // Cantidad de membresías: se completa si falta o si el Excel reporta un
+      // conteo MAYOR (compra de membresía => B pasa automáticamente a A)
+      if (
+        data.membershipCount !== undefined &&
+        (matched.metadata?.cantidad_membresias === undefined || data.membershipCount > Number(matched.metadata.cantidad_membresias))
+      ) syncFields.push('cantidad de membresías');
       if (matched.metadata?.estado_membresia === undefined && data.membershipStatus) syncFields.push('estado de membresía');
       classification.syncFields = syncFields;
 

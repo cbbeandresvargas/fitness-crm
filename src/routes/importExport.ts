@@ -12,6 +12,7 @@ import {
   FcRowClassification,
 } from '../lib/fcImport';
 import { cityFromMetadata } from '../lib/locations';
+import { computeFcSegment } from '../lib/segments';
 
 export const importExportRoutes = new Hono<{ Bindings: Env; Variables: { user: SessionData } }>();
 
@@ -408,7 +409,14 @@ importExportRoutes.post('/api/import/fc/commit', async (c) => {
     if (metadata.first_name === undefined) { metadata.first_name = row.data.firstName; fills.push('nombre'); }
     if (metadata.last_name === undefined) { metadata.last_name = row.data.lastName; fills.push('apellido'); }
     if (metadata.email_verificado === undefined && row.data.emailVerified !== undefined) { metadata.email_verificado = row.data.emailVerified; fills.push('email verificado'); }
-    if (metadata.cantidad_membresias === undefined && row.data.membershipCount !== undefined) { metadata.cantidad_membresias = row.data.membershipCount; fills.push('cantidad de membresías'); }
+    // Cantidad de membresías: se completa si falta y se ACTUALIZA si el Excel
+    // (registro real de FC) reporta un conteo mayor — así un "B — Registrado
+    // que nunca pagó" pasa automáticamente a "A — Antiguo pagador" al comprar
+    // su primera membresía. Nunca se baja un conteo existente mayor.
+    if (
+      row.data.membershipCount !== undefined &&
+      (metadata.cantidad_membresias === undefined || row.data.membershipCount > Number(metadata.cantidad_membresias))
+    ) { metadata.cantidad_membresias = row.data.membershipCount; fills.push('cantidad de membresías'); }
     if (metadata.estado_membresia === undefined && row.data.membershipStatus) { metadata.estado_membresia = row.data.membershipStatus; fills.push('estado de membresía'); }
 
     if (fills.length === 0) {
@@ -494,7 +502,13 @@ importExportRoutes.get('/api/export/csv', async (c) => {
       'Estado': l.status,
       'Estado de Membresía': meta.estado_membresia || '',
       'Cantidad de Membresías': meta.cantidad_membresias !== undefined ? meta.cantidad_membresias : '',
-      'Segmento': l.segment,
+      // Segmento comercial DERIVADO (misma fuente de verdad que lista/dashboard)
+      'Segmento': computeFcSegment({
+        metadata: meta,
+        created_at: l.created_at,
+        last_contacted_at: l.last_contacted_at,
+        last_inbound_at: l.last_inbound_at,
+      }).segment ?? '',
       'Asesor Asignado': l.assigned_name || '',
       'Presupuesto USD': meta.presupuesto || 0,
       'Objetivo': meta.objetivo || '',

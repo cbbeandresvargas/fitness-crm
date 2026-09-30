@@ -5,6 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
 import { Lead, User } from '../types';
 import { cityFromMetadata } from '../../lib/locations';
+import { FC_SEGMENTS } from '../../lib/segments';
+import { SegmentBadge } from '../components/SegmentBadge';
 
 export default function LeadsList() {
   const { user, showToast } = useAuth();
@@ -200,10 +202,10 @@ export default function LeadsList() {
               <span class="text-xs font-bold text-muted mr-1">Segmento:</span>
               {[
                 { id: '', label: 'Todos' },
-                { id: 'A', label: '🔥 A (VIP)' },
-                { id: 'B', label: '⚡ B (Tibio)' },
-                { id: 'C', label: '⏳ C (Atención)' },
-                { id: 'D', label: '🛑 D (Inactivo)' },
+                ...(['A', 'B', 'C'] as const).map((id) => ({
+                  id,
+                  label: `${FC_SEGMENTS[id].icon} ${id} · ${FC_SEGMENTS[id].label}`,
+                })),
               ].map((seg) => (
                 <button
                   type="button"
@@ -357,19 +359,7 @@ export default function LeadsList() {
                             </td>
 
                             <td class="p-4">
-                              <span
-                                class={`px-2.5 py-1 rounded-full text-[10px] font-extrabold inline-block ${
-                                  lead.segment === 'A'
-                                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                                    : lead.segment === 'B'
-                                    ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                                    : lead.segment === 'C'
-                                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                                    : 'bg-elevate text-muted border border-edge-strong'
-                                }`}
-                              >
-                                Segmento {lead.segment}
-                              </span>
+                              <SegmentBadge segment={lead.segment} />
                             </td>
 
                             <td class="p-4">
@@ -481,20 +471,8 @@ export default function LeadsList() {
                             </div>
                           </div>
 
-                          <span
-                            class={`px-2.5 py-1 rounded-full text-[10px] font-extrabold shrink-0 ${
-                              lead.segment === 'A'
-                                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                                : lead.segment === 'B'
-                                ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                                : lead.segment === 'C'
-                                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                                : 'bg-elevate text-muted border border-edge-strong'
-                            }`}
-                          >
-                            Seg {lead.segment}
-                          </span>
-                        </div>
+                           <SegmentBadge segment={lead.segment} />
+                         </div>
 
                         <div class="p-3 rounded-2xl bg-app/70 border border-edge/80 space-y-1">
                           <div class="flex items-center justify-between text-xs">
