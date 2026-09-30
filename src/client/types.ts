@@ -39,6 +39,8 @@ export interface Lead {
   };
   notes_summary?: string | null;
   last_contacted_at?: string | null;
+  /** Actividades de interés asociadas (catálogo central, relación N:M) */
+  interests?: LeadInterest[];
   last_inbound_at?: string | null;
   ai_enabled?: number;
   handoff_at?: string | null;

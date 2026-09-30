@@ -318,7 +318,7 @@ export default function LeadsList() {
                         <th class="p-4">Segmento</th>
                         <th class="p-4">Estado del Lead</th>
                         <th class="p-4">Membresía</th>
-                        <th class="p-4">Interés / Meta</th>
+                        <th class="p-4">Actividades de interés</th>
                         <th class="p-4">Asesor</th>
                         <th class="p-4 text-right">Acciones</th>
                       </tr>
@@ -389,18 +389,33 @@ export default function LeadsList() {
                             </td>
 
                             <td class="p-4">
-                              <div class="space-y-1">
-                                <p class="font-medium text-body-soft">
-                                  {lead.metadata.producto || lead.metadata.objetivo || 'Fitness General'}
-                                </p>
-                                <Show when={lead.metadata.presupuesto}>
-                                  <div class="flex items-center gap-1.5 text-[11px] text-muted">
-                                    <span class="text-emerald-400 font-bold">
-                                      ${lead.metadata.presupuesto} USD
-                                    </span>
-                                  </div>
-                                </Show>
-                              </div>
+                              <Show
+                                when={(lead.interests || []).length > 0}
+                                fallback={<span class="text-muted text-xs">—</span>}
+                              >
+                                {/* Chips en una sola línea horizontal: overflow
+                                    horizontal, nunca crecimiento vertical de la fila */}
+                                <div class="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap max-w-[300px] pb-0.5">
+                                  <For each={lead.interests}>
+                                    {(interest) => (
+                                      <span
+                                        class={`px-2 py-0.5 rounded-lg border text-[10px] font-bold shrink-0 whitespace-nowrap ${
+                                          interest.is_active
+                                            ? 'bg-accent/20 border-accent/40 text-accent-text'
+                                            : 'bg-elevate border-edge-strong text-muted'
+                                        }`}
+                                        title={
+                                          interest.is_active
+                                            ? undefined
+                                            : 'Eliminada del catálogo (atenuada)'
+                                        }
+                                      >
+                                        {interest.name}
+                                      </span>
+                                    )}
+                                  </For>
+                                </div>
+                              </Show>
                             </td>
 
                             <td class="p-4 text-body-soft">
@@ -469,13 +484,35 @@ export default function LeadsList() {
                            <SegmentBadge segment={lead.segment} />
                          </div>
 
-                        <div class="p-3 rounded-2xl bg-app/70 border border-edge/80 space-y-1">
-                          <div class="flex items-center justify-between text-xs">
-                            <span class="text-muted">Programa:</span>
-                            <span class="font-semibold text-body-soft">
-                              {lead.metadata.producto || 'Gimnasio'}
-                            </span>
-                          </div>
+                         <div class="p-3 rounded-2xl bg-app/70 border border-edge/80 space-y-1">
+                           <div class="flex items-center justify-between gap-2 text-xs overflow-hidden">
+                             <span class="text-muted shrink-0">Actividades:</span>
+                             <Show
+                               when={(lead.interests || []).length > 0}
+                               fallback={<span class="text-muted">Sin actividades</span>}
+                             >
+                               <div class="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap max-w-[220px]">
+                                 <For each={lead.interests}>
+                                   {(interest) => (
+                                     <span
+                                       class={`px-2 py-0.5 rounded-lg border text-[10px] font-bold shrink-0 whitespace-nowrap ${
+                                         interest.is_active
+                                           ? 'bg-accent/20 border-accent/40 text-accent-text'
+                                           : 'bg-elevate border-edge-strong text-muted'
+                                       }`}
+                                       title={
+                                         interest.is_active
+                                           ? undefined
+                                           : 'Eliminada del catálogo (atenuada)'
+                                       }
+                                     >
+                                       {interest.name}
+                                     </span>
+                                   )}
+                                 </For>
+                               </div>
+                             </Show>
+                           </div>
                           <div class="flex items-center justify-between text-xs">
                             <span class="text-muted">Presupuesto:</span>
                             <span class="font-bold text-emerald-400">
