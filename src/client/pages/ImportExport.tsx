@@ -31,7 +31,6 @@ export default function ImportExport() {
   const [colProduct, setColProduct] = createSignal('Programa Interes');
   const [colGoal, setColGoal] = createSignal('Objetivo Deportivo');
   const [colCity, setColCity] = createSignal('Ciudad');
-  const [colBranch, setColBranch] = createSignal('Sede');
   const [colTags, setColTags] = createSignal('Tags');
   const [assignedTo, setAssignedTo] = createSignal('auto');
 
@@ -108,7 +107,6 @@ export default function ImportExport() {
         col_product: colProduct(),
         col_goal: colGoal(),
         col_city: colCity(),
-        col_branch: colBranch(),
         col_tags: colTags(),
       });
 
@@ -443,7 +441,7 @@ export default function ImportExport() {
               <span class="text-2xl block">⚡</span>
               <h3 class="font-extrabold text-body text-base">Probar con Datos Demo</h3>
               <p class="text-xs text-muted">
-                Carga un dataset prearmado de 5 prospectos con presupuestos, metas deportivas y sedes en CDMX, Guadalajara y Monterrey.
+                Carga un dataset prearmado de 5 prospectos con presupuestos, metas deportivas y datos de ubicación (CDMX, Guadalajara y Monterrey).
               </p>
             </div>
 
@@ -515,7 +513,6 @@ export default function ImportExport() {
                 { label: 'Programa de Interés', val: colProduct, set: setColProduct },
                 { label: 'Objetivo Deportivo', val: colGoal, set: setColGoal },
                 { label: 'Ciudad', val: colCity, set: setColCity },
-                { label: 'Sede', val: colBranch, set: setColBranch },
                 { label: 'Etiquetas / Tags', val: colTags, set: setColTags },
               ].map((field) => (
                 <div class="p-3 bg-app rounded-2xl border border-edge/80 space-y-1">

@@ -4,6 +4,7 @@ import { Layout } from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
 import { Lead, User } from '../types';
+import { cityFromMetadata } from '../../lib/locations';
 
 export default function LeadsList() {
   const { user, showToast } = useAuth();
@@ -313,8 +314,10 @@ export default function LeadsList() {
                     <thead class="bg-app/80 border-b border-edge text-muted uppercase font-bold tracking-wider">
                       <tr>
                         <th class="p-4">Prospecto</th>
+                        <th class="p-4">Ciudad</th>
                         <th class="p-4">Segmento</th>
-                        <th class="p-4">Estado</th>
+                        <th class="p-4">Estado del Lead</th>
+                        <th class="p-4">Membresía</th>
                         <th class="p-4">Interés / Meta</th>
                         <th class="p-4">Asesor</th>
                         <th class="p-4 text-right">Acciones</th>
@@ -345,6 +348,12 @@ export default function LeadsList() {
                                   </div>
                                 </div>
                               </div>
+                            </td>
+
+                            <td class="p-4 text-xs font-semibold text-body-soft whitespace-nowrap">
+                              {cityFromMetadata(lead.metadata) || (
+                                <span class="text-muted font-normal">—</span>
+                              )}
                             </td>
 
                             <td class="p-4">
@@ -379,19 +388,33 @@ export default function LeadsList() {
                             </td>
 
                             <td class="p-4">
+                              <Show
+                                when={lead.metadata.estado_membresia}
+                                fallback={<span class="text-muted text-xs">—</span>}
+                              >
+                                <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold inline-block bg-violet-500/20 text-violet-400 border border-violet-500/40">
+                                  {lead.metadata.estado_membresia}
+                                </span>
+                              </Show>
+                              <Show when={lead.metadata.cantidad_membresias !== undefined}>
+                                <span class="block text-[10px] text-muted mt-1">
+                                  Cantidad: {lead.metadata.cantidad_membresias}
+                                </span>
+                              </Show>
+                            </td>
+
+                            <td class="p-4">
                               <div class="space-y-1">
                                 <p class="font-medium text-body-soft">
                                   {lead.metadata.producto || lead.metadata.objetivo || 'Fitness General'}
                                 </p>
-                                <div class="flex items-center gap-1.5 text-[11px] text-muted">
-                                  <Show when={lead.metadata.presupuesto}>
+                                <Show when={lead.metadata.presupuesto}>
+                                  <div class="flex items-center gap-1.5 text-[11px] text-muted">
                                     <span class="text-emerald-400 font-bold">
                                       ${lead.metadata.presupuesto} USD
                                     </span>
-                                    <span>•</span>
-                                  </Show>
-                                  <span>{lead.metadata.sede || lead.metadata.ciudad || 'Principal'}</span>
-                                </div>
+                                  </div>
+                                </Show>
                               </div>
                             </td>
 
@@ -487,10 +510,24 @@ export default function LeadsList() {
                             </span>
                           </div>
                           <div class="flex items-center justify-between text-xs">
-                            <span class="text-muted">Sede:</span>
+                            <span class="text-muted">Ciudad:</span>
                             <span class="text-body-soft">
-                              {lead.metadata.sede || lead.metadata.ciudad || 'No especificada'}
+                              {cityFromMetadata(lead.metadata) || 'Sin especificar'}
                             </span>
+                          </div>
+                          <div class="flex items-center justify-between text-xs">
+                            <span class="text-muted">Membresía:</span>
+                            <Show
+                              when={lead.metadata.estado_membresia}
+                              fallback={<span class="text-muted">Sin dato</span>}
+                            >
+                              <span class="px-2 py-0.5 rounded-lg bg-violet-500/20 border border-violet-500/40 text-violet-400 text-[10px] font-bold">
+                                {lead.metadata.estado_membresia}
+                                <Show when={lead.metadata.cantidad_membresias !== undefined}>
+                                  <span class="text-violet-400/80"> · {lead.metadata.cantidad_membresias}</span>
+                                </Show>
+                              </span>
+                            </Show>
                           </div>
                         </div>
 

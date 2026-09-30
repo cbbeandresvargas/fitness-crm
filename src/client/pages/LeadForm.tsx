@@ -1,6 +1,7 @@
 import { createSignal, Show } from 'solid-js';
 import { useNavigate, A } from '@solidjs/router';
 import { Layout } from '../components/Layout';
+import { LeadFormFields } from '../components/LeadFormFields';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
 
@@ -11,13 +12,14 @@ export default function LeadForm() {
   const [submitting, setSubmitting] = createSignal(false);
   const [errorMessage, setErrorMessage] = createSignal('');
 
-  // Form fields (FC workflow)
+  // Form fields (FC workflow — misma definición compartida con Editar Prospecto)
   const [firstName, setFirstName] = createSignal('');
   const [lastName, setLastName] = createSignal('');
   const [phone, setPhone] = createSignal('');
   const [email, setEmail] = createSignal('');
   const [ci, setCi] = createSignal('');
   const [status, setStatus] = createSignal('nuevo');
+  const [city, setCity] = createSignal('');
 
   const handleSubmit = async (e: Event) => {
     e.preventDefault();
@@ -37,6 +39,7 @@ export default function LeadForm() {
         email: email().trim() || undefined,
         ci: ci().trim() || undefined,
         status: status(),
+        ciudad: city().trim() || undefined,
       });
 
       showToast(`¡Prospecto ${res.lead.full_name} registrado con éxito!`, 'success');
@@ -78,99 +81,28 @@ export default function LeadForm() {
           onSubmit={handleSubmit}
           class="p-6 sm:p-8 rounded-3xl bg-surface border border-edge space-y-6 shadow-2xl"
         >
-          {/* Datos del Prospecto */}
+          {/* Datos del Prospecto (campos compartidos con Editar Prospecto) */}
           <div class="space-y-4">
             <h3 class="text-xs font-bold uppercase tracking-wider text-accent-text">
               Datos del Prospecto
             </h3>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-xs font-bold text-body-soft mb-1">
-                  Nombre *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={firstName()}
-                  onInput={(e) => setFirstName(e.currentTarget.value)}
-                  placeholder="Ej. Sofía"
-                  class="w-full px-4 py-2.5 bg-app border border-edge rounded-2xl text-xs text-body focus:outline-none focus:border-accent"
-                />
-              </div>
-
-              <div>
-                <label class="block text-xs font-bold text-body-soft mb-1">
-                  Apellido *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={lastName()}
-                  onInput={(e) => setLastName(e.currentTarget.value)}
-                  placeholder="Ej. Morales"
-                  class="w-full px-4 py-2.5 bg-app border border-edge rounded-2xl text-xs text-body focus:outline-none focus:border-accent"
-                />
-              </div>
-
-              <div>
-                <label class="block text-xs font-bold text-body-soft mb-1">
-                  WhatsApp *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={phone()}
-                  onInput={(e) => setPhone(e.currentTarget.value)}
-                  placeholder="+52 55 1234 5678"
-                  class="w-full px-4 py-2.5 bg-app border border-edge rounded-2xl text-xs text-body focus:outline-none focus:border-accent"
-                />
-              </div>
-
-              <div>
-                <label class="block text-xs font-bold text-body-soft mb-1">
-                  Correo Electrónico (Opcional)
-                </label>
-                <input
-                  type="email"
-                  value={email()}
-                  onInput={(e) => setEmail(e.currentTarget.value)}
-                  placeholder="sofia@gmail.com"
-                  class="w-full px-4 py-2.5 bg-app border border-edge rounded-2xl text-xs text-body focus:outline-none focus:border-accent"
-                />
-              </div>
-
-              <div>
-                <label class="block text-xs font-bold text-body-soft mb-1">
-                  CI (Opcional)
-                </label>
-                <input
-                  type="text"
-                  value={ci()}
-                  onInput={(e) => setCi(e.currentTarget.value)}
-                  placeholder="Ej. 123456789"
-                  class="w-full px-4 py-2.5 bg-app border border-edge rounded-2xl text-xs text-body focus:outline-none focus:border-accent"
-                />
-              </div>
-
-              <div>
-                <label class="block text-xs font-bold text-body-soft mb-1">
-                  Estado
-                </label>
-                <select
-                  value={status()}
-                  onChange={(e) => setStatus(e.currentTarget.value)}
-                  class="w-full px-4 py-2.5 bg-app border border-edge rounded-2xl text-xs text-body focus:outline-none focus:border-accent"
-                >
-                  <option value="nuevo">🌱 Nuevo</option>
-                  <option value="contactado">💬 Contactado</option>
-                  <option value="cita_agendada">📅 Cita Agendada</option>
-                  <option value="negociacion">🤝 Negociación</option>
-                  <option value="ganado">🏆 Ganado</option>
-                  <option value="perdido">🛑 Perdido</option>
-                </select>
-              </div>
-            </div>
+            <LeadFormFields
+              firstName={firstName}
+              setFirstName={setFirstName}
+              lastName={lastName}
+              setLastName={setLastName}
+              phone={phone}
+              setPhone={setPhone}
+              email={email}
+              setEmail={setEmail}
+              ci={ci}
+              setCi={setCi}
+              status={status}
+              setStatus={setStatus}
+              city={city}
+              setCity={setCity}
+            />
           </div>
 
           <div class="flex items-center justify-end gap-3 pt-4 border-t border-edge">

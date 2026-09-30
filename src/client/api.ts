@@ -155,6 +155,7 @@ export const api = {
     phone: string;
     email?: string;
     ci?: string;
+    ciudad?: string;
     status?: string;
     assigned_to?: string;
     tags?: string[];
@@ -232,8 +233,12 @@ export const api = {
     id: string,
     data: {
       full_name?: string;
+      first_name?: string;
+      last_name?: string;
       phone?: string;
       email?: string | null;
+      ci?: string;
+      ciudad?: string;
       tags?: string[];
       metadata?: Record<string, any>;
       notes_summary?: string;
@@ -345,7 +350,6 @@ export const api = {
     col_budget?: string;
     col_goal?: string;
     col_city?: string;
-    col_branch?: string;
     col_product?: string;
     col_tags?: string;
   }): Promise<{

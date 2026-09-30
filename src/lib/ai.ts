@@ -1,5 +1,6 @@
 import { Lead, ActivityLog, Env } from './types';
 import { normalizePhone } from './rules';
+import { cityFromMetadata } from './locations';
 
 /**
  * Reemplaza variables / placeholders como {nombre}, {producto}, {ciudad}, {agente} en una plantilla
@@ -109,7 +110,7 @@ Reglas:
 2. Usa emojis fitness con balance (💪, 🏋️, 🚀, ⏱️).
 3. Incluye siempre una llamada a la acción (CTA) fácil de responder.
 4. Habla con cercanía y calidez humana.
-5. Inyecta con precisión el objetivo deportivo, sede y notas del prospecto.`;
+5. Inyecta con precisión el objetivo deportivo, ciudad y notas del prospecto.`;
 
   const userPrompt = `Prospecto:
 - Nombre: ${lead.full_name}
@@ -163,7 +164,7 @@ export async function generateAiWhatsAppMessage(
   const meta = lead.metadata || {};
   const objetivo = meta.objetivo || 'alcanzar tu mejor nivel físico';
   const producto = meta.producto || 'nuestros programas de acondicionamiento';
-  const ciudad = meta.ciudad || meta.sede || 'nuestro gimnasio';
+  const ciudad = cityFromMetadata(meta) || 'nuestro gimnasio';
   const nombre = lead.full_name.split(' ')[0];
 
   if (lead.segment === 'A') {
@@ -205,7 +206,7 @@ export async function generateAiLeadBriefing(
 
   // Fallback
   const meta = lead.metadata || {};
-  return `${lead.full_name} se encuentra en etapa ${lead.status.toUpperCase()} buscando ${meta.objetivo || 'entrenamiento'} con presupuesto aproximado de $${meta.presupuesto || '100'} USD. Se recomienda coordinar visita presencial o clase de prueba inmediata en sede ${meta.sede || 'principal'}.`;
+  return `${lead.full_name} se encuentra en etapa ${lead.status.toUpperCase()} buscando ${meta.objetivo || 'entrenamiento'} con presupuesto aproximado de $${meta.presupuesto || '100'} USD. Se recomienda coordinar visita presencial o clase de prueba inmediata${cityFromMetadata(meta) ? ` en la ciudad de ${cityFromMetadata(meta)}` : ''}.`;
 }
 
 /**

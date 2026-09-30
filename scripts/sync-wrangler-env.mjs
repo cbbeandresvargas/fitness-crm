@@ -116,6 +116,22 @@ if (!fs.existsSync(templatePath)) {
   process.exit(1);
 }
 
+// Validación: sin estos IDs wrangler genera una configuración inválida (falla al arrancar).
+// Mejor detenerse aquí con instrucciones claras que romper wrangler.jsonc.
+const missing = [];
+if (!config.D1_DATABASE_ID) {
+  missing.push('D1_DATABASE_ID  ->  créalo con:  npx wrangler d1 create fitness-crm-db');
+}
+if (!config.KV_NAMESPACE_ID) {
+  missing.push('KV_NAMESPACE_ID  ->  créalo con:  npx wrangler kv namespace create KV');
+}
+if (missing.length > 0) {
+  console.error('❌ [env-sync] Faltan valores requeridos en .env — NO se sobrescribió wrangler.jsonc:');
+  for (const m of missing) console.error(`   - ${m}`);
+  console.error('ℹ️  Copia los IDs generados a tu .env y vuelve a ejecutar: npm run config:sync');
+  process.exit(1);
+}
+
 let template = fs.readFileSync(templatePath, 'utf-8');
 
 // Reemplazos de tokens
@@ -126,9 +142,23 @@ template = template
   .replaceAll('__KV_NAMESPACE_ID__', config.KV_NAMESPACE_ID)
   .replaceAll('__R2_BUCKET_NAME__', config.R2_BUCKET_NAME);
 
-// Escribir wrangler.jsonc resultante
+// Escribir wrangler.jsonc resultante, eliminando campos vacíos
+// (wrangler rechaza account_id vacío y los bindings requieren IDs no vacíos)
 const wranglerJsonPath = path.join(rootDir, 'wrangler.jsonc');
-fs.writeFileSync(wranglerJsonPath, template, 'utf-8');
+try {
+  const cfg = JSON.parse(template);
+  if (!cfg.account_id) delete cfg.account_id;
+  if (cfg.vars && typeof cfg.vars === 'object') {
+    for (const key of Object.keys(cfg.vars)) {
+      if (!String(cfg.vars[key] ?? '').trim()) delete cfg.vars[key];
+    }
+    if (Object.keys(cfg.vars).length === 0) delete cfg.vars;
+  }
+  fs.writeFileSync(wranglerJsonPath, JSON.stringify(cfg, null, '\t'), 'utf-8');
+} catch (e) {
+  console.error('❌ [env-sync] wrangler.template.jsonc no produce JSON válido:', e.message);
+  process.exit(1);
+}
 
 // 3. Sincronizar .dev.vars para desarrollo local con wrangler dev
 const devVarsContent = [

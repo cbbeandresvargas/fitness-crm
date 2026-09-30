@@ -11,6 +11,7 @@ import {
   FcExistingLeadRef,
   FcRowClassification,
 } from '../lib/fcImport';
+import { cityFromMetadata } from '../lib/locations';
 
 export const importExportRoutes = new Hono<{ Bindings: Env; Variables: { user: SessionData } }>();
 
@@ -20,12 +21,12 @@ importExportRoutes.use('/api/*', requireAuth);
  * Carga de CSV de prueba precargado
  */
 importExportRoutes.get('/api/import/load-sample', async (c) => {
-  const sampleCsv = `Nombre Completo,Telefono Movil,Correo,Presupuesto USD,Programa Interes,Objetivo Deportivo,Ciudad,Sede,Tags
-Esteban Navarro,+525566778899,esteban.navarro@gmail.com,190,CrossFit Pro,Ganar fuerza y masa muscular,Ciudad de México,Polanco,CrossFit;Fuerza;VIP
-Gabriela Meza,+525512345678,gabriela.m@hotmail.com,120,Pilates Reformer,Rehabilitación de espalda,Ciudad de México,Roma Norte,Pilates;Salud
-Felipe Rivas,+525544332211,felipe.rivas@empresa.com,220,Personal Trainer,Bajar 8 kilos en 3 meses,Monterrey,San Pedro,Personal Trainer;Nutricion
-Andrea Salazar,+525533221100,andrea.s@yahoo.com,100,Funcional,Tonificación,Guadalajara,Chapultepec,Funcional
-Manuel Coronado,+525588990011,manuel.c@live.com,160,Membresía Anual,Mejorar resistencia cardiovascular,Querétaro,Juriquilla,Cardio;Anual`;
+  const sampleCsv = `Nombre Completo,Telefono Movil,Correo,Presupuesto USD,Programa Interes,Objetivo Deportivo,Ciudad,Tags
+Esteban Navarro,+525566778899,esteban.navarro@gmail.com,190,CrossFit Pro,Ganar fuerza y masa muscular,Ciudad de México,CrossFit;Fuerza;VIP
+Gabriela Meza,+525512345678,gabriela.m@hotmail.com,120,Pilates Reformer,Rehabilitación de espalda,Ciudad de México,Pilates;Salud
+Felipe Rivas,+525544332211,felipe.rivas@empresa.com,220,Personal Trainer,Bajar 8 kilos en 3 meses,Monterrey,Personal Trainer;Nutricion
+Andrea Salazar,+525533221100,andrea.s@yahoo.com,100,Funcional,Tonificación,Guadalajara,Funcional
+Manuel Coronado,+525588990011,manuel.c@live.com,160,Membresía Anual,Mejorar resistencia cardiovascular,Querétaro,Cardio;Anual`;
 
   const fileKey = `sample_${Date.now()}.csv`;
 
@@ -136,7 +137,6 @@ importExportRoutes.post('/api/import/process', async (c) => {
   const budgetCol = (body.col_budget as string) || 'Presupuesto USD';
   const goalCol = (body.col_goal as string) || 'Objetivo Deportivo';
   const cityCol = (body.col_city as string) || 'Ciudad';
-  const branchCol = (body.col_branch as string) || 'Sede';
   const productCol = (body.col_product as string) || 'Programa Interes';
   const tagsCol = (body.col_tags as string) || 'Tags';
 
@@ -172,7 +172,6 @@ importExportRoutes.post('/api/import/process', async (c) => {
       presupuesto,
       objetivo: row[goalCol]?.trim() || '',
       ciudad: row[cityCol]?.trim() || '',
-      sede: row[branchCol]?.trim() || '',
       producto: row[productCol]?.trim() || '',
     };
 
@@ -493,12 +492,13 @@ importExportRoutes.get('/api/export/csv', async (c) => {
       'Teléfono': l.phone,
       'Correo': l.email || '',
       'Estado': l.status,
+      'Estado de Membresía': meta.estado_membresia || '',
+      'Cantidad de Membresías': meta.cantidad_membresias !== undefined ? meta.cantidad_membresias : '',
       'Segmento': l.segment,
       'Asesor Asignado': l.assigned_name || '',
       'Presupuesto USD': meta.presupuesto || 0,
       'Objetivo': meta.objetivo || '',
-      'Ciudad': meta.ciudad || '',
-      'Sede': meta.sede || '',
+      'Ciudad': cityFromMetadata(meta),
       'Producto': meta.producto || '',
       'Etiquetas': tags.join('; '),
       'Último Contacto': l.last_contacted_at || '',

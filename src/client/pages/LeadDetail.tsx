@@ -1,6 +1,8 @@
 import { createSignal, onMount, Show, For } from 'solid-js';
 import { useParams, useNavigate, A } from '@solidjs/router';
 import { Layout } from '../components/Layout';
+import { LeadFormFields } from '../components/LeadFormFields';
+import { cityFromMetadata } from '../../lib/locations';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
 import { Lead, ActivityLog, User, WhatsAppMessage, MessageTemplate } from '../types';
@@ -46,17 +48,15 @@ export default function LeadDetail() {
   const [generatingTags, setGeneratingTags] = createSignal(false);
   const [newTagInput, setNewTagInput] = createSignal('');
 
-  // Edit Modal State
+  // Edit Modal State (mismos campos compartidos que el formulario de Nuevo Prospecto)
   const [isEditModalOpen, setIsEditModalOpen] = createSignal(false);
-  const [editFullName, setEditFullName] = createSignal('');
+  const [editFirstName, setEditFirstName] = createSignal('');
+  const [editLastName, setEditLastName] = createSignal('');
   const [editPhone, setEditPhone] = createSignal('');
   const [editEmail, setEditEmail] = createSignal('');
-  const [editPresupuesto, setEditPresupuesto] = createSignal('0');
-  const [editProducto, setEditProducto] = createSignal('');
-  const [editObjetivo, setEditObjetivo] = createSignal('');
-  const [editSede, setEditSede] = createSignal('');
-  const [editCiudad, setEditCiudad] = createSignal('');
-  const [editHorario, setEditHorario] = createSignal('');
+  const [editCi, setEditCi] = createSignal('');
+  const [editStatus, setEditStatus] = createSignal('nuevo');
+  const [editCity, setEditCity] = createSignal('');
   const [savingEdit, setSavingEdit] = createSignal(false);
 
   const loadLead = async () => {
@@ -69,16 +69,16 @@ export default function LeadDetail() {
       setLead(res.lead);
       setActivities(res.activities);
 
-      // Populate edit fields
-      setEditFullName(res.lead.full_name);
+      // Populate edit fields (mismos campos que el formulario de nuevo prospecto)
+      const meta = res.lead.metadata || {};
+      const nameParts = res.lead.full_name.trim().split(/\s+/);
+      setEditFirstName(meta.first_name || nameParts[0] || '');
+      setEditLastName(meta.last_name || nameParts.slice(1).join(' ') || '');
       setEditPhone(res.lead.phone);
       setEditEmail(res.lead.email || '');
-      setEditPresupuesto(String(res.lead.metadata.presupuesto || '0'));
-      setEditProducto(res.lead.metadata.producto || '');
-      setEditObjetivo(res.lead.metadata.objetivo || '');
-      setEditSede(res.lead.metadata.sede || '');
-      setEditCiudad(res.lead.metadata.ciudad || '');
-      setEditHorario(res.lead.metadata.horario_preferido || '');
+      setEditCi(meta.ci !== undefined && meta.ci !== null ? String(meta.ci) : '');
+      setEditStatus(res.lead.status);
+      setEditCity(cityFromMetadata(meta));
 
       // Load WhatsApp messages
       loadMessages();
@@ -258,30 +258,36 @@ export default function LeadDetail() {
     const parsed = content
       .replace(/{nombre}/gi, currentLead.full_name.split(' ')[0])
       .replace(/{producto}/gi, currentLead.metadata.producto || 'CrossFit Pro')
-      .replace(/{ciudad}/gi, currentLead.metadata.ciudad || currentLead.metadata.sede || 'nuestro gimnasio')
+      .replace(/{ciudad}/gi, cityFromMetadata(currentLead.metadata) || 'nuestro gimnasio')
       .replace(/{agente}/gi, user()?.name || 'Tu Coach');
     setChatInput(parsed);
   };
 
   const handleSaveEdit = async (e: Event) => {
     e.preventDefault();
-    if (!lead()) return;
+    const currentLead = lead();
+    if (!currentLead) return;
+
+    if (!editFirstName().trim() || !editLastName().trim() || !editPhone().trim()) {
+      showToast('El nombre, el apellido y el WhatsApp son obligatorios.', 'error');
+      return;
+    }
 
     try {
       setSavingEdit(true);
-      const res = await api.updateLead(lead()!.id, {
-        full_name: editFullName().trim(),
+
+      // Estado del Lead por el mecanismo existente (recalcula segmento + bitácora)
+      if (editStatus() !== currentLead.status) {
+        await api.updateLeadStatus(currentLead.id, editStatus());
+      }
+
+      const res = await api.updateLead(currentLead.id, {
+        first_name: editFirstName().trim(),
+        last_name: editLastName().trim(),
         phone: editPhone().trim(),
         email: editEmail().trim() || null,
-        metadata: {
-          ...lead()!.metadata,
-          presupuesto: Number(editPresupuesto()) || 0,
-          producto: editProducto(),
-          objetivo: editObjetivo().trim(),
-          sede: editSede(),
-          ciudad: editCiudad(),
-          horario_preferido: editHorario(),
-        },
+        ci: editCi().trim(),
+        ciudad: editCity().trim(),
       });
 
       setLead(res.lead);
@@ -406,74 +412,24 @@ export default function LeadDetail() {
             </div>
 
             <form onSubmit={handleSaveEdit} class="space-y-4 text-xs">
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-body-soft font-bold mb-1">Nombre Completo *</label>
-                  <input
-                    type="text"
-                    required
-                    value={editFullName()}
-                    onInput={(e) => setEditFullName(e.currentTarget.value)}
-                    class="w-full px-3 py-2 bg-app border border-edge rounded-xl text-body focus:outline-none focus:border-accent"
-                  />
-                </div>
-                <div>
-                  <label class="block text-body-soft font-bold mb-1">Teléfono / WhatsApp *</label>
-                  <input
-                    type="text"
-                    required
-                    value={editPhone()}
-                    onInput={(e) => setEditPhone(e.currentTarget.value)}
-                    class="w-full px-3 py-2 bg-app border border-edge rounded-xl text-body focus:outline-none focus:border-accent"
-                  />
-                </div>
-                <div>
-                  <label class="block text-body-soft font-bold mb-1">Correo Electrónico</label>
-                  <input
-                    type="email"
-                    value={editEmail()}
-                    onInput={(e) => setEditEmail(e.currentTarget.value)}
-                    class="w-full px-3 py-2 bg-app border border-edge rounded-xl text-body focus:outline-none focus:border-accent"
-                  />
-                </div>
-                <div>
-                  <label class="block text-body-soft font-bold mb-1">Presupuesto Mensual (USD)</label>
-                  <input
-                    type="number"
-                    value={editPresupuesto()}
-                    onInput={(e) => setEditPresupuesto(e.currentTarget.value)}
-                    class="w-full px-3 py-2 bg-app border border-edge rounded-xl text-body focus:outline-none focus:border-accent"
-                  />
-                </div>
-                <div>
-                  <label class="block text-body-soft font-bold mb-1">Programa de Interés</label>
-                  <input
-                    type="text"
-                    value={editProducto()}
-                    onInput={(e) => setEditProducto(e.currentTarget.value)}
-                    class="w-full px-3 py-2 bg-app border border-edge rounded-xl text-body focus:outline-none focus:border-accent"
-                  />
-                </div>
-                <div>
-                  <label class="block text-body-soft font-bold mb-1">Sede</label>
-                  <input
-                    type="text"
-                    value={editSede()}
-                    onInput={(e) => setEditSede(e.currentTarget.value)}
-                    class="w-full px-3 py-2 bg-app border border-edge rounded-xl text-body focus:outline-none focus:border-accent"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label class="block text-body-soft font-bold mb-1">Objetivo del Prospecto</label>
-                <textarea
-                  rows={2}
-                  value={editObjetivo()}
-                  onInput={(e) => setEditObjetivo(e.currentTarget.value)}
-                  class="w-full p-2.5 bg-app border border-edge rounded-xl text-body focus:outline-none focus:border-accent"
-                ></textarea>
-              </div>
+              {/* Campos compartidos con el formulario de Nuevo Prospecto
+                  (mismos fields, labels, opciones y reglas de validación) */}
+              <LeadFormFields
+                firstName={editFirstName}
+                setFirstName={setEditFirstName}
+                lastName={editLastName}
+                setLastName={setEditLastName}
+                phone={editPhone}
+                setPhone={setEditPhone}
+                email={editEmail}
+                setEmail={setEditEmail}
+                ci={editCi}
+                setCi={setEditCi}
+                status={editStatus}
+                setStatus={setEditStatus}
+                city={editCity}
+                setCity={setEditCity}
+              />
 
               <div class="flex justify-end gap-3 pt-3 border-t border-edge">
                 <button
@@ -656,6 +612,20 @@ export default function LeadDetail() {
                     <span class="text-muted">Correo:</span>
                     <span class="text-body-soft">{lead()?.email || 'No proporcionado'}</span>
                   </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-muted">Estado de Membresía:</span>
+                    <Show
+                      when={lead()?.metadata?.estado_membresia}
+                      fallback={<span class="text-muted">Sin dato</span>}
+                    >
+                      <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-violet-500/20 text-violet-400 border border-violet-500/40">
+                        {lead()?.metadata?.estado_membresia}
+                        <Show when={lead()?.metadata?.cantidad_membresias !== undefined}>
+                          <span class="text-violet-400/80"> · {lead()?.metadata?.cantidad_membresias}</span>
+                        </Show>
+                      </span>
+                    </Show>
+                  </div>
                 </div>
               </div>
 
@@ -689,8 +659,10 @@ export default function LeadDetail() {
 
                   <div class="grid grid-cols-2 gap-2">
                     <div class="p-3 bg-app rounded-2xl border border-edge/80">
-                      <span class="text-[11px] text-muted block">Sede:</span>
-                      <span class="font-bold text-body-soft">{lead()?.metadata.sede || 'Principal'}</span>
+                      <span class="text-[11px] text-muted block">Ciudad:</span>
+                      <span class="font-bold text-body-soft">
+                        {cityFromMetadata(lead()?.metadata) || 'Sin especificar'}
+                      </span>
                     </div>
                     <div class="p-3 bg-app rounded-2xl border border-edge/80">
                       <span class="text-[11px] text-muted block">Horario:</span>

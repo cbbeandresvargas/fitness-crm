@@ -256,6 +256,7 @@ leadsRoutes.post('/api/leads', async (c) => {
   const rawPhone = (data.phone as string)?.trim();
   const email = (data.email as string)?.trim().toLowerCase() || null;
   const ci = (data.ci as string)?.trim() || null;
+  const ciudad = (data.ciudad as string)?.trim() || null;
   const status = (data.status as string) || 'nuevo';
   let assignedTo = (data.assigned_to as string) || null;
   const tagsStr = (data.tags as string) || '';
@@ -306,19 +307,23 @@ leadsRoutes.post('/api/leads', async (c) => {
       presupuesto: Number(data.presupuesto) || 0,
       objetivo: data.objetivo || '',
       horario_preferido: data.horario_preferido || '',
-      ciudad: data.ciudad || '',
-      sede: data.sede || '',
+      ciudad: data.ciudad || data.region || data.sede || '',
       producto: data.producto || '',
     };
   }
 
-  // Estructura FC: Nombre/Apellido y CI se preservan como datos estructurados
+  // Estructura FC: Nombre/Apellido, CI y Ciudad se preservan como datos estructurados
   if (firstName && lastName) {
     metadata.first_name = firstName;
     metadata.last_name = lastName;
   }
   if (ci) {
     metadata.ci = ci;
+  }
+  // Ciudad = donde vive el prospecto (único campo de ubicación; independiente
+  // del estado del lead y de la membresía)
+  if (ciudad) {
+    metadata.ciudad = ciudad;
   }
 
   // Valor gestionado por el sistema: cantidad de membresías inicia en 0
@@ -777,7 +782,9 @@ leadsRoutes.post('/api/leads/:id/metadata', async (c) => {
 });
 
 /**
- * Actualizar datos generales del lead (Nombre, Teléfono, Correo, Metas, Sede)
+ * Actualizar datos generales del lead (Nombre, Apellido, WhatsApp, Correo, CI, Ciudad).
+ * Mismos campos que el formulario de Nuevo Prospecto; sólo se actualizan los campos
+ * proporcionados (no se resetean los que el usuario no modifica).
  */
 const handleUpdateLead = async (c: Context<{ Bindings: Env; Variables: { user: SessionData } }>) => {
   const user = c.get('user');
@@ -793,7 +800,19 @@ const handleUpdateLead = async (c: Context<{ Bindings: Env; Variables: { user: S
     return c.json({ error: 'Acceso Denegado' }, 403);
   }
 
-  const fullName = (body.full_name as string)?.trim() || currentLead.full_name;
+  // Nombre compuesto desde Nombre + Apellido (o full_name para compatibilidad)
+  const firstName = (body.first_name as string)?.trim() || '';
+  const lastName = (body.last_name as string)?.trim() || '';
+  const legacyFullName = (body.full_name as string)?.trim() || '';
+  const fullName = legacyFullName || [firstName, lastName].filter(Boolean).join(' ') || currentLead.full_name;
+
+  if ((firstName || lastName) && (!firstName || !lastName)) {
+    return c.json({ error: 'El nombre y el apellido son obligatorios.' }, 400);
+  }
+  if (!fullName) {
+    return c.json({ error: 'El nombre es obligatorio.' }, 400);
+  }
+
   const rawPhone = (body.phone as string)?.trim();
   const phone = rawPhone ? normalizePhone(rawPhone) : currentLead.phone;
   const email = body.email !== undefined ? ((body.email as string)?.trim().toLowerCase() || null) : currentLead.email;
@@ -813,9 +832,24 @@ const handleUpdateLead = async (c: Context<{ Bindings: Env; Variables: { user: S
     if (body.presupuesto !== undefined) metadata.presupuesto = Number(body.presupuesto) || 0;
     if (body.producto !== undefined) metadata.producto = body.producto;
     if (body.objetivo !== undefined) metadata.objetivo = body.objetivo;
-    if (body.sede !== undefined) metadata.sede = body.sede;
     if (body.ciudad !== undefined) metadata.ciudad = body.ciudad;
     if (body.horario_preferido !== undefined) metadata.horario_preferido = body.horario_preferido;
+  }
+
+  // Campos FC (se aplican siempre que se envíen; cadena vacía = limpiar el valor)
+  if (firstName && lastName) {
+    metadata.first_name = firstName;
+    metadata.last_name = lastName;
+  }
+  if (body.ci !== undefined) {
+    const ci = (body.ci as string)?.trim() || '';
+    if (ci) metadata.ci = ci;
+    else delete metadata.ci;
+  }
+  if (body.ciudad !== undefined) {
+    const ciudad = (body.ciudad as string)?.trim() || '';
+    if (ciudad) metadata.ciudad = ciudad;
+    else delete metadata.ciudad;
   }
 
   let tags = typeof currentLead.tags === 'string' ? JSON.parse(currentLead.tags || '[]') : (currentLead.tags || []);

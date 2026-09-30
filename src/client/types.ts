@@ -34,7 +34,6 @@ export interface Lead {
     objetivo?: string;
     horario_preferido?: string;
     ciudad?: string;
-    sede?: string;
     producto?: string;
     [key: string]: any;
   };
