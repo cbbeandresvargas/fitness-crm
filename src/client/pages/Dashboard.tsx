@@ -165,11 +165,10 @@ export default function Dashboard() {
             </div>
 
             {/* Tarjetas de Fases del Embudo */}
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
               {[
                 { key: 'nuevo', label: 'Nuevo', icon: '🌱', color: 'text-body-soft', border: 'hover:border-edge-strong' },
                 { key: 'contactado', label: 'Contactado', icon: '💬', color: 'text-blue-400', border: 'hover:border-blue-500' },
-                { key: 'cita_agendada', label: 'Cita Agendada', icon: '📅', color: 'text-amber-400', border: 'hover:border-amber-500' },
                 { key: 'negociacion', label: 'Negociación', icon: '🤝', color: 'text-purple-400', border: 'hover:border-purple-500' },
                 { key: 'ganado', label: 'Inscrito', icon: '🏆', color: 'text-emerald-400', border: 'hover:border-emerald-500' },
                 { key: 'perdido', label: 'No Interesado', icon: '🛑', color: 'text-red-400', border: 'hover:border-red-500' },

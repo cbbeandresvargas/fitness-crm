@@ -6,6 +6,7 @@ import { api } from '../api';
 import { Lead, User } from '../types';
 import { cityFromMetadata } from '../../lib/locations';
 import { FC_SEGMENTS } from '../../lib/segments';
+import { LEAD_STATUS_OPTIONS } from '../../lib/leadStatus';
 import { SegmentBadge } from '../components/SegmentBadge';
 
 export default function LeadsList() {
@@ -229,12 +230,9 @@ export default function LeadsList() {
                 class="px-3 py-1.5 bg-app border border-edge rounded-xl text-xs text-body-soft focus:outline-none focus:border-accent"
               >
                 <option value="">Todos los Estados</option>
-                <option value="nuevo">🌱 Nuevo</option>
-                <option value="contactado">💬 Contactado</option>
-                <option value="cita_agendada">📅 Cita Agendada</option>
-                <option value="negociacion">🤝 Negociación</option>
-                <option value="ganado">🏆 Ganado</option>
-                <option value="perdido">🛑 Perdido</option>
+                <For each={LEAD_STATUS_OPTIONS}>
+                  {(opt) => <option value={opt.value}>{opt.label}</option>}
+                </For>
               </select>
 
               <Show when={user()?.role === 'admin'}>
@@ -368,12 +366,9 @@ export default function LeadsList() {
                                 onChange={(e) => handleStatusChange(lead.id, e.currentTarget.value)}
                                 class="bg-app border border-edge rounded-xl px-2.5 py-1 text-xs text-body-soft focus:outline-none focus:border-accent cursor-pointer"
                               >
-                                <option value="nuevo">🌱 Nuevo</option>
-                                <option value="contactado">💬 Contactado</option>
-                                <option value="cita_agendada">📅 Cita Agendada</option>
-                                <option value="negociacion">🤝 Negociación</option>
-                                <option value="ganado">🏆 Ganado</option>
-                                <option value="perdido">🛑 Perdido</option>
+                                <For each={LEAD_STATUS_OPTIONS}>
+                                  {(opt) => <option value={opt.value}>{opt.label}</option>}
+                                </For>
                               </select>
                             </td>
 
@@ -527,12 +522,9 @@ export default function LeadsList() {
                           onChange={(e) => handleStatusChange(lead.id, e.currentTarget.value)}
                           class="bg-app border border-edge rounded-xl px-2.5 py-1 text-[11px] text-body-soft focus:outline-none focus:border-accent cursor-pointer"
                         >
-                          <option value="nuevo">🌱 Nuevo</option>
-                          <option value="contactado">💬 Contactado</option>
-                          <option value="cita_agendada">📅 Cita Agendada</option>
-                          <option value="negociacion">🤝 Negociación</option>
-                          <option value="ganado">🏆 Ganado</option>
-                          <option value="perdido">🛑 Perdido</option>
+                          <For each={LEAD_STATUS_OPTIONS}>
+                            {(opt) => <option value={opt.value}>{opt.label}</option>}
+                          </For>
                         </select>
 
                         <div class="flex items-center gap-1.5">

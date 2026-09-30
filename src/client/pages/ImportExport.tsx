@@ -7,7 +7,6 @@ import { User } from '../types';
 const LEAD_STATUS_LABELS: Record<string, string> = {
   nuevo: 'Nuevo',
   contactado: 'Contactado',
-  cita_agendada: 'Cita Agendada',
   negociacion: 'Negociación',
   ganado: 'Ganado',
   perdido: 'Perdido',

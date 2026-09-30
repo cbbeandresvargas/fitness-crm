@@ -1,18 +1,6 @@
 import { For } from 'solid-js';
 import { BOLIVIA_CITIES } from '../../lib/locations';
-
-/**
- * Opciones de Estado del Lead (posición en el proceso comercial).
- * Reutiliza el sistema de estados existente del CRM (columna `status`).
- */
-export const LEAD_STATUS_OPTIONS = [
-  { value: 'nuevo', label: '🌱 Nuevo' },
-  { value: 'contactado', label: '💬 Contactado' },
-  { value: 'cita_agendada', label: '📅 Cita Agendada' },
-  { value: 'negociacion', label: '🤝 Negociación' },
-  { value: 'ganado', label: '🏆 Ganado' },
-  { value: 'perdido', label: '🛑 Perdido' },
-] as const;
+import { LEAD_STATUS_OPTIONS } from '../../lib/leadStatus';
 
 export interface LeadFormFieldsProps {
   firstName: () => string;

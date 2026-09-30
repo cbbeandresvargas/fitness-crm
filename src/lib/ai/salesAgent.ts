@@ -17,7 +17,7 @@ export const AgentActionSchema = z.discriminatedUnion('action', [
   }),
   z.object({
     action: z.literal('move_stage'),
-    stage: z.enum(['nuevo', 'contactado', 'cita_agendada', 'negociacion', 'ganado', 'perdido']),
+    stage: z.enum(['nuevo', 'contactado', 'negociacion', 'ganado', 'perdido']),
     reply: z.string().optional(),
   }),
   z.object({
@@ -208,11 +208,11 @@ REGLAS DE ACTUACIÓN Y CIERRE DE VENTAS:
    - {"action":"none"} -> No responder (ej. el mensaje no amerita respuesta).
    - {"action":"reply","text":"..."} -> Enviar mensaje de respuesta al prospecto.
    - {"action":"update_lead","note":"...","reply":"..."} -> Guardar una nota/preferencia detectada del lead (reply opcional).
-   - {"action":"move_stage","stage":"nuevo"|"contactado"|"cita_agendada"|"negociacion"|"ganado"|"perdido","reply":"..."} -> Mover al prospecto en el pipeline comercial (reply opcional).
+   - {"action":"move_stage","stage":"nuevo"|"contactado"|"negociacion"|"ganado"|"perdido","reply":"..."} -> Mover al prospecto en el pipeline comercial (reply opcional).
    - {"action":"handoff","reason":"...","farewell":"..."} -> Escalar a un asesor humano cuando el cliente lo pida expresamente o no puedas ayudarlo (farewell opcional para despedirte).
 
 2. TÉCNICAS DE CIERRE DE VENTAS OBLIGATORIAS:
-   - Cuando el prospecto acepte agendar fecha/hora para su valoración física o clase de prueba -> Utiliza la acción "move_stage" con stage "cita_agendada".
+   - Cuando el prospecto acepte agendar fecha/hora para su valoración física o clase de prueba -> Confirma fecha, hora y sede en la respuesta y utiliza la acción "move_stage" con stage "negociacion".
    - Cuando el prospecto pida enlace de pago, métodos de pago o confirme intención de compra de membresía -> Utiliza "move_stage" con stage "negociacion" o "ganado".
    - Si el prospecto dice que "lo va a pensar" o "no tiene tiempo", aplica la técnica de objeciones del catálogo y dale dos opciones concretas de horario.
    - Si el cliente escribe palabras como "humano", "asesor", "persona", "queja" o "hablar con alguien" -> Ejecuta SIEMPRE "handoff" de inmediato.

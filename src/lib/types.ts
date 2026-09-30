@@ -15,7 +15,6 @@ export interface User {
 export type LeadStatus =
   | 'nuevo'
   | 'contactado'
-  | 'cita_agendada'
   | 'negociacion'
   | 'ganado'
   | 'perdido';

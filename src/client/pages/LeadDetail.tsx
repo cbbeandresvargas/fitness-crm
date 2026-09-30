@@ -578,7 +578,6 @@ export default function LeadDetail() {
                     >
                       <option value="nuevo">🌱 Nuevo</option>
                       <option value="contactado">💬 Contactado</option>
-                      <option value="cita_agendada">📅 Cita Agendada</option>
                       <option value="negociacion">🤝 Negociación</option>
                       <option value="ganado">🏆 Ganado / Inscrito</option>
                       <option value="perdido">🛑 Perdido</option>

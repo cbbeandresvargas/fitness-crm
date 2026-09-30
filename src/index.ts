@@ -40,7 +40,7 @@ app.use('*', async (c, next) => {
             full_name TEXT NOT NULL,
             phone TEXT UNIQUE NOT NULL,
             email TEXT,
-            status TEXT NOT NULL DEFAULT 'nuevo' CHECK(status IN ('nuevo', 'contactado', 'cita_agendada', 'negociacion', 'ganado', 'perdido')),
+            status TEXT NOT NULL DEFAULT 'nuevo' CHECK(status IN ('nuevo', 'contactado', 'negociacion', 'ganado', 'perdido')),
             segment TEXT NOT NULL DEFAULT 'B' CHECK(segment IN ('A', 'B', 'C', 'D')),
             assigned_to TEXT,
             tags TEXT NOT NULL DEFAULT '[]',

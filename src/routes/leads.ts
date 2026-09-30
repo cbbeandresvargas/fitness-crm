@@ -3,6 +3,7 @@ import { Env, Lead, User, ActivityLog, SessionData, WhatsAppMessage } from '../l
 import { requireAuth } from '../lib/auth';
 import { normalizePhone, checkDuplicatePhone, calculateDynamicSegment, autoAssignAgent } from '../lib/rules';
 import { computeFcSegment } from '../lib/segments';
+import { isValidLeadStatus, ALLOWED_LEAD_STATUSES } from '../lib/leadStatus';
 import {
   buildLeadContextPrompt,
   generateAiWhatsAppMessage,
@@ -69,7 +70,6 @@ leadsRoutes.get('/api/dashboard', async (c) => {
   const statusCount: Record<string, number> = {
     nuevo: 0,
     contactado: 0,
-    cita_agendada: 0,
     negociacion: 0,
     ganado: 0,
     perdido: 0,
@@ -286,10 +286,9 @@ leadsRoutes.post('/api/leads', async (c) => {
     return c.json({ error: 'El nombre, el apellido y el teléfono son obligatorios.' }, 400);
   }
 
-  // Validar estado contra el sistema de estados existente
-  const allowedStatuses = ['nuevo', 'contactado', 'cita_agendada', 'negociacion', 'ganado', 'perdido'];
-  if (!allowedStatuses.includes(status)) {
-    return c.json({ error: `Estado inválido: '${status}'. Estados permitidos: ${allowedStatuses.join(', ')}` }, 400);
+  // Validar estado contra el sistema de estados vigente ('cita_agendada' fue removido)
+  if (!isValidLeadStatus(status)) {
+    return c.json({ error: `Estado inválido: '${status}'. Estados permitidos: ${ALLOWED_LEAD_STATUSES.join(', ')}` }, 400);
   }
 
   const phone = normalizePhone(rawPhone);
@@ -441,6 +440,10 @@ leadsRoutes.post('/api/leads/:id/status', async (c) => {
   const newStatus = body.status as string;
   if (!newStatus) {
     return c.json({ error: 'Estado requerido' }, 400);
+  }
+  // 'cita_agendada' fue removido del sistema: rechazar estados no vigentes
+  if (!isValidLeadStatus(newStatus)) {
+    return c.json({ error: `Estado inválido: '${newStatus}'. Estados permitidos: ${ALLOWED_LEAD_STATUSES.join(', ')}` }, 400);
   }
 
   const currentLead = await c.env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(leadId).first<Lead>();
