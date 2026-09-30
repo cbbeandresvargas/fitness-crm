@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { Env, SessionData, Lead, WhatsAppSettings, KnowledgeBaseEntry, ConversationSummary } from '../lib/types';
 import { encryptSecret, decryptSecret, verifyMetaSignature, tokenLast4 } from '../lib/crypto';
+import { requireAuth, requireAdmin } from '../lib/auth';
 import {
   sendMetaTextMessage,
   sendMetaImageMessage,
@@ -11,6 +12,28 @@ import {
 import { runSalesAgentTurn } from '../lib/ai/salesAgent';
 
 export const whatsappRoutes = new Hono<{ Bindings: Env; Variables: { user?: SessionData } }>();
+
+// Excluir webhook público de Meta, proteger todas las demás rutas de WhatsApp
+whatsappRoutes.use('/api/whatsapp/*', async (c, next) => {
+  if (c.req.path === '/api/whatsapp/webhook') {
+    return next();
+  }
+  return requireAuth(c, next);
+});
+
+// Configuración y pruebas de conectividad de WhatsApp requieren rol Administrador
+whatsappRoutes.use('/api/whatsapp/config', requireAdmin);
+whatsappRoutes.use('/api/whatsapp/test-connection', requireAdmin);
+
+// Base de conocimiento: lectura autenticada, creación y borrado sólo administradores
+whatsappRoutes.use('/api/knowledge-base', async (c, next) => {
+  if (c.req.method === 'POST') {
+    return requireAdmin(c, next);
+  }
+  return requireAuth(c, next);
+});
+whatsappRoutes.use('/api/knowledge-base/*', requireAdmin);
+
 
 /**
  * Obtiene las credenciales activas de WhatsApp directamente desde variables de entorno

@@ -36,31 +36,45 @@ if (!fs.existsSync(envFilePath) && fs.existsSync(exampleEnvPath)) {
 const envFile = parseEnvFile(envFilePath);
 const devVarsFile = parseEnvFile(path.join(rootDir, '.dev.vars'));
 
+// Fallbacks defensivos a partir de wrangler.jsonc si ya existía
+const wranglerJsonPath = path.join(rootDir, 'wrangler.jsonc');
+let existingWrangler = {};
+if (fs.existsSync(wranglerJsonPath)) {
+  try {
+    existingWrangler = JSON.parse(fs.readFileSync(wranglerJsonPath, 'utf-8'));
+  } catch {}
+}
+
 const config = {
   CLOUDFLARE_ACCOUNT_ID:
     process.env.CLOUDFLARE_ACCOUNT_ID ||
     envFile.CLOUDFLARE_ACCOUNT_ID ||
     devVarsFile.CLOUDFLARE_ACCOUNT_ID ||
+    existingWrangler.account_id ||
     '',
   D1_DATABASE_ID:
     process.env.D1_DATABASE_ID ||
     envFile.D1_DATABASE_ID ||
     devVarsFile.D1_DATABASE_ID ||
+    existingWrangler.d1_databases?.[0]?.database_id ||
     '',
   D1_DATABASE_NAME:
     process.env.D1_DATABASE_NAME ||
     envFile.D1_DATABASE_NAME ||
     devVarsFile.D1_DATABASE_NAME ||
+    existingWrangler.d1_databases?.[0]?.database_name ||
     'fitness-crm-db',
   KV_NAMESPACE_ID:
     process.env.KV_NAMESPACE_ID ||
     envFile.KV_NAMESPACE_ID ||
     devVarsFile.KV_NAMESPACE_ID ||
+    existingWrangler.kv_namespaces?.[0]?.id ||
     '',
   R2_BUCKET_NAME:
     process.env.R2_BUCKET_NAME ||
     envFile.R2_BUCKET_NAME ||
     devVarsFile.R2_BUCKET_NAME ||
+    existingWrangler.r2_buckets?.[0]?.bucket_name ||
     'fitness-crm-storage',
   CLOUDFLARE_API_TOKEN:
     process.env.CLOUDFLARE_API_TOKEN ||
@@ -144,7 +158,6 @@ template = template
 
 // Escribir wrangler.jsonc resultante, eliminando campos vacíos
 // (wrangler rechaza account_id vacío y los bindings requieren IDs no vacíos)
-const wranglerJsonPath = path.join(rootDir, 'wrangler.jsonc');
 try {
   const cfg = JSON.parse(template);
   if (!cfg.account_id) delete cfg.account_id;

@@ -17,6 +17,7 @@ import {
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, {
+    credentials: 'include',
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -26,6 +27,14 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   });
 
   if (!res.ok) {
+    if (
+      res.status === 401 &&
+      typeof window !== 'undefined' &&
+      !window.location.pathname.startsWith('/login') &&
+      url !== '/api/auth/me'
+    ) {
+      window.location.href = '/login';
+    }
     let errorMsg = `Error ${res.status}`;
     try {
       const data = (await res.json()) as any;
@@ -38,8 +47,19 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 }
 
 async function postFormData<T>(url: string, formData: FormData): Promise<T> {
-  const res = await fetch(url, { method: 'POST', body: formData });
+  const res = await fetch(url, {
+    method: 'POST',
+    body: formData,
+    credentials: 'include',
+  });
   if (!res.ok) {
+    if (
+      res.status === 401 &&
+      typeof window !== 'undefined' &&
+      !window.location.pathname.startsWith('/login')
+    ) {
+      window.location.href = '/login';
+    }
     let err = 'Error en la solicitud';
     try {
       const d = (await res.json()) as any;
@@ -99,18 +119,6 @@ export const api = {
     return fetchJson('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
-    });
-  },
-  async demoLogin(role: 'admin' | 'agent'): Promise<{ success: boolean; user: SessionData }> {
-    return fetchJson('/api/auth/demo-login', {
-      method: 'POST',
-      body: JSON.stringify({ role }),
-    });
-  },
-  async quickSwitch(role: 'admin' | 'agent'): Promise<{ success: boolean; user: SessionData }> {
-    return fetchJson('/api/auth/quick-switch', {
-      method: 'POST',
-      body: JSON.stringify({ role }),
     });
   },
   async logout(): Promise<{ success: boolean }> {
@@ -335,19 +343,7 @@ export const api = {
   async uploadImage(file: File): Promise<{ success: boolean; media_url: string; key: string; file_name: string }> {
     const formData = new FormData();
     formData.append('file', file);
-    const res = await fetch('/api/upload/image', {
-      method: 'POST',
-      body: formData,
-    });
-    if (!res.ok) {
-      let err = 'Error al subir imagen';
-      try {
-        const d = (await res.json()) as any;
-        if (d && d.error) err = d.error;
-      } catch {}
-      throw new Error(err);
-    }
-    return res.json();
+    return postFormData('/api/upload/image', formData);
   },
 
   // Templates
@@ -383,6 +379,16 @@ export const api = {
   },
 
   // Import / Export
+  async previewCsvImport(formData: FormData): Promise<{
+    fileKey: string;
+    headers: string[];
+    previewRows: Record<string, string>[];
+    totalRows: number;
+    agents: User[];
+  }> {
+    return postFormData('/api/import/preview', formData);
+  },
+
   async loadSampleCsv(): Promise<{
     success: boolean;
     fileKey: string;

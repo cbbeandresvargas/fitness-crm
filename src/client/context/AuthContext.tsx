@@ -6,7 +6,7 @@ import {
   JSX,
   Show,
 } from 'solid-js';
-import { SessionData, UserRole } from '../types';
+import { SessionData } from '../types';
 import { api } from '../api';
 
 export interface Toast {
@@ -19,8 +19,6 @@ interface AuthContextType {
   user: () => SessionData | null;
   loading: () => boolean;
   login: (email: string, pass: string) => Promise<boolean>;
-  demoLogin: (role: 'admin' | 'agent') => Promise<boolean>;
-  quickSwitch: (role: 'admin' | 'agent') => Promise<void>;
   logout: () => Promise<void>;
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
 }
@@ -70,41 +68,13 @@ export function AuthProvider(props: { children: JSX.Element }) {
     }
   };
 
-  const demoLogin = async (role: 'admin' | 'agent') => {
-    try {
-      setLoading(true);
-      const res = await api.demoLogin(role);
-      if (res.user) {
-        setUser(res.user);
-        showToast(`Sesión iniciada como ${res.user.name}`, 'success');
-        return true;
-      }
-      return false;
-    } catch (err: any) {
-      showToast(err.message || 'Error en demo login', 'error');
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const quickSwitch = async (role: 'admin' | 'agent') => {
-    try {
-      const res = await api.quickSwitch(role);
-      if (res.user) {
-        setUser(res.user);
-        showToast(`Cambiado a vista de ${role === 'admin' ? 'Administrador' : 'Vendedora'}`, 'info');
-      }
-    } catch (err: any) {
-      showToast(err.message || 'Error al alternar rol', 'error');
-    }
-  };
-
   const logout = async () => {
     try {
       await api.logout();
       setUser(null);
       showToast('Sesión cerrada correctamente', 'info');
+      // Forzar redirección limpia a login
+      window.location.href = '/login';
     } catch (err: any) {
       showToast(err.message || 'Error al salir', 'error');
     }
@@ -116,8 +86,6 @@ export function AuthProvider(props: { children: JSX.Element }) {
         user,
         loading,
         login,
-        demoLogin,
-        quickSwitch,
         logout,
         showToast,
       }}

@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { ThemeToggle } from '../context/ThemeContext';
 
 export function Layout(props: { children: JSX.Element; title?: string }) {
-  const { user, quickSwitch, logout } = useAuth();
+  const { user, logout } = useAuth();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = createSignal(false);
 
@@ -213,27 +213,16 @@ export function Layout(props: { children: JSX.Element; title?: string }) {
               </div>
             </div>
 
-            {/* Quick role switcher & logout */}
-            <div class="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() =>
-                  quickSwitch(user()?.role === 'admin' ? 'agent' : 'admin')
-                }
-                class="flex-1 py-1.5 px-2 bg-elevate hover:bg-elevate-strong text-body-soft rounded-xl text-[11px] font-semibold transition border border-edge-strong/60 flex items-center justify-center gap-1 cursor-pointer"
-                title="Cambiar vista para probar"
-              >
-                <span>🔄 {user()?.role === 'admin' ? 'Ver Coach' : 'Ver Admin'}</span>
-              </button>
-              <button
-                type="button"
-                onClick={logout}
-                class="py-1.5 px-2.5 bg-red-950/40 hover:bg-red-900/60 text-red-400 rounded-xl text-[11px] font-semibold transition cursor-pointer"
-                title="Cerrar sesión"
-              >
-                Salir
-              </button>
-            </div>
+            {/* Logout button */}
+            <button
+              type="button"
+              onClick={logout}
+              class="w-full py-2 px-3 bg-elevate hover:bg-red-950/40 hover:border-red-800 text-muted hover:text-red-300 rounded-xl text-xs font-semibold transition border border-edge flex items-center justify-center gap-2 cursor-pointer"
+              title="Cerrar sesión"
+            >
+              <span>🚪</span>
+              <span>Cerrar Sesión</span>
+            </button>
           </Show>
         </div>
       </aside>

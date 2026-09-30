@@ -27,13 +27,16 @@ Plataforma CRM de alto rendimiento desarrollada para el sector fitness y gestió
 - **Detección Estricta de Duplicados**: Normalización y validación instantánea por número telefónico / WhatsApp tanto en el formulario unitario como en la importación masiva.
 
 ### 2. Integración de WhatsApp y Mensajería AI
+- **Meta Graph API v25.0**: Integración directa con Cloudflare Workers para el envío y recepción de mensajes de texto e imágenes.
 - **Plantillas con Placeholders Dinámicos**: Variables `{nombre}`, `{producto}`, `{ciudad}`, `{agente}`, `{presupuesto}`.
 - **Deep Link Directo**: Generación de botones con enlace directo `https://wa.me/{numero}?text={url_encoded}` para apertura instantánea en WhatsApp Web o móvil sin fricción.
 - **Contexto para la IA**: Inyección del perfil completo del lead (etapa, presupuesto, objetivos, tags y últimas 4 notas de bitácora) en el prompt para redactar mensajes hiper-personalizados.
+- **Base de Conocimiento Centralizada**: Gestión administrativa de información de planes, sedes, horarios y argumentos de venta utilizada por el agente de IA para responder dudas en WhatsApp.
 
 ### 3. Perfil de Usuario y Metadatos Estructurados
 - **Metadatos Flexibles (JSONB / Key-Value)**: Almacenamiento dinámico de objetivos deportivos, lesiones, sedes o presupuestos en D1 sin alterar el esquema relacional.
 - **Etiquetado Rápido (Chips / Tags)**: Filtros instantáneos por intereses (`#CrossFit`, `#Nutricion`, `#Hipertrofia`, `#Pilates`, `#MembresiaVIP`).
+- **Catálogo de Actividades**: Relación N:M entre prospectos y actividades deportivas con borrado lógico (`is_active = 0`).
 
 ### 4. Importación, Exportación y Mapeo Inteligente
 - **Mapeo Dinámico de Columnas CSV**: Asignación visual de encabezados de archivos a los campos del CRM.
@@ -41,11 +44,26 @@ Plataforma CRM de alto rendimiento desarrollada para el sector fitness y gestió
 - **Almacenamiento en Cloudflare R2**: Persistencia de archivos importados.
 - **Exportación Filtrada**: Descarga de prospectos a CSV filtrados por segmento, etapa o agente.
 
-### 5. Seguridad y Control de Acceso (RBAC)
-- **Roles Definidos**:
-  - **Admin**: Visibilidad total, reasignación global, importación/exportación masiva, gestión de equipo y bitácora de auditoría.
-  - **Agente / Ventas**: Restricción estricta; visualiza y gestiona únicamente los prospectos asignados a su cartera.
-- **Auditoría de Seguridad**: Trazabilidad con campos `created_by`, `updated_by` y timestamps en cada registro.
+### 5. Seguridad de Nivel Producción, Autenticación y RBAC
+- **Arquitectura Worker-First (`run_worker_first: true`)**:
+  - En Cloudflare Workers, todas las peticiones a la raíz (`/`) o a cualquier ruta web pasan prioritariamente por el Worker en el Edge antes de servir assets estáticos.
+  - **Redirección obligatoria no autenticada**: Cualquier visita a `/` o rutas privadas sin una sesión válida es interceptada de inmediato y redirigida con `HTTP 302 Found` a `/login`.
+  - **Redirección de usuario autenticado**: Si un usuario con sesión activa intenta ir a `/login`, es redirigido automáticamente a `/`.
+- **Doble Capa de Protección con Route Guards**:
+  - En el frontend (SolidJS), el componente `<ProtectedRoute>` valida el estado reactivo del usuario, impidiendo accesos no autorizados durante la navegación SPA.
+  - Vistas administrativas sensibles como `/team` y `/settings/whatsapp` están restringidas exclusivamente a usuarios con rol `admin`.
+- **Cookies y Sesiones en Cloudflare KV**:
+  - Cookies HTTP-only `fitcrm_session` con `SameSite=Lax`, expiración automática (TTL de 7 días) y activación dinámica de `Secure` bajo conexiones HTTPS.
+  - Las sesiones se almacenan y validan contra Cloudflare KV en milisegundos.
+- **Hardening OWASP**:
+  - Eliminación total de puertas traseras, accesos simulados (1-click) y atajos de elevación de privilegios (*quick switch*).
+  - Respuestas protegidas contra ataques de enumeración de usuarios (*«Credenciales inválidas o cuenta no activa»*).
+  - Contraseñas almacenadas exclusivamente como hashes criptográficos SHA-256.
+- **Fetch y CORS Robusto**:
+  - Middleware `cors()` habilitado en Hono con `credentials: true`.
+  - Todas las peticiones fetch del frontend (`fetchJson`, `postFormData`) incluyen `credentials: 'include'`.
+  - Manejador de 404 estricto para `/api/*` que garantiza respuestas JSON en caso de error, evitando que respuestas HTML rompan el analizador JSON del cliente.
+  - Blindaje con `requireAuth` y `requireAdmin` en todos los endpoints privados de WhatsApp y Base de Conocimiento (dejando público únicamente el webhook de Meta).
 
 ---
 
@@ -120,9 +138,12 @@ D1_DATABASE_NAME=fitness-crm-db
 KV_NAMESPACE_ID=tu_kv_id_aqui
 R2_BUCKET_NAME=fitness-crm-storage
 
-# Opcional (para llamadas directas a Workers AI REST API)
+# Opcional (para llamadas directas a Workers AI REST API y WhatsApp Meta)
 CLOUDFLARE_API_TOKEN=
 ADMIN_SECRET=
+META_WA_PHONE_NUMBER_ID=
+META_WA_ACCESS_TOKEN=
+META_WA_VERIFY_TOKEN=fitnessclub_secure_verify_token_2026
 ```
 
 > 🔒 **Seguridad y Colaboración:** El archivo `.env` está en `.gitignore`. Cada desarrollador mantiene sus propios IDs en su máquina sin interferir ni pisar las configuraciones del resto del equipo.
@@ -135,9 +156,13 @@ Aplica el esquema SQL y los datos de prueba iniciales en tu base de datos SQLite
 npm run d1:init
 ```
 
-#### Paso 5: Iniciar el Servidor de Desarrollo
+#### Paso 5: Compilar el Frontend e Iniciar el Servidor de Desarrollo
 
 ```bash
+# Compilar los bundles de producción de la SPA
+npm run build
+
+# Iniciar el servidor local de Cloudflare Workers con Wrangler
 npm run dev
 ```
 
@@ -146,18 +171,15 @@ El servidor local de Cloudflare Workers iniciará en:
 
 ---
 
-### 🔑 Credenciales de Acceso Local (Demostración)
+### 🔑 Credenciales de Acceso al Sistema
 
-La base de datos local incluye usuarios de prueba precargados:
+Para ingresar al sistema en el entorno inicial:
 
-| Rol | Correo Electrónico | Contraseña | Permisos |
+| Rol | Correo Electrónico | Contraseña Inicial | Permisos |
 | :--- | :--- | :--- | :--- |
 | **Director General (Admin)** | `admin@fitnessclub.fit` | `admin123` | Control total, reasignación masiva, importación/exportación, gestión de equipo y auditoría. |
-| **Head Coach (Admin)** | `carlos@fitnessclub.fit` | `admin123` | Mismos accesos administrativos. |
-| **Coach Comercial (Agente)** | `valeria@fitnessclub.fit` | `agent123` | Vista filtrada a sus prospectos asignados, registro de notas, WhatsApp y llamadas. |
-| **Asesora Fitness (Agente)** | `sofia@fitnessclub.fit` | `agent123` | Gestión exclusiva de su cartera de prospectos. |
 
-> ⚡ En la pantalla de login (`http://127.0.0.1:8787/login`) encontrarás **botones de acceso rápido de 1-click** para iniciar sesión como Admin o Agente sin necesidad de escribir las credenciales manualmente.
+> 🔒 **Acceso Seguro Obligatorio:** El acceso requiere autenticación con credenciales reales. Cualquier intento de navegar a la raíz (`/`) o a vistas privadas sin una sesión activa es redirigido automáticamente con `HTTP 302` a `/login`. Puedes dar de alta nuevos miembros y asesores con sus propias contraseñas desde el módulo de **Equipo & Permisos** (`/team`).
 
 ---
 
@@ -186,35 +208,37 @@ fitness-crm/
 ├── README.md                  # Documentación oficial del CRM
 ├── tsconfig.json              # Configuración de TypeScript
 ├── vite.config.ts             # Configuración de Vite para SolidJS y TailwindCSS
-├── wrangler.jsonc             # Configuración activa de Cloudflare (auto-generada)
+├── wrangler.jsonc             # Configuración activa de Cloudflare (auto-generada con run_worker_first: true)
 ├── wrangler.template.jsonc    # Plantilla de configuración con marcadores de variables
 ├── scripts/
 │   └── sync-wrangler-env.mjs  # Sincronizador automático .env -> wrangler.jsonc
 └── src/
-    ├── index.ts               # Servidor Hono y Worker principal en el Edge
+    ├── index.ts               # Servidor Hono y Worker principal en el Edge (CORS, Auth, Static)
     ├── client/                # Frontend SPA con SolidJS y Tailwind CSS 4
-    │   ├── App.tsx            # Enrutamiento de vistas y layout principal
-    │   ├── api.ts             # Cliente HTTP tipado hacia los endpoints de Hono
+    │   ├── App.tsx            # Enrutamiento de vistas con Route Guards
+    │   ├── api.ts             # Cliente HTTP tipado hacia los endpoints de Hono con credentials:include
     │   ├── index.css          # Sistema de diseño, tokens de color fuego y temas
     │   ├── index.tsx          # Renderizado inicial en el DOM
     │   ├── types.ts           # Interfaces de datos del cliente
-    │   ├── components/        # Componentes UI reutilizables (Layout, modales)
+    │   ├── components/        # Componentes UI reutilizables (Layout, ProtectedRoute, modales)
     │   ├── context/           # Contextos globales (AuthContext, ThemeContext)
-    │   └── pages/             # Vistas: Dashboard, Leads, LeadDetail, Team, etc.
+    │   └── pages/             # Vistas: Dashboard, Leads, LeadDetail, Team, Login, etc.
     ├── db/
     │   ├── schema.sql         # Esquema D1 relacional (users, leads, activity, etc.)
-    │   └── seed.sql           # Datos iniciales de demostración para el CRM
+    │   └── seed.sql           # Datos iniciales limpios para el CRM
     ├── lib/
     │   ├── ai.ts              # Integración con Cloudflare Workers AI
-    │   ├── auth.ts            # Autenticación con cookies y sesiones en KV
+    │   ├── auth.ts            # Autenticación con cookies HTTP-only (Secure en HTTPS) y sesiones en KV
+    │   ├── crypto.ts          # Cifrado AES-GCM para tokens de WhatsApp
     │   ├── fcImport.ts        # Adaptador del modelo de datos de leads
     │   ├── rules.ts           # Reglas de negocio (segmentación y normalización)
     │   └── types.ts           # Tipos de TypeScript del backend y entorno (Env)
     └── routes/
-        ├── auth.ts            # Rutas de autenticación (/auth)
-        ├── importExport.ts    # Importación y exportación de prospectos (/import-export)
-        ├── leads.ts           # Pipeline y gestión comercial de prospectos (/leads)
-        ├── team.ts            # Gestión de asesores y auditoría (/team)
-        └── templates.ts       # Plantillas de mensajes para WhatsApp (/templates)
+        ├── activities.ts      # Catálogo de actividades de prospectos (/activities)
+        ├── auth.ts            # Rutas seguras de autenticación (/api/auth)
+        ├── importExport.ts    # Importación y exportación de prospectos (/api/import, /api/export)
+        ├── leads.ts           # Pipeline y gestión comercial de prospectos (/api/leads)
+        ├── team.ts            # Gestión de asesores, roles RBAC y auditoría (/api/team)
+        ├── templates.ts       # Plantillas de mensajes para WhatsApp (/api/templates)
+        └── whatsapp.ts        # Meta Graph API v25.0, webhook, chat y Knowledge Base
 ```
-

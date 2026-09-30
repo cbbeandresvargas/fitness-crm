@@ -5,14 +5,14 @@ import { ThemeToggle } from '../context/ThemeContext';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { user, login, demoLogin } = useAuth();
+  const { user, login } = useAuth();
 
   const [email, setEmail] = createSignal('');
   const [password, setPassword] = createSignal('');
   const [submitting, setSubmitting] = createSignal(false);
   const [error, setError] = createSignal('');
 
-  // If already logged in, go to dashboard
+  // Redirigir al inicio si ya hay una sesión autenticada
   createEffect(() => {
     if (user()) {
       navigate('/', { replace: true });
@@ -30,15 +30,7 @@ export default function Login() {
     if (success) {
       navigate('/', { replace: true });
     } else {
-      setError('Credenciales inválidas o usuario inactivo');
-    }
-  };
-
-  const handleDemo = async (role: 'admin' | 'agent') => {
-    setError('');
-    const success = await demoLogin(role);
-    if (success) {
-      navigate('/', { replace: true });
+      setError('Credenciales inválidas o cuenta no activa');
     }
   };
 
@@ -61,53 +53,15 @@ export default function Login() {
           </p>
         </div>
 
-        {/* Demo Fast Access Card */}
-        <div class="p-6 rounded-3xl bg-surface border border-accent/30 space-y-4 shadow-xl">
-          <div class="flex items-center gap-2">
-            <span class="text-lg">⚡</span>
-            <div>
-              <h2 class="text-xs font-bold text-body uppercase tracking-wider">
-                Acceso Rápido de Prueba (1 Clic)
-              </h2>
-              <p class="text-[11px] text-muted">
-                Inicia sesión al instante sin tener que escribir contraseñas
-              </p>
-            </div>
+        {/* Card de Inicio de Sesión Oficial */}
+        <div class="p-8 rounded-3xl bg-surface border border-edge space-y-5 shadow-2xl">
+          <div class="space-y-1">
+            <h2 class="text-base font-bold text-body">Iniciar Sesión</h2>
+            <p class="text-xs text-muted">Ingresa tus credenciales autorizadas para acceder</p>
           </div>
-
-          <div class="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => handleDemo('admin')}
-              class="p-3.5 rounded-2xl bg-app hover:bg-elevate border border-edge hover:border-accent/50 transition text-left space-y-1 cursor-pointer group"
-            >
-              <span class="text-lg block">👑</span>
-              <p class="font-extrabold text-xs text-body group-hover:text-accent-text transition">
-                Carlos Mendoza
-              </p>
-              <p class="text-[10px] text-muted">Director / Admin</p>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleDemo('agent')}
-              class="p-3.5 rounded-2xl bg-app hover:bg-elevate border border-edge hover:border-accent/50 transition text-left space-y-1 cursor-pointer group"
-            >
-              <span class="text-lg block">🏋️</span>
-              <p class="font-extrabold text-xs text-body group-hover:text-accent-text transition">
-                Valeria Ríos
-              </p>
-              <p class="text-[10px] text-muted">Coach / Ventas</p>
-            </button>
-          </div>
-        </div>
-
-        {/* Manual Login Card */}
-        <div class="p-8 rounded-3xl bg-surface border border-edge space-y-5 shadow-xl">
-          <h2 class="text-sm font-bold text-body">Ingreso con Credenciales</h2>
 
           <Show when={error()}>
-            <div class="p-3.5 rounded-2xl bg-red-950/80 border border-red-800 text-red-200 text-xs font-semibold flex items-center gap-2.5">
+            <div class="p-3.5 rounded-2xl bg-red-950/80 border border-red-800 text-red-200 text-xs font-semibold flex items-center gap-2.5 animate-fade-in">
               <span>⚠️</span>
               <span>{error()}</span>
             </div>
@@ -115,41 +69,55 @@ export default function Login() {
 
           <form onSubmit={handleSubmit} class="space-y-4">
             <div>
-              <label class="block text-xs font-bold text-muted mb-1">
+              <label class="block text-xs font-bold text-muted mb-1.5">
                 Correo Electrónico
               </label>
               <input
                 type="email"
                 required
+                autocomplete="email"
                 value={email()}
                 onInput={(e) => setEmail(e.currentTarget.value)}
-                placeholder="admin@fitnessclub.fit"
-                class="w-full px-4 py-2.5 bg-app border border-edge rounded-2xl text-xs text-body focus:outline-none focus:border-accent"
+                placeholder="ejemplo@fitnessclub.fit"
+                class="w-full px-4 py-2.5 bg-app border border-edge rounded-2xl text-xs text-body focus:outline-none focus:border-accent transition"
               />
             </div>
 
             <div>
-              <label class="block text-xs font-bold text-muted mb-1">
+              <label class="block text-xs font-bold text-muted mb-1.5">
                 Contraseña
               </label>
               <input
                 type="password"
                 required
+                autocomplete="current-password"
                 value={password()}
                 onInput={(e) => setPassword(e.currentTarget.value)}
-                placeholder="admin123"
-                class="w-full px-4 py-2.5 bg-app border border-edge rounded-2xl text-xs text-body focus:outline-none focus:border-accent"
+                placeholder="••••••••"
+                class="w-full px-4 py-2.5 bg-app border border-edge rounded-2xl text-xs text-body focus:outline-none focus:border-accent transition"
               />
             </div>
 
             <button
               type="submit"
               disabled={submitting()}
-              class="w-full py-3 bg-accent hover:bg-accent-hover text-white font-extrabold text-xs rounded-2xl shadow-accent-glow transition disabled:opacity-50 cursor-pointer"
+              class="w-full py-3 bg-accent hover:bg-accent-hover text-white font-extrabold text-xs rounded-2xl shadow-accent-glow transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
             >
-              {submitting() ? 'Iniciando sesión...' : 'Entrar a Fitness Club'}
+              <Show
+                when={submitting()}
+                fallback={<span>Ingresar al Sistema</span>}
+              >
+                <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>Verificando...</span>
+              </Show>
             </button>
           </form>
+
+          <div class="pt-2 border-t border-edge text-center">
+            <span class="text-[11px] text-muted">
+              Acceso seguro con cifrado SHA-256 y sesiones KV
+            </span>
+          </div>
         </div>
       </div>
     </div>

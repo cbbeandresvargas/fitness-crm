@@ -31,11 +31,12 @@ export async function createSession(
     expirationTtl: SESSION_TTL_SECONDS,
   });
 
-  // Set HTTP-only Cookie
+  // Set HTTP-only Cookie with dynamic HTTPS security
+  const isHttps = c.req.url.startsWith('https://') || c.req.header('x-forwarded-proto') === 'https';
   setCookie(c, SESSION_COOKIE_NAME, sessionId, {
     path: '/',
     httpOnly: true,
-    secure: false, // allows localhost testing in dev
+    secure: isHttps,
     sameSite: 'Lax',
     maxAge: SESSION_TTL_SECONDS,
   });
@@ -70,7 +71,8 @@ export async function destroySession(
       console.error('Error deleting session from KV:', err);
     }
   }
-  deleteCookie(c, SESSION_COOKIE_NAME, { path: '/' });
+  const isHttps = c.req.url.startsWith('https://') || c.req.header('x-forwarded-proto') === 'https';
+  deleteCookie(c, SESSION_COOKIE_NAME, { path: '/', secure: isHttps });
 }
 
 export async function authMiddleware(

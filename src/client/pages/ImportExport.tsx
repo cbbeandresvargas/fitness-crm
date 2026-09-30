@@ -72,12 +72,7 @@ export default function ImportExport() {
       const formData = new FormData();
       formData.append('csvText', text);
 
-      const res = (await fetch('/api/import/preview', {
-        method: 'POST',
-        body: formData,
-      }).then((r) => r.json())) as any;
-
-      if (res.error) throw new Error(res.error);
+      const res = await api.previewCsvImport(formData);
 
       setFileKey(res.fileKey);
       setHeaders(res.headers);

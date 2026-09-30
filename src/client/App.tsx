@@ -1,6 +1,7 @@
 import { Router, Route } from '@solidjs/router';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import Dashboard from './pages/Dashboard';
 import LeadsList from './pages/LeadsList';
 import LeadDetail from './pages/LeadDetail';
@@ -18,17 +19,18 @@ export function App() {
     <ThemeProvider>
       <AuthProvider>
         <Router>
-          <Route path="/" component={Dashboard} />
-          <Route path="/leads" component={LeadsList} />
-          <Route path="/leads/new" component={LeadForm} />
-          <Route path="/leads/:id" component={LeadDetail} />
-          <Route path="/inbox" component={WhatsAppInbox} />
-          <Route path="/templates" component={Templates} />
-          <Route path="/import-export" component={ImportExport} />
-          <Route path="/activities" component={ActivityCatalog} />
-          <Route path="/settings/whatsapp" component={WhatsAppSettings} />
-          <Route path="/team" component={Team} />
           <Route path="/login" component={Login} />
+          <Route path="/" component={() => <ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/leads" component={() => <ProtectedRoute><LeadsList /></ProtectedRoute>} />
+          <Route path="/leads/new" component={() => <ProtectedRoute><LeadForm /></ProtectedRoute>} />
+          <Route path="/leads/:id" component={() => <ProtectedRoute><LeadDetail /></ProtectedRoute>} />
+          <Route path="/inbox" component={() => <ProtectedRoute><WhatsAppInbox /></ProtectedRoute>} />
+          <Route path="/templates" component={() => <ProtectedRoute><Templates /></ProtectedRoute>} />
+          <Route path="/import-export" component={() => <ProtectedRoute><ImportExport /></ProtectedRoute>} />
+          <Route path="/activities" component={() => <ProtectedRoute><ActivityCatalog /></ProtectedRoute>} />
+          <Route path="/settings/whatsapp" component={() => <ProtectedRoute adminOnly><WhatsAppSettings /></ProtectedRoute>} />
+          <Route path="/team" component={() => <ProtectedRoute adminOnly><Team /></ProtectedRoute>} />
+          <Route path="*404" component={() => <ProtectedRoute><Dashboard /></ProtectedRoute>} />
         </Router>
       </AuthProvider>
     </ThemeProvider>
