@@ -1,7 +1,7 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "fitness-crm",
-	"account_id": "7779d2868c06758814b3bad6cae29f6b",
+	"account_id": "79549c7c02a54b734601f990b46c14b4",
 	"main": "src/index.ts",
 	"compatibility_date": "2024-09-23",
 	"compatibility_flags": [
@@ -17,13 +17,13 @@
 		{
 			"binding": "DB",
 			"database_name": "fitness-crm-db",
-			"database_id": "ca9fae22-d16d-490b-bb27-fcd854fdd328"
+			"database_id": "7194fec3-c400-421c-a9d7-edfa89e3f912"
 		}
 	],
 	"kv_namespaces": [
 		{
 			"binding": "KV",
-			"id": "edaba0a5742445858299c07817446e1c"
+			"id": "ca43ee0f72ba4bfd84fddfa3491e4851"
 		}
 	],
 	"r2_buckets": [
@@ -36,6 +36,6 @@
 		"binding": "AI"
 	},
 	"vars": {
-		"CLOUDFLARE_ACCOUNT_ID": "7779d2868c06758814b3bad6cae29f6b"
+		"CLOUDFLARE_ACCOUNT_ID": "79549c7c02a54b734601f990b46c14b4"
 	}
 }
