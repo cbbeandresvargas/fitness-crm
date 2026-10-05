@@ -19,7 +19,10 @@ import { normalizeActivityName } from '../lib/activities';
 
 export const activitiesRoutes = new Hono<{ Bindings: Env; Variables: { user: SessionData } }>();
 
-activitiesRoutes.use('*', requireAuth);
+activitiesRoutes.use('/api/activities', requireAuth);
+activitiesRoutes.use('/api/activities/*', requireAuth);
+activitiesRoutes.use('/api/leads/*/activities', requireAuth);
+activitiesRoutes.use('/api/leads/*/activities/*', requireAuth);
 
 interface ActivityRow {
   id: string;

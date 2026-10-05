@@ -118,9 +118,14 @@ export async function requireAdmin(
   c: Context<{ Bindings: Env; Variables: { user?: SessionData } }>,
   next: Next
 ) {
+  const path = c.req.path;
+  if (path.startsWith('/api/whatsapp/webhook')) {
+    return next();
+  }
+
   const user = c.get('user');
   if (!user || user.role !== 'admin') {
-    if (c.req.path.startsWith('/api/')) {
+    if (path.startsWith('/api/')) {
       return c.json({ error: 'Acceso Denegado: Esta acción requiere rol de Administrador' }, 403);
     }
     return c.redirect('/login');

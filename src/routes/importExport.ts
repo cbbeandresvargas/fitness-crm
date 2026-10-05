@@ -16,7 +16,8 @@ import { computeFcSegment } from '../lib/segments';
 
 export const importExportRoutes = new Hono<{ Bindings: Env; Variables: { user: SessionData } }>();
 
-importExportRoutes.use('/api/*', requireAuth);
+importExportRoutes.use('/api/import/*', requireAuth);
+importExportRoutes.use('/api/export/*', requireAuth);
 
 /**
  * Carga de CSV de prueba precargado

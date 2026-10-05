@@ -14,7 +14,11 @@ import {
 
 export const leadsRoutes = new Hono<{ Bindings: Env; Variables: { user: SessionData } }>();
 
-leadsRoutes.use('/api/*', requireAuth);
+leadsRoutes.use('/api/agents', requireAuth);
+leadsRoutes.use('/api/dashboard', requireAuth);
+leadsRoutes.use('/api/leads', requireAuth);
+leadsRoutes.use('/api/leads/*', requireAuth);
+leadsRoutes.use('/api/upload/*', requireAuth);
 
 /**
  * Lista de agentes disponibles para asignar o filtrar
