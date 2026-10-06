@@ -12,7 +12,7 @@ INSERT OR IGNORE INTO whatsapp_settings (
 ) VALUES (
   'ws_default', '', '', '+591 60750474', 'Fitness Club Pass',
   'fitnessclub_secure_verify_token_2026', 'connected', 1,
-  '@cf/meta/llama-3.1-8b-instruct',
+  '@cf/meta/llama-3.2-3b-instruct',
   'enérgico, asesor consultivo, empático y altamente enfocado en cerrar suscripciones de Fitness Club Pass',
   'Fitness Club Pass es la plataforma de pases multideporte en Cochabamba, Bolivia. Con una sola membresía en la app, el usuario accede a múltiples centros deportivos, gimnasios, natación, crossfit, pádel y canchas de toda la ciudad. Todos los precios están en Bolivianos (Bs). La moneda oficial es Bs. El objetivo del asesor es indagar qué disciplinas le interesan al prospecto, explicar cómo la app le da pases flexibles y guiarlo a comprar su suscripción para activar su cuenta en la app.'
 );
@@ -31,10 +31,10 @@ INSERT OR IGNORE INTO knowledge_base (id, category, title, content, is_active) V
 
 -- 4. Plantillas Rápidas de Mensajes en WhatsApp
 INSERT OR IGNORE INTO message_templates (id, title, category, content, created_by, created_at, updated_at) VALUES
-('tmpl_1', 'Bienvenida Multideporte Cochabamba', 'primer_contacto', '¡Hola {nombre}! 💪 Te saluda {agente} de Fitness Club Pass Cochabamba. Con nuestra app tienes acceso a múltiples gimnasios, box de crossfit, piscinas y centros deportivos de la ciudad con una sola membresía en Bs. 📱 ¿Qué disciplina o zona de Cochabamba te queda más cómoda para entrenar?', 'usr_admin_1', DATETIME('now'), DATETIME('now')),
-('tmpl_2', 'Explicación de la App y Planes en Bs', 'seguimiento', '¡Hola {nombre}! Te comento cómo funciona: al suscribirte a Fitness Club Pass activas tu cuenta en la app móvil y recibes tus pases para entrenar en cualquiera de nuestros centros aliados en Cochabamba. 🏋️🏊 Tenemos planes desde Bs 180 al mes. ¿Te gustaría que te envíe los detalles de los planes para elegir el tuyo?', 'usr_admin_1', DATETIME('now'), DATETIME('now')),
-('tmpl_3', 'Activación de Cuenta y QR de Pago', 'cierre', '¡Excelente decisión {nombre}! 🚀 Tu cuenta de Fitness Club Pass está lista para habilitarse. Te comparto nuestro código QR / datos de transferencia para activar tus pases en la app hoy mismo. ¿Prefieres pago por QR simple o transferencia bancaria?', 'usr_admin_1', DATETIME('now'), DATETIME('now')),
-('tmpl_4', 'Reactivación de Suscripción', 'reactivacion', '¡Hola {nombre}! Te escribimos de Fitness Club Pass. Este mes incorporamos nuevos centros deportivos y gimnasios en Cochabamba. 🥊🔥 Tenemos un beneficio especial en tu renovación si reactivas tu suscripción esta semana. ¿Aún estás con ganas de entrenar?', 'usr_admin_1', DATETIME('now'), DATETIME('now'));
+('tmpl_1', 'Bienvenida Multideporte Cochabamba', 'primer_contacto', '¡Hola {nombre}! Te saluda {agente} de Fitness Club Pass Cochabamba. Con nuestra app tienes acceso a múltiples gimnasios, box de crossfit, piscinas y centros deportivos de la ciudad con una sola membresía en Bs. ¿Qué disciplina o zona de Cochabamba te queda más cómoda para entrenar?', 'usr_admin_1', DATETIME('now'), DATETIME('now')),
+('tmpl_2', 'Explicación de la App y Planes en Bs', 'seguimiento', '¡Hola {nombre}! Te comento cómo funciona: al suscribirte a Fitness Club Pass activas tu cuenta en la app móvil y recibes tus pases para entrenar en cualquiera de nuestros centros aliados en Cochabamba. Tenemos planes desde Bs 180 al mes. ¿Te gustaría que te envíe los detalles de los planes para elegir el tuyo?', 'usr_admin_1', DATETIME('now'), DATETIME('now')),
+('tmpl_3', 'Activación de Cuenta y QR de Pago', 'cierre', '¡Excelente decisión {nombre}! Tu cuenta de Fitness Club Pass está lista para habilitarse. Te comparto nuestro código QR / datos de transferencia para activar tus pases en la app hoy mismo. ¿Prefieres pago por QR simple o transferencia bancaria?', 'usr_admin_1', DATETIME('now'), DATETIME('now')),
+('tmpl_4', 'Reactivación de Suscripción', 'reactivacion', '¡Hola {nombre}! Te escribimos de Fitness Club Pass. Este mes incorporamos nuevos centros deportivos y gimnasios en Cochabamba. Tenemos un beneficio especial en tu renovación si reactivas tu suscripción esta semana. ¿Aún estás con ganas de entrenar?', 'usr_admin_1', DATETIME('now'), DATETIME('now'));
 
 -- 5. Catálogo de Actividades / Disciplinas Multideporte
 INSERT OR IGNORE INTO activities (id, name, name_norm, is_active) VALUES

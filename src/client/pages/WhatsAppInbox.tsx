@@ -39,6 +39,7 @@ export default function WhatsAppInbox() {
   const [chatInput, setChatInput] = createSignal('');
   const [sending, setSending] = createSignal(false);
   const [togglingAi, setTogglingAi] = createSignal(false);
+  const [triggeringAi, setTriggeringAi] = createSignal(false);
   const [updatingStage, setUpdatingStage] = createSignal(false);
   const [templates, setTemplates] = createSignal<MessageTemplate[]>([]);
 
@@ -180,6 +181,26 @@ export default function WhatsAppInbox() {
       alert(`Error actualizando IA: ${err.message}`);
     } finally {
       setTogglingAi(false);
+    }
+  };
+
+  const handleTriggerAi = async () => {
+    const lead = activeLead();
+    if (!lead || triggeringAi()) return;
+
+    setTriggeringAi(true);
+    try {
+      const res = await api.testLeadAi(lead.id, { sendToWhatsApp: true });
+      if (res.success) {
+        await loadChat(lead.id, false);
+        await loadInboxList();
+      } else {
+        alert(`Error al generar respuesta de IA: ${res.error || 'No se pudo generar'}`);
+      }
+    } catch (err: any) {
+      alert(`Error al ejecutar IA: ${err.message}`);
+    } finally {
+      setTriggeringAi(false);
     }
   };
 
@@ -508,6 +529,19 @@ export default function WhatsAppInbox() {
 
                 {/* AI Status & Controls */}
                 <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleTriggerAi}
+                    disabled={triggeringAi() || !activeLead()}
+                    class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-accent hover:bg-accent-hover text-white border border-accent/40 shadow-sm cursor-pointer disabled:opacity-50"
+                    title="Generar y enviar respuesta de IA para el último mensaje de este cliente"
+                  >
+                    <Show when={triggeringAi()} fallback={<Sparkles size={13} />}>
+                      <RefreshCw size={13} class="animate-spin" />
+                    </Show>
+                    <span>{triggeringAi() ? 'Pensando...' : 'Disparar IA'}</span>
+                  </button>
+
                   <Show
                     when={activeLead()?.is_handoff}
                     fallback={
@@ -525,7 +559,7 @@ export default function WhatsAppInbox() {
                         <Show when={activeLead()?.ai_enabled} fallback={<User size={13} />}>
                           <Bot size={13} class="text-emerald-400" />
                         </Show>
-                        <span>{activeLead()?.ai_enabled ? 'IA Respondiendo' : 'Control Manual'}</span>
+                        <span>{activeLead()?.ai_enabled ? 'IA Activa' : 'Control Manual'}</span>
                       </button>
                     }
                   >

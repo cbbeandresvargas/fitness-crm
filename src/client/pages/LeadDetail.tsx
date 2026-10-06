@@ -1321,7 +1321,32 @@ export default function LeadDetail() {
                         class="flex-1 py-3 bg-elevate hover:bg-elevate-strong text-body font-bold text-xs rounded-xl transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
                       >
                         <MessageSquare size={13} />
-                        <span>Pegar en Chat en Vivo</span>
+                        <span>Pegar en Chat</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const currentLead = lead();
+                          if (!currentLead || !aiMessage().trim()) return;
+                          try {
+                            const res = await api.sendWhatsAppDirect(currentLead.id, aiMessage());
+                            if (res.success) {
+                              showToast('Mensaje enviado por WhatsApp Cloud API');
+                              setActiveTab('chat');
+                              await loadMessages();
+                              await loadLead();
+                            } else {
+                              showToast(`Error al enviar: ${res.metaSendError || 'Fallo de entrega'}`, 'error');
+                            }
+                          } catch (err: any) {
+                            showToast(`Error: ${err.message}`, 'error');
+                          }
+                        }}
+                        disabled={!aiMessage().trim()}
+                        class="flex-1 py-3 bg-accent hover:bg-accent-hover text-white font-extrabold text-xs rounded-xl shadow-lg transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
+                      >
+                        <Send size={13} />
+                        <span>Enviar por WhatsApp</span>
                       </button>
                       <button
                         type="button"
@@ -1333,7 +1358,7 @@ export default function LeadDetail() {
                         class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-xl shadow-lg transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
                       >
                         <ExternalLink size={13} />
-                        <span>Abrir en WhatsApp</span>
+                        <span>Abrir wa.me</span>
                       </button>
                     </div>
                   </div>

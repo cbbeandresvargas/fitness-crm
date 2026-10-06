@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS whatsapp_settings (
   verify_token TEXT,
   status TEXT NOT NULL DEFAULT 'disconnected' CHECK(status IN ('connected', 'disconnected', 'reconnect_required')),
   ai_enabled INTEGER NOT NULL DEFAULT 1,
-  ai_model TEXT NOT NULL DEFAULT '@cf/meta/llama-3.1-8b-instruct',
+  ai_model TEXT NOT NULL DEFAULT '@cf/meta/llama-3.2-3b-instruct',
   ai_tone TEXT DEFAULT 'enérgico, asesor consultivo, empático y enfocado en cerrar suscripciones de Fitness Club Pass',
   ai_instructions TEXT,
   created_at TEXT NOT NULL DEFAULT (DATETIME('now')),

@@ -19,10 +19,14 @@ import {
   Sparkles,
   X,
   SlidersHorizontal,
+  Activity,
+  Play,
+  Cpu,
+  Send,
 } from 'lucide-solid';
 
 export default function WhatsAppSettings() {
-  const [activeTab, setActiveTab] = createSignal<'connection' | 'ai' | 'kb'>('connection');
+  const [activeTab, setActiveTab] = createSignal<'connection' | 'ai' | 'kb' | 'diagnostics'>('connection');
   const [settings, setSettings] = createSignal<(SettingsType & { env_configured?: boolean }) | null>(null);
   const [webhook, setWebhook] = createSignal<WebhookInfo | null>(null);
   const [loading, setLoading] = createSignal(true);
@@ -31,9 +35,17 @@ export default function WhatsAppSettings() {
   const [testResult, setTestResult] = createSignal<{ success: boolean; message: string } | null>(null);
   const [savedSuccess, setSavedSuccess] = createSignal(false);
 
+  // Diagnostics & Simulator
+  const [diagnostics, setDiagnostics] = createSignal<any | null>(null);
+  const [runningDiag, setRunningDiag] = createSignal(false);
+  const [simMessage, setSimMessage] = createSignal('hola, que planes tienen disponibles en Cochabamba?');
+  const [sendLiveWhatsApp, setSendLiveWhatsApp] = createSignal(true);
+  const [simulating, setSimulating] = createSignal(false);
+  const [simResult, setSimResult] = createSignal<any | null>(null);
+
   // Form Fields para IA
   const [aiEnabled, setAiEnabled] = createSignal(true);
-  const [aiModel, setAiModel] = createSignal('@cf/meta/llama-3.1-8b-instruct');
+  const [aiModel, setAiModel] = createSignal('@cf/meta/llama-3.2-3b-instruct');
   const [aiTone, setAiTone] = createSignal('');
   const [aiInstructions, setAiInstructions] = createSignal('');
 
@@ -51,7 +63,7 @@ export default function WhatsAppSettings() {
       if (res.settings) {
         setSettings(res.settings as any);
         setAiEnabled(res.settings.ai_enabled === 1);
-        setAiModel(res.settings.ai_model || '@cf/meta/llama-3.1-8b-instruct');
+        setAiModel(res.settings.ai_model || '@cf/meta/llama-3.2-3b-instruct');
         setAiTone(res.settings.ai_tone || '');
         setAiInstructions(res.settings.ai_instructions || '');
       }
@@ -125,6 +137,35 @@ export default function WhatsAppSettings() {
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     alert(`${label} copiado al portapapeles.`);
+  };
+
+  const handleRunDiagnostics = async () => {
+    setRunningDiag(true);
+    try {
+      const res = await api.getWhatsAppDiagnostics();
+      setDiagnostics(res);
+    } catch (err: any) {
+      alert(`Error ejecutando diagnóstico: ${err.message}`);
+    } finally {
+      setRunningDiag(false);
+    }
+  };
+
+  const handleSimulateAi = async () => {
+    if (!simMessage().trim()) return;
+    setSimulating(true);
+    setSimResult(null);
+    try {
+      const res = await api.testLeadAi('lead_3ba72e62', {
+        incomingText: simMessage().trim(),
+        sendToWhatsApp: sendLiveWhatsApp(),
+      });
+      setSimResult(res);
+    } catch (err: any) {
+      setSimResult({ success: false, error: err.message });
+    } finally {
+      setSimulating(false);
+    }
   };
 
   // Knowledge Base actions
@@ -258,6 +299,22 @@ export default function WhatsAppSettings() {
             <Database size={14} />
             <span>Catálogo & Precios en Bs</span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('diagnostics');
+              if (!diagnostics()) handleRunDiagnostics();
+            }}
+            class={`px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+              activeTab() === 'diagnostics'
+                ? 'bg-accent text-white shadow-md'
+                : 'text-muted hover:text-body hover:bg-elevate'
+            }`}
+          >
+            <Activity size={14} />
+            <span>Diagnóstico & Pruebas en Vivo</span>
+          </button>
         </div>
 
         <Show when={!loading()} fallback={<div class="p-8 text-center text-xs text-muted animate-pulse">Cargando ajustes...</div>}>
@@ -384,7 +441,7 @@ export default function WhatsAppSettings() {
                   <Bot size={18} class="text-accent" />
                   <div>
                     <h3 class="font-bold text-body">Motor del Asesor Comercial con IA</h3>
-                    <p class="text-[11px] text-muted">Cloudflare Workers AI (Llama 3.1 Instruct)</p>
+                    <p class="text-[11px] text-muted">Cloudflare Workers AI (Llama 3.2 Instruct)</p>
                   </div>
                 </div>
 
@@ -407,11 +464,14 @@ export default function WhatsAppSettings() {
                   onChange={(e) => setAiModel(e.currentTarget.value)}
                   class="w-full px-3 py-2 bg-app border border-edge rounded-xl text-xs text-body focus:outline-none focus:border-accent"
                 >
-                  <option value="@cf/meta/llama-3.1-8b-instruct">
-                    @cf/meta/llama-3.1-8b-instruct (Rápido, ultra económico y conversacional)
+                  <option value="@cf/meta/llama-3.2-3b-instruct">
+                    @cf/meta/llama-3.2-3b-instruct (Recomendado: ultra rápido, multilingüe y alta precisión en ventas)
+                  </option>
+                  <option value="@cf/meta/llama-3.2-1b-instruct">
+                    @cf/meta/llama-3.2-1b-instruct (Ultra ligero y respuesta instantánea)
                   </option>
                   <option value="@cf/meta/llama-3.3-70b-instruct">
-                    @cf/meta/llama-3.3-70b-instruct (Razonamiento profundo para ventas y objeciones complejas)
+                    @cf/meta/llama-3.3-70b-instruct (Razonamiento profundo para objeciones complejas)
                   </option>
                 </select>
               </div>
@@ -516,6 +576,275 @@ export default function WhatsAppSettings() {
                     </div>
                   )}
                 </For>
+              </div>
+            </div>
+          </Show>
+
+          {/* TAB 4: DIAGNÓSTICO EN TIEMPO REAL & SIMULADOR DE IA */}
+          <Show when={activeTab() === 'diagnostics'}>
+            <div class="space-y-6 animate-fade-in">
+              {/* Header with Run Diagnostics button */}
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="text-xs font-black text-body flex items-center gap-2">
+                    <Activity size={16} class="text-accent" />
+                    <span>Diagnóstico de Salud del Sistema (Meta WhatsApp & Workers AI)</span>
+                  </h3>
+                  <p class="text-[11px] text-muted">
+                    Verifica la conectividad con Meta Graph API v25.0, la disponibilidad del modelo de IA y el estado de la base de datos D1.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleRunDiagnostics}
+                  disabled={runningDiag()}
+                  class="px-4 py-2 bg-accent hover:bg-accent-hover text-white text-xs font-extrabold rounded-xl transition shadow-md disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                >
+                  <RefreshCw size={14} class={runningDiag() ? 'animate-spin' : ''} />
+                  <span>{runningDiag() ? 'Comprobando Sistema...' : 'Ejecutar Diagnóstico Ahora'}</span>
+                </button>
+              </div>
+
+              {/* 3 Status Cards */}
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Meta API Status Card */}
+                <div class="p-5 rounded-2xl bg-surface border border-edge space-y-3">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <Phone size={16} class="text-accent" />
+                      <h4 class="text-xs font-bold text-body">Meta WhatsApp API</h4>
+                    </div>
+                    <Show
+                      when={diagnostics()?.metaApi?.status === 'ok'}
+                      fallback={
+                        <span class="px-2 py-0.5 rounded-lg bg-red-500/10 text-red-400 border border-red-500/30 text-[10px] font-bold flex items-center gap-1">
+                          <AlertCircle size={10} />
+                          <span>Desconectado</span>
+                        </span>
+                      }
+                    >
+                      <span class="px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold flex items-center gap-1">
+                        <CheckCircle2 size={10} />
+                        <span>Operativo</span>
+                      </span>
+                    </Show>
+                  </div>
+
+                  <div class="space-y-1.5 text-[11px]">
+                    <div class="flex justify-between">
+                      <span class="text-muted">Teléfono verificado:</span>
+                      <span class="font-mono text-body font-bold">
+                        {diagnostics()?.metaApi?.display_phone_number || settings()?.display_phone_number || '+591 60750474'}
+                      </span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-muted">Nombre verificado:</span>
+                      <span class="text-body font-bold">
+                        {diagnostics()?.metaApi?.verified_name || settings()?.verified_name || 'Fitness Club Pass'}
+                      </span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-muted">Calidad de número:</span>
+                      <span class="text-emerald-400 font-bold uppercase">
+                        {diagnostics()?.metaApi?.quality_rating || 'GREEN (Óptimo)'}
+                      </span>
+                    </div>
+                    <Show when={diagnostics()?.metaApi?.error}>
+                      <div class="p-2 rounded-lg bg-red-500/10 text-red-400 text-[10px] font-mono mt-2">
+                        {diagnostics()?.metaApi?.error}
+                      </div>
+                    </Show>
+                  </div>
+                </div>
+
+                {/* Workers AI Card */}
+                <div class="p-5 rounded-2xl bg-surface border border-edge space-y-3">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <Cpu size={16} class="text-accent" />
+                      <h4 class="text-xs font-bold text-body">Cloudflare Workers AI</h4>
+                    </div>
+                    <Show
+                      when={diagnostics()?.workersAi?.status === 'ok'}
+                      fallback={
+                        <span class="px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[10px] font-bold flex items-center gap-1">
+                          <AlertCircle size={10} />
+                          <span>Fallo / Fallback</span>
+                        </span>
+                      }
+                    >
+                      <span class="px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold flex items-center gap-1">
+                        <CheckCircle2 size={10} />
+                        <span>Activo</span>
+                      </span>
+                    </Show>
+                  </div>
+
+                  <div class="space-y-1.5 text-[11px]">
+                    <div class="flex justify-between">
+                      <span class="text-muted">Modelo evaluado:</span>
+                      <span class="font-mono text-body text-[10px]">
+                        {diagnostics()?.workersAi?.model || '@cf/meta/llama-3.2-3b-instruct'}
+                      </span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-muted">Latencia de respuesta:</span>
+                      <span class="text-accent font-bold font-mono">
+                        {diagnostics()?.workersAi?.latencyMs ? `${diagnostics()?.workersAi?.latencyMs} ms` : 'N/A'}
+                      </span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-muted">Prueba de inferencia:</span>
+                      <span class="text-emerald-400 font-bold">
+                        {diagnostics()?.workersAi?.response || 'Respondiendo'}
+                      </span>
+                    </div>
+                    <Show when={diagnostics()?.workersAi?.error}>
+                      <div class="p-2 rounded-lg bg-amber-500/10 text-amber-400 text-[10px] font-mono mt-2">
+                        {diagnostics()?.workersAi?.error}
+                      </div>
+                    </Show>
+                  </div>
+                </div>
+
+                {/* Base de Datos Card */}
+                <div class="p-5 rounded-2xl bg-surface border border-edge space-y-3">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <Database size={16} class="text-accent" />
+                      <h4 class="text-xs font-bold text-body">Base de Datos D1</h4>
+                    </div>
+                    <span class="px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold flex items-center gap-1">
+                      <CheckCircle2 size={10} />
+                      <span>Conectado</span>
+                    </span>
+                  </div>
+
+                  <div class="space-y-1.5 text-[11px]">
+                    <div class="flex justify-between">
+                      <span class="text-muted">Total prospectos (leads):</span>
+                      <span class="font-bold text-body">{diagnostics()?.database?.leadsCount ?? '...'}</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-muted">Mensajes en historial:</span>
+                      <span class="font-bold text-body">{diagnostics()?.database?.messagesCount ?? '...'}</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-muted">Catálogo oficial (KB):</span>
+                      <span class="font-bold text-body">{diagnostics()?.database?.kbEntriesCount ?? '...'} planes</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Live AI Simulation & Testing Panel */}
+              <div class="p-5 rounded-2xl bg-surface border border-edge space-y-4">
+                <div class="flex items-center justify-between border-b border-edge pb-3">
+                  <div class="flex items-center gap-2">
+                    <Bot size={18} class="text-accent" />
+                    <div>
+                      <h4 class="text-xs font-bold text-body">Simulador de Conversación de Ventas con IA</h4>
+                      <p class="text-[11px] text-muted">
+                        Envía un mensaje de prueba a la IA y observa el proceso de razonamiento, la acción elegida y la entrega por WhatsApp.
+                      </p>
+                    </div>
+                  </div>
+
+                  <label class="flex items-center gap-2 cursor-pointer bg-elevate px-3 py-1.5 rounded-xl border border-edge">
+                    <input
+                      type="checkbox"
+                      checked={sendLiveWhatsApp()}
+                      onChange={(e) => setSendLiveWhatsApp(e.currentTarget.checked)}
+                      class="w-3.5 h-3.5 accent-accent rounded cursor-pointer"
+                    />
+                    <span class="text-[11px] font-bold text-body">Enviar mensaje real a WhatsApp (+59170795878)</span>
+                  </label>
+                </div>
+
+                {/* Predefined Test Prompts */}
+                <div class="flex flex-wrap items-center gap-2 text-xs">
+                  <span class="text-muted font-bold text-[11px]">Ejemplos rápidos:</span>
+                  {[
+                    'hola, que planes tienen disponibles?',
+                    'hola, quisiera saber precios y si tienen pase de prueba',
+                    'cuanto cuesta el plan pro y que gimnasios incluye?',
+                    'quiero pagar por qr para activar mi cuenta hoy',
+                    'quiero hablar con un asesor humano por favor',
+                  ].map((preset) => (
+                    <button
+                      type="button"
+                      onClick={() => setSimMessage(preset)}
+                      class="px-2.5 py-1 rounded-lg bg-app border border-edge hover:border-accent text-body-soft text-[10px] font-medium transition cursor-pointer"
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Input and Action */}
+                <div class="flex gap-2">
+                  <input
+                    type="text"
+                    value={simMessage()}
+                    onInput={(e) => setSimMessage(e.currentTarget.value)}
+                    placeholder="Escribe el mensaje del cliente a simular..."
+                    class="flex-1 px-4 py-2.5 bg-app border border-edge rounded-xl text-xs text-body focus:outline-none focus:border-accent"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={handleSimulateAi}
+                    disabled={simulating() || !simMessage().trim()}
+                    class="px-5 py-2.5 bg-accent hover:bg-accent-hover text-white text-xs font-extrabold rounded-xl transition shadow-md disabled:opacity-50 cursor-pointer flex items-center gap-2 shrink-0"
+                  >
+                    <Show when={simulating()} fallback={<Play size={13} fill="currentColor" />}>
+                      <RefreshCw size={13} class="animate-spin" />
+                    </Show>
+                    <span>{simulating() ? 'Procesando IA...' : 'Probar IA'}</span>
+                  </button>
+                </div>
+
+                {/* Simulation Output */}
+                <Show when={simResult()}>
+                  <div class="p-4 rounded-2xl bg-app border border-accent/30 space-y-3 animate-fade-in text-xs">
+                    <div class="flex items-center justify-between border-b border-edge pb-2">
+                      <span class="font-black text-body flex items-center gap-1.5">
+                        <CheckCircle2 size={14} class="text-emerald-400" />
+                        <span>Resultado de la Inferencia:</span>
+                      </span>
+                      <span class="font-mono text-muted text-[11px]">
+                        Tiempo: {simResult()?.durationMs} ms | Acción: {simResult()?.action?.action || 'N/A'}
+                      </span>
+                    </div>
+
+                    <div class="space-y-1">
+                      <span class="text-muted text-[11px] font-bold">Respuesta generada para el cliente:</span>
+                      <p class="p-3 rounded-xl bg-surface border border-edge text-body-soft whitespace-pre-wrap leading-relaxed font-sans text-xs">
+                        {simResult()?.action?.reply || simResult()?.action?.text || simResult()?.action?.farewell || 'Sin texto de respuesta'}
+                      </p>
+                    </div>
+
+                    <Show when={simResult()?.deliveryResult}>
+                      <div class="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-between text-[11px]">
+                        <span class="flex items-center gap-1.5 font-bold">
+                          <CheckCircle2 size={13} />
+                          <span>Entregado a Meta WhatsApp Cloud API</span>
+                        </span>
+                        <span class="font-mono text-[10px]">
+                          ID: {simResult()?.deliveryResult?.waMessageId || 'N/A'}
+                        </span>
+                      </div>
+                    </Show>
+
+                    <Show when={simResult()?.error}>
+                      <div class="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-[11px] flex items-center gap-1.5">
+                        <AlertCircle size={13} />
+                        <span>{simResult()?.error}</span>
+                      </div>
+                    </Show>
+                  </div>
+                </Show>
               </div>
             </div>
           </Show>

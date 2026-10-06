@@ -122,7 +122,7 @@ Todos los precios están en Bolivianos (Bs).
 Tu función es generar mensajes de WhatsApp personalizados, altamente persuasivos y consultivos para que el prospecto adquiera su membresía en la app.
 Reglas:
 1. Sé conciso y directo (máximo 3 párrafos cortos).
-2. Usa emojis deportivos con balance (💪, 🏋️, 📱, ⏱️, 🚀).
+2. NO uses emojis. Mantén un tono profesional, claro y formal pero cercano.
 3. Incluye siempre una sola llamada a la acción (CTA) fácil de responder.
 4. Recuerda que no somos un solo gimnasio: somos la app que te da acceso a múltiples centros en Cochabamba.`;
 
@@ -149,7 +149,7 @@ Devuelve exclusivamente el texto final para WhatsApp listo para enviar, sin comi
 }
 
 /**
- * Generador de Mensajes de WhatsApp usando Cloudflare Workers AI (@cf/meta/llama-3.1-8b-instruct)
+ * Generador de Mensajes de WhatsApp usando Cloudflare Workers AI (@cf/meta/llama-3.2-3b-instruct)
  */
 export async function generateAiWhatsAppMessage(
   env: Env,
@@ -162,7 +162,7 @@ export async function generateAiWhatsAppMessage(
   // Ejecución en Cloudflare Workers AI
   const aiOutput = await callCloudflareWorkersAi(
     env,
-    '@cf/meta/llama-3.1-8b-instruct',
+    '@cf/meta/llama-3.2-3b-instruct',
     [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt },
@@ -180,16 +180,16 @@ export async function generateAiWhatsAppMessage(
   const nombre = lead.full_name.split(' ')[0] || 'campeón';
 
   if (lead.segment === 'A') {
-    return `¡Hola ${nombre}! 💪 Te escribe ${agentName} de Fitness Club Pass Cochabamba. Tenemos tu pase listo para acceder a gimnasios, crossfit, natación y pádel con una sola app. 📱 ¿Te gustaría que te activemos tu suscripción con tarifa preferencial hoy? 🚀`;
+    return `¡Hola ${nombre}! Te escribe ${agentName} de Fitness Club Pass Cochabamba. Tenemos tu pase listo para acceder a gimnasios, crossfit, natación y pádel con una sola app. ¿Te gustaría que te activemos tu suscripción con tarifa preferencial hoy?`;
   } else if (lead.segment === 'C') {
-    return `Hola ${nombre}, ¿cómo estás? Te saluda ${agentName} de Fitness Club Pass Cochabamba. Sé que a veces la rutina se complica, pero con nuestra app puedes entrenar cerca de donde estés en la ciudad desde solo Bs 180 al mes. 🏋️ ¿Aún estás con ganas de entrenar?`;
+    return `Hola ${nombre}, ¿cómo estás? Te saluda ${agentName} de Fitness Club Pass Cochabamba. Con nuestra app puedes entrenar cerca de donde estés en la ciudad desde solo Bs 180 al mes. ¿Aún estás con ganas de entrenar?`;
   } else {
     return `¡Hola ${nombre}! Te saluda ${agentName} de Fitness Club Pass Cochabamba. Con una sola membresía en Bs tienes acceso a múltiples gimnasios y disciplinas en la ciudad. ¿Qué centros o disciplinas te gustaría probar primero?`;
   }
 }
 
 /**
- * Resumen Ejecutivo y Diagnóstico del Prospecto con Cloudflare Workers AI (@cf/meta/llama-3.1-8b-instruct)
+ * Resumen Ejecutivo y Diagnóstico del Prospecto con Cloudflare Workers AI (@cf/meta/llama-3.2-3b-instruct)
  */
 export async function generateAiLeadBriefing(
   env: Env,
@@ -199,12 +199,12 @@ export async function generateAiLeadBriefing(
   const metaStr = JSON.stringify(lead.metadata || {});
   const notesStr = activities.slice(0, 6).map((a) => a.details).join(' | ');
 
-  const systemPrompt = `Eres un estratega comercial senior de Fitness Club. Resume el perfil del prospecto en exactamente 2 oraciones concisas para el asesor de ventas: 1) Quién es y qué busca, 2) Siguiente paso sugerido y nivel de urgencia.`;
+  const systemPrompt = `Eres un estratega comercial senior de Fitness Club Pass Cochabamba. Resume el perfil del prospecto en exactamente 2 oraciones concisas para el asesor de ventas: 1) Quién es y qué busca, 2) Siguiente paso sugerido y nivel de urgencia.`;
   const userPrompt = `Prospecto: ${lead.full_name}, Estado: ${lead.status}, Segmento: ${lead.segment}. Metadatos: ${metaStr}. Historial notas: ${notesStr || 'Sin historial'}.`;
 
   const aiOutput = await callCloudflareWorkersAi(
     env,
-    '@cf/meta/llama-3.1-8b-instruct',
+    '@cf/meta/llama-3.2-3b-instruct',
     [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt },
@@ -218,7 +218,7 @@ export async function generateAiLeadBriefing(
 
   // Fallback
   const meta = lead.metadata || {};
-  return `${lead.full_name} se encuentra en etapa ${lead.status.toUpperCase()} buscando ${meta.objetivo || 'entrenamiento'} con presupuesto aproximado de $${meta.presupuesto || '100'} USD. Se recomienda coordinar visita presencial o clase de prueba inmediata${cityFromMetadata(meta) ? ` en la ciudad de ${cityFromMetadata(meta)}` : ''}.`;
+  return `${lead.full_name} se encuentra en etapa ${lead.status.toUpperCase()} buscando ${meta.objetivo || 'entrenamiento'} con interés en suscripciones de pase multideporte en Cochabamba. Se recomienda coordinar activación de su primer pase en la app.`;
 }
 
 /**
@@ -231,7 +231,7 @@ export async function suggestAiTags(env: Env, lead: Lead): Promise<string[]> {
 
   const aiOutput = await callCloudflareWorkersAi(
     env,
-    '@cf/meta/llama-3.1-8b-instruct',
+    '@cf/meta/llama-3.2-3b-instruct',
     [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt },

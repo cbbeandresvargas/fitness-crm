@@ -47,11 +47,28 @@ async function getActiveMetaCredentials(env: Env): Promise<{
   appSecret?: string;
   wabaId?: string;
 } | null> {
-  const token = env.META_WA_ACCESS_TOKEN?.trim() || '';
-  const phoneNumberId = env.META_WA_PHONE_NUMBER_ID?.trim() || '';
-  const verifyToken = env.META_WA_VERIFY_TOKEN?.trim() || 'fitnessclub_secure_verify_token_2026';
-  const appSecret = env.META_APP_SECRET?.trim() || undefined;
-  const wabaId = env.META_WA_WABA_ID?.trim() || undefined;
+  let token = env.META_WA_ACCESS_TOKEN?.trim() || '';
+  let phoneNumberId = env.META_WA_PHONE_NUMBER_ID?.trim() || '';
+  let verifyToken = env.META_WA_VERIFY_TOKEN?.trim() || 'fitnessclub_secure_verify_token_2026';
+  let appSecret = env.META_APP_SECRET?.trim() || undefined;
+  let wabaId = env.META_WA_WABA_ID?.trim() || undefined;
+
+  // Respaldo desde base de datos si faltan en variables de entorno
+  if (!phoneNumberId || !token) {
+    try {
+      const settings = await env.DB.prepare(
+        'SELECT phone_number_id, waba_id, verify_token FROM whatsapp_settings WHERE id = "ws_default"'
+      ).first<any>();
+      if (!phoneNumberId && settings?.phone_number_id) {
+        phoneNumberId = settings.phone_number_id;
+      }
+      if (!wabaId && settings?.waba_id) {
+        wabaId = settings.waba_id;
+      }
+    } catch {
+      // ignore
+    }
+  }
 
   if (!phoneNumberId || !token) {
     return null;
@@ -80,11 +97,11 @@ whatsappRoutes.get('/api/whatsapp/webhook', async (c) => {
   const expectedToken = creds?.verifyToken || c.env.META_WA_VERIFY_TOKEN || 'fitnessclub_secure_verify_token_2026';
 
   if (mode === 'subscribe' && token === expectedToken) {
-    console.log('[Meta Webhook GET] Verificación de webhook exitosa ✅');
+    console.log('[Meta Webhook GET] Verificación de webhook exitosa.');
     return c.text(challenge || '', 200);
   }
 
-  console.warn('[Meta Webhook GET] Token de verificación inválido ❌');
+  console.warn('[Meta Webhook GET] Token de verificación inválido.');
   return c.text('Forbidden', 403);
 });
 
@@ -101,7 +118,7 @@ whatsappRoutes.post('/api/whatsapp/webhook', async (c) => {
   if (creds?.appSecret) {
     const isValid = verifyMetaSignature(rawBody, signature, creds.appSecret);
     if (!isValid) {
-      console.warn('[Meta Webhook POST] Firma x-hub-signature-256 inválida ❌');
+      console.warn('[Meta Webhook POST] Firma x-hub-signature-256 inválida.');
       return c.json({ error: 'Invalid signature' }, 401);
     }
   }
@@ -146,7 +163,7 @@ whatsappRoutes.post('/api/whatsapp/webhook', async (c) => {
             const contactProfile = value.contacts?.find((ct: any) => ct.wa_id === msg.from);
             const profileName = contactProfile?.profile?.name || null;
             const msgType = msg.type || 'text';
-            const content = msg.text?.body || (msgType === 'image' ? (msg.image?.caption ? `📷 ${msg.image.caption}` : '📷 Imagen recibida') : 'Archivo multimedia');
+            const content = msg.text?.body || (msgType === 'image' ? (msg.image?.caption ? `[Foto: ${msg.image.caption}]` : '[Foto recibida]') : 'Archivo multimedia');
             const mediaUrl = msgType === 'image' && msg.image?.id ? `/api/whatsapp/media/${msg.image.id}` : null;
 
             // 1. Idempotencia: Verificar si el mensaje ya fue procesado
@@ -248,8 +265,8 @@ whatsappRoutes.post('/api/whatsapp/webhook', async (c) => {
               console.log(`[Sales Agent] Disparando turno de IA para lead ${lead.id} (${lead.full_name})...`);
               const aiIncomingText = msgType === 'image'
                 ? (msg.image?.caption
-                    ? `[El prospecto envió una foto/imagen con el texto: "${msg.image.caption}"]`
-                    : `[El prospecto envió una foto/imagen (ej. comprobante de pago o consulta de entrenamiento)]`)
+                    ? `[El prospecto envió una foto con el texto: "${msg.image.caption}"]`
+                    : `[El prospecto envió una foto]`)
                 : content;
 
               const aiPromise = runSalesAgentTurn({
@@ -257,9 +274,17 @@ whatsappRoutes.post('/api/whatsapp/webhook', async (c) => {
                 leadId: lead.id,
                 incomingText: aiIncomingText,
                 credentials: creds,
-              }).catch((aiErr) => {
-                console.error('[Sales Agent] Error ejecutando turno de IA:', aiErr);
-              });
+              })
+                .then((aiRes) => {
+                  if (aiRes.executed) {
+                    console.log(`[Sales Agent] Turno de IA finalizado con éxito para ${lead.id}. Acción: ${aiRes.action?.action}`);
+                  } else {
+                    console.warn(`[Sales Agent] Turno de IA no ejecutado para ${lead.id}: ${aiRes.error}`);
+                  }
+                })
+                .catch((aiErr) => {
+                  console.error('[Sales Agent] Error ejecutando turno de IA:', aiErr);
+                });
 
               if (c.executionCtx && typeof c.executionCtx.waitUntil === 'function') {
                 c.executionCtx.waitUntil(aiPromise);
@@ -383,7 +408,7 @@ whatsappRoutes.get('/api/whatsapp/config', async (c) => {
       status: isEnvConfigured ? 'connected' : 'disconnected',
       verify_token: c.env.META_WA_VERIFY_TOKEN || 'fitnessclub_secure_verify_token_2026',
       ai_enabled: settings?.ai_enabled ?? 1,
-      ai_model: settings?.ai_model || '@cf/meta/llama-3.1-8b-instruct',
+      ai_model: settings?.ai_model || '@cf/meta/llama-3.2-3b-instruct',
       ai_tone: settings?.ai_tone || 'enérgico, motivador, empático y altamente enfocado en cerrar ventas',
       ai_instructions: settings?.ai_instructions || '',
       env_configured: isEnvConfigured,
@@ -426,7 +451,7 @@ whatsappRoutes.post('/api/whatsapp/config', async (c) => {
     .bind(
       id,
       ai_enabled !== undefined ? (ai_enabled ? 1 : 0) : 1,
-      ai_model || '@cf/meta/llama-3.1-8b-instruct',
+      ai_model || '@cf/meta/llama-3.2-3b-instruct',
       ai_tone || 'enérgico, motivador, empático y altamente enfocado en cerrar ventas',
       ai_instructions || null,
       now,
@@ -480,6 +505,153 @@ whatsappRoutes.post('/api/whatsapp/test-connection', async (c) => {
       status: err instanceof MetaApiError ? err.status : 500,
     }, 400);
   }
+});
+
+/**
+ * 5.1 DIAGNÓSTICO EN TIEMPO REAL DEL SISTEMA (META WHATSAPP + WORKERS AI + D1)
+ */
+whatsappRoutes.get('/api/whatsapp/diagnostics', async (c) => {
+  const creds = await getActiveMetaCredentials(c.env);
+
+  // A) Test Meta Graph API
+  let metaStatus: {
+    status: 'ok' | 'error';
+    phone_number_id?: string;
+    display_phone_number?: string;
+    verified_name?: string;
+    quality_rating?: string;
+    error?: string;
+  } = { status: 'error', error: 'Credenciales no configuradas' };
+
+  if (creds?.phoneNumberId && creds?.token) {
+    try {
+      const details = await getMetaPhoneNumberDetails({
+        phoneNumberId: creds.phoneNumberId,
+        token: creds.token,
+        env: c.env,
+      });
+      metaStatus = {
+        status: 'ok',
+        phone_number_id: details.id,
+        display_phone_number: details.display_phone_number,
+        verified_name: details.verified_name,
+        quality_rating: details.quality_rating,
+      };
+    } catch (err: any) {
+      metaStatus = {
+        status: 'error',
+        phone_number_id: creds.phoneNumberId,
+        error: err.message || 'Error conectando con Meta Graph API',
+      };
+    }
+  }
+
+  // B) Test Cloudflare Workers AI
+  let aiStatus: {
+    status: 'ok' | 'error';
+    model: string;
+    latencyMs: number;
+    response?: string;
+    error?: string;
+  } = { status: 'error', model: '@cf/meta/llama-3.2-3b-instruct', latencyMs: 0 };
+
+  const startAi = Date.now();
+  const testModels = ['@cf/meta/llama-3.2-3b-instruct', '@cf/meta/llama-3.2-1b-instruct', '@cf/meta/llama-2-7b-chat-int8'];
+
+  if (c.env.AI && typeof c.env.AI.run === 'function') {
+    for (const testModel of testModels) {
+      try {
+        const testRes = await c.env.AI.run(testModel, {
+          messages: [{ role: 'user', content: 'Di "OK" únicamente' }],
+          max_tokens: 10,
+        });
+        aiStatus = {
+          status: 'ok',
+          model: testModel,
+          latencyMs: Date.now() - startAi,
+          response: testRes?.response?.trim() || 'OK',
+        };
+        break;
+      } catch (aiErr: any) {
+        aiStatus = {
+          status: 'error',
+          model: testModel,
+          latencyMs: Date.now() - startAi,
+          error: aiErr.message || 'Fallo al ejecutar modelo Workers AI',
+        };
+      }
+    }
+  } else {
+    aiStatus = {
+      status: 'error',
+      model: '@cf/meta/llama-3.2-3b-instruct',
+      latencyMs: Date.now() - startAi,
+      error: 'El binding env.AI no está disponible en este entorno',
+    };
+  }
+
+  // C) Estado de Base de Datos y Pipeline
+  const [leadsCountRes, msgsCountRes, kbCountRes, settingsRes] = await Promise.all([
+    c.env.DB.prepare('SELECT COUNT(*) as count FROM leads').first<any>(),
+    c.env.DB.prepare('SELECT COUNT(*) as count FROM whatsapp_messages').first<any>(),
+    c.env.DB.prepare('SELECT COUNT(*) as count FROM knowledge_base WHERE is_active = 1').first<any>(),
+    c.env.DB.prepare('SELECT ai_enabled, ai_model FROM whatsapp_settings WHERE id = "ws_default"').first<any>(),
+  ]);
+
+  const host = c.req.header('host') || 'fitness-crm.workers.dev';
+  const proto = c.req.header('x-forwarded-proto') || 'https';
+
+  return c.json({
+    metaApi: metaStatus,
+    workersAi: aiStatus,
+    database: {
+      leadsCount: leadsCountRes?.count || 0,
+      messagesCount: msgsCountRes?.count || 0,
+      kbEntriesCount: kbCountRes?.count || 0,
+      aiEnabledGlobal: settingsRes?.ai_enabled === 1,
+      aiModel: settingsRes?.ai_model || '@cf/meta/llama-3.2-3b-instruct',
+    },
+    webhook: {
+      url: `${proto}://${host}/api/whatsapp/webhook`,
+      verify_token: c.env.META_WA_VERIFY_TOKEN || 'fitnessclub_secure_verify_token_2026',
+    },
+  });
+});
+
+/**
+ * 5.2 SIMULADOR Y TEST EN VIVO DEL AGENTE DE IA PARA UN LEAD
+ */
+whatsappRoutes.post('/api/whatsapp/leads/:id/test-ai', async (c) => {
+  const leadId = c.req.param('id');
+  const body = await c.req.json().catch(() => ({}));
+  const incomingText = (body.incomingText as string)?.trim() || 'Hola, quisiera saber sobre sus planes';
+  const sendToWhatsApp = body.sendToWhatsApp === true;
+
+  const lead = await c.env.DB.prepare('SELECT * FROM leads WHERE id = ?')
+    .bind(leadId)
+    .first<Lead>();
+  if (!lead) return c.json({ error: 'Lead no encontrado' }, 404);
+
+  const creds = await getActiveMetaCredentials(c.env);
+  const start = Date.now();
+
+  const result = await runSalesAgentTurn({
+    env: c.env,
+    leadId: lead.id,
+    incomingText,
+    credentials: sendToWhatsApp ? creds : null,
+  });
+
+  return c.json({
+    success: result.executed,
+    leadId: lead.id,
+    incomingText,
+    action: result.action,
+    error: result.error,
+    deliveryResult: (result as any).deliveryResult,
+    sendToWhatsApp,
+    durationMs: Date.now() - start,
+  });
 });
 
 /**

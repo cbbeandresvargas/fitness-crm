@@ -534,4 +534,54 @@ export const api = {
   async deleteKnowledgeBaseEntry(id: string): Promise<{ success: boolean; deletedId: string }> {
     return fetchJson(`/api/knowledge-base/${id}`, { method: 'DELETE' });
   },
+
+  async getWhatsAppDiagnostics(): Promise<{
+    metaApi: {
+      status: 'ok' | 'error';
+      phone_number_id?: string;
+      display_phone_number?: string;
+      verified_name?: string;
+      quality_rating?: string;
+      error?: string;
+    };
+    workersAi: {
+      status: 'ok' | 'error';
+      model: string;
+      latencyMs: number;
+      response?: string;
+      error?: string;
+    };
+    database: {
+      leadsCount: number;
+      messagesCount: number;
+      kbEntriesCount: number;
+      aiEnabledGlobal: boolean;
+      aiModel: string;
+    };
+    webhook: {
+      url: string;
+      verify_token: string;
+    };
+  }> {
+    return fetchJson('/api/whatsapp/diagnostics');
+  },
+
+  async testLeadAi(
+    leadId: string,
+    payload?: { incomingText?: string; sendToWhatsApp?: boolean }
+  ): Promise<{
+    success: boolean;
+    leadId: string;
+    incomingText: string;
+    action?: any;
+    deliveryResult?: { sentToMeta: boolean; waMessageId?: string; error?: string };
+    error?: string;
+    sendToWhatsApp: boolean;
+    durationMs: number;
+  }> {
+    return fetchJson(`/api/whatsapp/leads/${leadId}/test-ai`, {
+      method: 'POST',
+      body: JSON.stringify(payload || {}),
+    });
+  },
 };

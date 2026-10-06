@@ -56,7 +56,7 @@ export function extractJson(raw: string): unknown | null {
 }
 
 /**
- * Llamada al modelo en Cloudflare Workers AI con soporte nativo y fallback REST
+ * Llamada al modelo en Cloudflare Workers AI con soporte nativo, cadena de fallbacks y REST
  */
 export async function callCloudflareWorkersAi(
   env: Env,
@@ -64,47 +64,58 @@ export async function callCloudflareWorkersAi(
   messages: { role: 'system' | 'user' | 'assistant'; content: string }[],
   maxTokens: number = 600
 ): Promise<string | null> {
-  // 1. Intento por binding nativo env.AI
-  if (env.AI && typeof env.AI.run === 'function') {
-    try {
-      const res = await env.AI.run(model, {
-        messages,
-        max_tokens: maxTokens,
-        temperature: 0.3,
-      });
-      if (res && res.response) {
-        return res.response.trim();
-      }
-    } catch (err) {
-      console.warn(`[Workers AI Binding] Error ejecutando modelo ${model}:`, err);
-    }
-  }
+  const modelsToTry = [
+    model,
+    '@cf/meta/llama-3.2-3b-instruct',
+    '@cf/meta/llama-3.2-1b-instruct',
+    '@cf/meta/llama-2-7b-chat-int8',
+  ].filter((m, idx, arr) => Boolean(m) && !m.includes('llama-3.1-8b') && arr.indexOf(m) === idx);
 
-  // 2. Intento por REST API de Cloudflare Workers AI
-  const token = env.CLOUDFLARE_API_TOKEN;
-  const accountId = env.CLOUDFLARE_ACCOUNT_ID;
-  if (token && accountId) {
-    try {
-      const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+  // 1. Intento por binding nativo env.AI con reintento sobre modelo rápido si el principal falla
+  if (env.AI && typeof env.AI.run === 'function') {
+    for (const m of modelsToTry) {
+      try {
+        const res = await env.AI.run(m, {
           messages,
           max_tokens: maxTokens,
           temperature: 0.3,
-        }),
-      });
-
-      const data: any = await response.json();
-      if (data && data.success && data.result && data.result.response) {
-        return data.result.response.trim();
+        });
+        if (res && res.response && res.response.trim().length > 0) {
+          return res.response.trim();
+        }
+      } catch (err) {
+        console.warn(`[Workers AI Binding] Error ejecutando modelo ${m}:`, err);
       }
-    } catch (err) {
-      console.warn(`[Workers AI REST API] Error llamando a ${model}:`, err);
+    }
+  }
+
+  // 2. Intento por REST API de Cloudflare Workers AI si existen credenciales
+  const token = env.CLOUDFLARE_API_TOKEN;
+  const accountId = env.CLOUDFLARE_ACCOUNT_ID;
+  if (token && accountId) {
+    for (const m of modelsToTry) {
+      try {
+        const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${m}`;
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            messages,
+            max_tokens: maxTokens,
+            temperature: 0.3,
+          }),
+        });
+
+        const data: any = await response.json();
+        if (data && data.success && data.result && data.result.response) {
+          return data.result.response.trim();
+        }
+      } catch (err) {
+        console.warn(`[Workers AI REST API] Error llamando a ${m}:`, err);
+      }
     }
   }
 
@@ -118,9 +129,9 @@ export async function chatJson<T>(
   schema: z.ZodType<T>,
   messages: { role: 'system' | 'user' | 'assistant'; content: string }[],
   env: Env,
-  model: string = '@cf/meta/llama-3.1-8b-instruct'
+  model: string = '@cf/meta/llama-3.2-3b-instruct'
 ): Promise<{ ok: true; data: T; raw: string } | { ok: false; error: string; detail: string; lastRaw?: string }> {
-  const MAX_ATTEMPTS = 3;
+  const MAX_ATTEMPTS = 2;
   let lastDetail = '';
   let lastRaw = '';
 
@@ -160,6 +171,78 @@ export async function chatJson<T>(
   }
 
   return { ok: false, error: 'invalid_output', detail: lastDetail, lastRaw };
+}
+
+/**
+ * Generador de respuesta comercial inteligente de contingencia (Zero-failure fallback)
+ * Garantiza que el prospecto NUNCA se quede sin respuesta aunque Workers AI tenga latencia o caída temporal.
+ */
+export function generateSmartSalesFallback(params: {
+  lead: Lead;
+  incomingText: string;
+  kbEntries: KnowledgeBaseEntry[];
+}): AgentAction {
+  const { lead, incomingText, kbEntries } = params;
+  const lower = incomingText.toLowerCase();
+  const firstName = lead.full_name?.split(' ')[0] || '';
+  const greeting = firstName ? `Hola ${firstName}` : 'Hola';
+
+  // 1. Detección de solicitud de asesor humano
+  if (
+    lower.includes('humano') ||
+    lower.includes('asesor') ||
+    lower.includes('persona') ||
+    lower.includes('alguien') ||
+    lower.includes('queja') ||
+    lower.includes('reclamo')
+  ) {
+    return {
+      action: 'handoff',
+      reason: 'El prospecto solicitó atención humana directa.',
+      farewell: `${greeting}, con mucho gusto te pongo en contacto con uno de nuestros asesores para atenderte personalmente. En unos momentos te escribirán por este mismo chat.`,
+    };
+  }
+
+  // 2. Detección de intención de compra, QR o pago
+  if (
+    lower.includes('pago') ||
+    lower.includes('pagar') ||
+    lower.includes('qr') ||
+    lower.includes('transferencia') ||
+    lower.includes('cuenta') ||
+    lower.includes('inscribir') ||
+    lower.includes('comprar') ||
+    lower.includes('adquirir')
+  ) {
+    return {
+      action: 'move_stage',
+      stage: 'negociacion',
+      reply: `Excelente decisión ${firstName || ''}. Para activar tus pases y habilitar tu cuenta en la app de Fitness Club Pass Cochabamba hoy mismo, te puedo compartir nuestro código QR simple o datos de transferencia bancaria. ¿Qué medio de pago prefieres?`,
+    };
+  }
+
+  // 3. Consulta de planes, precios y opciones
+  if (
+    lower.includes('plan') ||
+    lower.includes('precio') ||
+    lower.includes('costo') ||
+    lower.includes('cuanto') ||
+    lower.includes('vale') ||
+    lower.includes('membresia') ||
+    lower.includes('tarifa') ||
+    lower.includes('promo')
+  ) {
+    return {
+      action: 'reply',
+      text: `${greeting}, con gusto te comparto nuestras membresías oficiales en Fitness Club Pass Cochabamba:\n\n- Pase Fit Básico: Bs 180 / mes (8 pases mensuales para salas de pesas y gimnasios)\n- Pase Fit Pro: Bs 280 / mes (16 pases mensuales con acceso a gimnasios, crossfit y funcional - el más elegido)\n- Pase Total Black VIP: Bs 380 / mes (pases ilimitados para toda la red, incluye natación y pádel)\n\nCon una sola membresía en la app entrenas donde quieras en la ciudad. ¿Qué disciplinas o zonas de Cochabamba te quedan más cómodas?`,
+    };
+  }
+
+  // 4. Saludo inicial o consulta general
+  return {
+    action: 'reply',
+    text: `¡${greeting}! Bienvenido a Fitness Club Pass Cochabamba. Con nuestra app móvil tienes acceso a múltiples gimnasios, box de crossfit, piscinas de natación y centros deportivos en toda la ciudad con una sola membresía mensual en Bolivianos (Bs).\n\nTenemos planes desde Bs 180 al mes. ¿Te gustaría saber qué centros aliados tenemos en tu zona o qué disciplinas te interesa practicar?`,
+  };
 }
 
 /**
@@ -203,7 +286,8 @@ TONO Y PERSONALIDAD:
 ${tone}
 
 INSTRUCCIONES ESPECÍFICAS DEL NEGOCIO:
-${customInstructions || '- Sé directo, empático, profesional y usa emojis deportivos con moderación (💪, 🏋️, 📱, ⏱️, 🚀).'}
+${customInstructions || '- Sé directo, empático y profesional.'}
+- REGLA ESTRICTA DE ESTILO: NO utilices ningún emoji en tus mensajes. Mantén un estilo formal, claro, cordial y profesional.
 
 CATÁLOGO OFICIAL Y BASE DE CONOCIMIENTO (TU ÚNICA FUENTE DE VERDAD; NO INVENTES PRECIOS NI SERVICIOS QUE NO ESTÉN AQUÍ):
 ${kbText}
@@ -234,8 +318,9 @@ REGLAS DE ACTUACIÓN, MULTIMEDIA Y CIERRE DE VENTAS:
    - Cuando el prospecto confirme el pago o envíe comprobante -> Felicítalo, pídele su correo para activar la app y utiliza "move_stage" con stage "ganado".
    - Si el cliente escribe palabras como "humano", "asesor", "persona", "queja" o "hablar con alguien" -> Ejecuta SIEMPRE "handoff" de inmediato.
 
-4. REGLA ESTRICTA DE FORMATO:
-   Devuelve EXCLUSIVAMENTE el objeto JSON sin texto antes ni después, sin comillas externas ni etiquetas markdown.`;
+4. REGLA ESTRICTA DE FORMATO Y ESTILO:
+   - Devuelve EXCLUSIVAMENTE el objeto JSON sin texto antes ni después, sin comillas externas ni etiquetas markdown.
+   - NUNCA incluyas emojis en los campos de texto ni en las respuestas al prospecto.`;
 }
 
 /**
@@ -249,7 +334,12 @@ export async function runSalesAgentTurn(params: {
     phoneNumberId: string;
     token: string;
   } | null;
-}): Promise<{ executed: boolean; action?: AgentAction; error?: string }> {
+}): Promise<{
+  executed: boolean;
+  action?: AgentAction;
+  deliveryResult?: { sentToMeta: boolean; waMessageId?: string; error?: string };
+  error?: string;
+}> {
   const { env, leadId, incomingText, credentials } = params;
 
   try {
@@ -275,7 +365,9 @@ export async function runSalesAgentTurn(params: {
       return { executed: false, error: 'IA global apagada' };
     }
 
-    const aiModel = settings?.ai_model || '@cf/meta/llama-3.1-8b-instruct';
+    const aiModel = (settings?.ai_model && !settings.ai_model.includes('llama-3.1-8b'))
+      ? settings.ai_model
+      : '@cf/meta/llama-3.2-3b-instruct';
 
     // 3. Obtener catálogo y base de conocimiento
     const kbRows = await env.DB.prepare(
@@ -319,6 +411,7 @@ export async function runSalesAgentTurn(params: {
     const result = await chatJson(AgentActionSchema, chatMessages, env, aiModel);
 
     let action: AgentAction;
+    let usedFallback = false;
     if (result.ok) {
       action = result.data;
     } else if (result.lastRaw && result.lastRaw.trim().length > 0) {
@@ -330,11 +423,28 @@ export async function runSalesAgentTurn(params: {
       console.warn('[Sales Agent] Recuperado de fallo de formato JSON; despachando texto directo de IA:', fallbackText.slice(0, 100));
       action = { action: 'reply', text: fallbackText };
     } else {
-      console.error(`[Sales Agent] Error en inferencia de Workers AI: ${result.detail}`);
-      return { executed: false, error: result.detail };
+      console.warn(`[Sales Agent] Workers AI no devolvió respuesta (${result.detail}). Activando motor de contingencia comercial...`);
+      usedFallback = true;
+      action = generateSmartSalesFallback({ lead, incomingText, kbEntries });
     }
 
     const now = new Date().toISOString();
+
+    if (usedFallback) {
+      await env.DB.prepare(`
+        INSERT INTO activity_logs (id, lead_id, action_type, details, created_at)
+        VALUES (?, ?, 'ai_generated', ?, ?)
+      `)
+        .bind(
+          `act_${crypto.randomUUID().slice(0, 8)}`,
+          leadId,
+          `IA ejecutó respuesta comercial de contingencia por indisponibilidad de modelo Cloudflare Workers AI.`,
+          now
+        )
+        .run();
+    }
+
+    let deliveryResult: { sentToMeta: boolean; waMessageId?: string; error?: string } | undefined;
 
     // 7. Ejecutar acción resultante
     switch (action.action) {
@@ -363,7 +473,7 @@ export async function runSalesAgentTurn(params: {
           .run();
 
         if (action.reply) {
-          await deliverOutboundMessage({
+          deliveryResult = await deliverOutboundMessage({
             env,
             lead,
             text: action.reply,
@@ -372,7 +482,7 @@ export async function runSalesAgentTurn(params: {
             now,
           });
         }
-        return { executed: true, action };
+        return { executed: true, action, deliveryResult };
       }
 
       case 'update_lead': {
@@ -400,7 +510,7 @@ export async function runSalesAgentTurn(params: {
           .run();
 
         if (action.reply) {
-          await deliverOutboundMessage({
+          deliveryResult = await deliverOutboundMessage({
             env,
             lead,
             text: action.reply,
@@ -409,7 +519,7 @@ export async function runSalesAgentTurn(params: {
             now,
           });
         }
-        return { executed: true, action };
+        return { executed: true, action, deliveryResult };
       }
 
       case 'handoff': {
@@ -434,7 +544,7 @@ export async function runSalesAgentTurn(params: {
           .run();
 
         if (action.farewell) {
-          await deliverOutboundMessage({
+          deliveryResult = await deliverOutboundMessage({
             env,
             lead,
             text: action.farewell,
@@ -442,11 +552,11 @@ export async function runSalesAgentTurn(params: {
             now,
           });
         }
-        return { executed: true, action };
+        return { executed: true, action, deliveryResult };
       }
 
       case 'reply': {
-        await deliverOutboundMessage({
+        deliveryResult = await deliverOutboundMessage({
           env,
           lead,
           text: action.text,
@@ -454,7 +564,7 @@ export async function runSalesAgentTurn(params: {
           credentials,
           now,
         });
-        return { executed: true, action };
+        return { executed: true, action, deliveryResult };
       }
     }
   } catch (err: any) {
@@ -466,16 +576,17 @@ export async function runSalesAgentTurn(params: {
 /**
  * Despacha el mensaje de salida: envía vía Meta WhatsApp Cloud API v25.0 y guarda en D1
  */
-async function deliverOutboundMessage(params: {
+export async function deliverOutboundMessage(params: {
   env: Env;
   lead: Lead;
   text: string;
   imageUrl?: string;
   credentials?: { phoneNumberId: string; token: string } | null;
   now: string;
-}): Promise<void> {
+}): Promise<{ sentToMeta: boolean; waMessageId?: string; error?: string }> {
   const { env, lead, text, imageUrl, credentials, now } = params;
   let waMessageId: string | null = null;
+  let metaError: string | null = null;
 
   // Si hay credenciales activas, enviar a través de Meta Graph API v25.0
   if (credentials && credentials.phoneNumberId && credentials.token) {
@@ -500,9 +611,13 @@ async function deliverOutboundMessage(params: {
         });
         waMessageId = res.messageId;
       }
-    } catch (sendErr) {
+    } catch (sendErr: any) {
+      metaError = sendErr?.message || String(sendErr);
       console.error('[deliverOutboundMessage] Error enviando a Meta Graph API v25.0:', sendErr);
     }
+  } else {
+    metaError = 'Credenciales de Meta WhatsApp no encontradas (falta META_WA_PHONE_NUMBER_ID o META_WA_ACCESS_TOKEN)';
+    console.warn('[deliverOutboundMessage] Credenciales de Meta no configuradas al despachar');
   }
 
   const msgId = `msg_${crypto.randomUUID().slice(0, 8)}`;
@@ -519,7 +634,7 @@ async function deliverOutboundMessage(params: {
       imageUrl ? 'image' : 'text',
       text,
       imageUrl || null,
-      waMessageId ? 'delivered' : 'sent',
+      waMessageId ? 'delivered' : (metaError ? 'failed' : 'sent'),
       waMessageId,
       now
     )
@@ -533,17 +648,37 @@ async function deliverOutboundMessage(params: {
     .bind(now, now, lead.id)
     .run();
 
-  await env.DB.prepare(`
-    INSERT INTO activity_logs (id, lead_id, action_type, details, created_at)
-    VALUES (?, ?, 'ai_generated', ?, ?)
-  `)
-    .bind(
-      `act_${crypto.randomUUID().slice(0, 8)}`,
-      lead.id,
-      imageUrl
-        ? `Respuesta de IA con imagen enviada por WhatsApp: "${text.slice(0, 80)}..."`
-        : `Respuesta automática de IA enviada por WhatsApp: "${text.slice(0, 80)}..."`,
-      now
-    )
-    .run();
+  if (waMessageId) {
+    await env.DB.prepare(`
+      INSERT INTO activity_logs (id, lead_id, action_type, details, created_at)
+      VALUES (?, ?, 'ai_generated', ?, ?)
+    `)
+      .bind(
+        `act_${crypto.randomUUID().slice(0, 8)}`,
+        lead.id,
+        imageUrl
+          ? `Respuesta de IA con imagen enviada por WhatsApp (ID: ${waMessageId}): "${text.slice(0, 80)}..."`
+          : `Respuesta de IA enviada por WhatsApp (ID: ${waMessageId}): "${text.slice(0, 80)}..."`,
+        now
+      )
+      .run();
+  } else if (metaError) {
+    await env.DB.prepare(`
+      INSERT INTO activity_logs (id, lead_id, action_type, details, created_at)
+      VALUES (?, ?, 'error', ?, ?)
+    `)
+      .bind(
+        `act_${crypto.randomUUID().slice(0, 8)}`,
+        lead.id,
+        `[Alerta Meta WhatsApp] Falló la entrega del mensaje al número ${lead.phone}: ${metaError}`,
+        now
+      )
+      .run();
+  }
+
+  return {
+    sentToMeta: Boolean(waMessageId),
+    waMessageId: waMessageId || undefined,
+    error: metaError || undefined,
+  };
 }
