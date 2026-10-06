@@ -55,17 +55,17 @@ export default function LeadForm() {
 
   return (
     <Layout title="Anotar Nuevo Prospecto">
-      <div class="max-w-3xl mx-auto space-y-6">
+      <div class="max-w-2xl mx-auto space-y-4">
         <div class="flex items-center gap-3">
           <A
             href="/leads"
-            class="p-2.5 bg-surface border border-edge hover:bg-elevate text-body-soft rounded-2xl transition flex items-center justify-center"
+            class="p-2 bg-surface border border-edge hover:bg-elevate text-body-soft rounded-lg transition flex items-center justify-center"
             title="Volver a la lista"
           >
             <ArrowLeft class="w-4 h-4" />
           </A>
           <div>
-            <h2 class="text-2xl font-black text-body">Registro de Nuevo Prospecto</h2>
+            <h2 class="text-lg font-bold text-body">Registro de Nuevo Prospecto</h2>
             <p class="text-xs text-muted">
               El asesor se asigna automáticamente (Round-Robin) y el segmento lo calcula el motor de reglas.
             </p>
@@ -73,7 +73,7 @@ export default function LeadForm() {
         </div>
 
         <Show when={errorMessage()}>
-          <div class="p-4 rounded-2xl bg-red-950/80 border border-red-800 text-red-200 text-xs font-semibold flex items-center gap-3">
+          <div class="p-3 rounded-lg bg-red-950/80 border border-red-800 text-red-200 text-xs font-medium flex items-center gap-2.5">
             <TriangleAlert class="w-4 h-4 shrink-0 text-red-300" />
             <span>{errorMessage()}</span>
           </div>
@@ -81,11 +81,11 @@ export default function LeadForm() {
 
         <form
           onSubmit={handleSubmit}
-          class="p-6 sm:p-8 rounded-3xl bg-surface border border-edge space-y-6 shadow-2xl"
+          class="p-4 sm:p-5 rounded-xl bg-surface border border-edge space-y-4"
         >
           {/* Datos del Prospecto (campos compartidos con Editar Prospecto) */}
-          <div class="space-y-4">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-accent-text">
+          <div class="space-y-3">
+            <h3 class="text-xs font-semibold uppercase tracking-wider text-accent-text">
               Datos del Prospecto
             </h3>
 
@@ -107,17 +107,17 @@ export default function LeadForm() {
             />
           </div>
 
-          <div class="flex items-center justify-end gap-3 pt-4 border-t border-edge">
+          <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-edge">
             <A
               href="/leads"
-              class="px-5 py-2.5 bg-elevate hover:bg-elevate-strong text-body-soft text-xs font-bold rounded-2xl transition"
+              class="px-4 py-2 bg-elevate hover:bg-elevate-strong text-body-soft text-xs font-medium rounded-lg transition"
             >
               Cancelar
             </A>
             <button
               type="submit"
               disabled={submitting()}
-              class="px-6 py-2.5 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded-2xl transition shadow-accent-glow disabled:opacity-50 cursor-pointer"
+              class="px-4 py-2 bg-accent hover:bg-accent-hover text-white text-xs font-semibold rounded-lg transition disabled:opacity-50 cursor-pointer"
             >
               {submitting() ? 'Registrando...' : 'Guardar Prospecto'}
             </button>

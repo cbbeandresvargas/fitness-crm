@@ -521,24 +521,23 @@ export default function LeadDetail() {
       {/* Edit Lead Modal */}
       <Show when={isEditModalOpen()}>
         <div class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div class="bg-surface border border-edge rounded-3xl p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-6 shadow-2xl">
-            <div class="flex items-center justify-between border-b border-edge pb-4">
-              <h3 class="text-lg font-bold text-body flex items-center gap-2">
-                <Pencil class="w-4 h-4 text-accent" />
+          <div class="bg-surface border border-edge rounded-xl p-4 sm:p-5 max-w-xl w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-xl">
+            <div class="flex items-center justify-between border-b border-edge pb-3">
+              <h3 class="text-sm font-bold text-body flex items-center gap-2">
+                <Pencil class="w-3.5 h-3.5 text-accent" />
                 <span>Editar Información del Prospecto</span>
               </h3>
               <button
                 type="button"
                 onClick={() => setIsEditModalOpen(false)}
-                class="text-muted hover:text-body p-1"
+                class="text-muted hover:text-body p-1 cursor-pointer"
               >
-                <X class="w-5 h-5" />
+                <X class="w-4 h-4" />
               </button>
             </div>
 
             <form onSubmit={handleSaveEdit} class="space-y-4 text-xs">
-              {/* Campos compartidos con el formulario de Nuevo Prospecto
-                  (mismos fields, labels, opciones y reglas de validación) */}
+              {/* Campos compartidos con el formulario de Nuevo Prospecto */}
               <LeadFormFields
                 firstName={editFirstName}
                 setFirstName={setEditFirstName}
@@ -556,18 +555,18 @@ export default function LeadDetail() {
                 setCity={setEditCity}
               />
 
-              <div class="flex justify-end gap-3 pt-3 border-t border-edge">
+              <div class="flex justify-end gap-2.5 pt-3 border-t border-edge">
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
-                  class="px-4 py-2 bg-elevate hover:bg-elevate-strong text-body-soft rounded-xl font-bold transition"
+                  class="px-3.5 py-1.5 bg-elevate hover:bg-elevate-strong text-body-soft rounded-lg text-xs font-medium transition cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={savingEdit()}
-                  class="px-5 py-2 bg-accent hover:bg-accent-hover text-white rounded-xl font-bold transition shadow-accent-glow disabled:opacity-50"
+                  class="px-4 py-1.5 bg-accent hover:bg-accent-hover text-white rounded-lg text-xs font-semibold transition disabled:opacity-50 cursor-pointer"
                 >
                   {savingEdit() ? 'Guardando...' : 'Guardar Cambios'}
                 </button>
@@ -579,27 +578,27 @@ export default function LeadDetail() {
 
       {/* Loading state */}
       <Show when={loading()}>
-        <div class="flex flex-col items-center justify-center p-24 text-muted space-y-3">
-          <div class="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
+        <div class="flex flex-col items-center justify-center p-20 text-muted space-y-3">
+          <div class="w-7 h-7 border-3 border-accent border-t-transparent rounded-full animate-spin"></div>
           <span class="text-xs">Cargando expediente del prospecto...</span>
         </div>
       </Show>
 
       {/* Not found state */}
       <Show when={!loading() && (notFound() || !lead())}>
-        <div class="p-16 rounded-3xl bg-surface border border-edge text-center space-y-4 max-w-lg mx-auto shadow-2xl">
-          <div class="w-16 h-16 mx-auto rounded-3xl bg-elevate border border-edge flex items-center justify-center text-muted">
-            <Search class="w-8 h-8" />
+        <div class="p-8 sm:p-12 rounded-xl bg-surface border border-edge text-center space-y-3 max-w-md mx-auto shadow-sm">
+          <div class="w-12 h-12 mx-auto rounded-xl bg-elevate border border-edge flex items-center justify-center text-muted">
+            <Search class="w-6 h-6" />
           </div>
-          <h2 class="text-xl font-black text-body">Prospecto no encontrado</h2>
+          <h2 class="text-base font-bold text-body">Prospecto no encontrado</h2>
           <p class="text-xs text-muted">
             El prospecto no existe o no tienes los permisos suficientes asignados para consultarlo.
           </p>
           <A
             href="/leads"
-            class="inline-flex items-center gap-1.5 px-5 py-2.5 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded-xl transition shadow-accent-glow"
+            class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-accent hover:bg-accent-hover text-white text-xs font-semibold rounded-lg transition"
           >
-            <ArrowLeft class="w-4 h-4" />
+            <ArrowLeft class="w-3.5 h-3.5" />
             <span>Volver a la lista</span>
           </A>
         </div>
@@ -607,49 +606,49 @@ export default function LeadDetail() {
 
       {/* Main Content */}
       <Show when={!loading() && lead()}>
-        <div class="space-y-6 max-w-6xl mx-auto">
+        <div class="space-y-4 max-w-6xl mx-auto">
           {/* Header Bar */}
-          <div class="p-6 rounded-3xl bg-surface border border-edge flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl">
-            <div class="flex items-center gap-3.5">
+          <div class="p-3.5 sm:p-4 rounded-xl bg-surface border border-edge flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
               <A
                 href="/leads"
-                class="p-2.5 bg-app border border-edge hover:bg-elevate text-body-soft rounded-2xl transition flex items-center justify-center"
+                class="p-2 bg-app border border-edge hover:bg-elevate text-body-soft rounded-lg transition flex items-center justify-center"
                 title="Volver a la lista"
               >
                 <ArrowLeft class="w-4 h-4" />
               </A>
               <div>
-                <div class="flex items-center gap-3 flex-wrap">
-                  <h2 class="text-xl sm:text-2xl font-black text-body tracking-tight">
+                <div class="flex items-center gap-2.5 flex-wrap">
+                  <h2 class="text-lg font-bold text-body tracking-tight">
                     {lead()?.full_name}
                   </h2>
                   <SegmentBadge segment={lead()?.segment} />
                 </div>
-                <p class="text-xs text-muted mt-0.5">
-                  Teléfono: <strong class="text-body">{lead()?.phone}</strong> • Registrado el{' '}
+                <p class="text-[11px] text-muted mt-0.5">
+                  Tel: <strong class="text-body font-medium">{lead()?.phone}</strong> • Registrado el{' '}
                   {new Date(lead()?.created_at || '').toLocaleDateString('es-ES')}
                 </p>
               </div>
             </div>
 
             {/* Quick Actions */}
-            <div class="flex flex-wrap items-center gap-2">
+            <div class="flex flex-wrap items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setIsEditModalOpen(true)}
-                class="inline-flex items-center gap-1.5 px-3 py-2 bg-elevate hover:bg-elevate-strong text-body-soft rounded-xl text-xs font-semibold border border-edge-strong transition cursor-pointer"
+                class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-elevate hover:bg-elevate-strong text-body-soft rounded-lg text-xs font-medium border border-edge-strong transition cursor-pointer"
               >
-                <Pencil class="w-3.5 h-3.5" />
+                <Pencil class="w-3 h-3" />
                 <span>Editar</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleRecalculateSegment}
-                class="inline-flex items-center gap-1.5 px-3 py-2 bg-elevate hover:bg-elevate-strong text-body-soft rounded-xl text-xs font-semibold border border-edge-strong transition cursor-pointer"
+                class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-elevate hover:bg-elevate-strong text-body-soft rounded-lg text-xs font-medium border border-edge-strong transition cursor-pointer"
                 title="Recalcular segmento con reglas dinámicas"
               >
-                <RefreshCw class="w-3.5 h-3.5" />
+                <RefreshCw class="w-3 h-3" />
                 <span>Segmento</span>
               </button>
 
@@ -657,42 +656,42 @@ export default function LeadDetail() {
                 href={`https://wa.me/${lead()?.phone.replace(/^\+/, '')}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-lg"
+                class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition flex items-center gap-1.5"
               >
-                <MessageSquare class="w-4 h-4" />
-                <span>WhatsApp App</span>
+                <MessageSquare class="w-3.5 h-3.5" />
+                <span>WhatsApp</span>
               </a>
 
               <button
                 type="button"
                 onClick={handleDeleteLead}
-                class="p-2 text-muted hover:text-red-400 rounded-xl hover:bg-red-950/40 transition cursor-pointer flex items-center justify-center"
+                class="p-1.5 text-muted hover:text-red-400 rounded-lg hover:bg-red-950/40 transition cursor-pointer flex items-center justify-center"
                 title="Eliminar prospecto"
               >
-                <Trash class="w-4 h-4" />
+                <Trash class="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
 
           {/* Grid de 2 Columnas */}
-          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Columna Izquierda: Estado, contacto y actividades (1 col) */}
-            <div class="space-y-6">
+            <div class="space-y-4">
               {/* Tarjeta de Estado y Asignación */}
-              <div class="p-6 rounded-3xl bg-surface border border-edge space-y-4 shadow-xl">
-                <h3 class="text-xs font-bold uppercase tracking-wider text-accent-text">
+              <div class="p-3.5 sm:p-4 rounded-xl bg-surface border border-edge space-y-3">
+                <h3 class="text-xs font-semibold uppercase tracking-wider text-accent-text">
                   Estado & Coach Asignado
                 </h3>
 
-                <div class="space-y-3">
+                <div class="space-y-2.5">
                   <div>
-                    <label class="block text-[11px] text-muted mb-1 font-semibold">
+                    <label class="block text-[11px] text-muted mb-1 font-medium">
                       Fase en el Gimnasio
                     </label>
                     <select
                       value={lead()?.status}
                       onChange={(e) => handleStatusChange(e.currentTarget.value)}
-                      class="w-full bg-app border border-edge rounded-xl px-3 py-2 text-xs text-body focus:outline-none focus:border-accent cursor-pointer"
+                      class="w-full bg-app border border-edge rounded-lg px-2.5 py-1.5 text-xs text-body focus:outline-none focus:border-accent cursor-pointer"
                     >
                       <option value="nuevo">Nuevo</option>
                       <option value="contactado">Contactado</option>
@@ -703,13 +702,13 @@ export default function LeadDetail() {
                   </div>
 
                   <div>
-                    <label class="block text-[11px] text-muted mb-1 font-semibold">
+                    <label class="block text-[11px] text-muted mb-1 font-medium">
                       Coach / Asesor
                     </label>
                     <select
                       value={lead()?.assigned_to || ''}
                       onChange={(e) => handleAssignAgent(e.currentTarget.value)}
-                      class="w-full bg-app border border-edge rounded-xl px-3 py-2 text-xs text-body focus:outline-none focus:border-accent cursor-pointer"
+                      class="w-full bg-app border border-edge rounded-lg px-2.5 py-1.5 text-xs text-body focus:outline-none focus:border-accent cursor-pointer"
                     >
                       <option value="">Sin Asignar</option>
                       <option value="auto">Balance Automático (Round-Robin)</option>
@@ -720,30 +719,30 @@ export default function LeadDetail() {
                   </div>
                 </div>
 
-                <div class="pt-3 border-t border-edge space-y-2 text-xs">
+                <div class="pt-2.5 border-t border-edge space-y-1.5 text-xs">
                   <div class="flex items-center justify-between">
-                    <span class="text-muted">Teléfono:</span>
-                    <span class="font-bold text-body">{lead()?.phone}</span>
+                    <span class="text-muted text-[11px]">Teléfono:</span>
+                    <span class="font-semibold text-body">{lead()?.phone}</span>
                   </div>
                   <div class="flex items-center justify-between">
-                    <span class="text-muted">Correo:</span>
-                    <span class="text-body-soft">{lead()?.email || 'No proporcionado'}</span>
+                    <span class="text-muted text-[11px]">Correo:</span>
+                    <span class="text-body-soft text-[11px]">{lead()?.email || 'No proporcionado'}</span>
                   </div>
                   <div class="flex items-center justify-between">
-                    <span class="text-muted">Ciudad:</span>
-                    <span class="text-body-soft">
+                    <span class="text-muted text-[11px]">Ciudad:</span>
+                    <span class="text-body-soft text-[11px]">
                       {cityFromMetadata(lead()?.metadata) || (
                         <span class="text-muted">—</span>
                       )}
                     </span>
                   </div>
                   <div class="flex items-center justify-between">
-                    <span class="text-muted">Estado de Membresía:</span>
+                    <span class="text-muted text-[11px]">Estado de Membresía:</span>
                     <Show
                       when={lead()?.metadata?.estado_membresia}
-                      fallback={<span class="text-muted">Sin dato</span>}
+                      fallback={<span class="text-muted text-[11px]">Sin dato</span>}
                     >
-                      <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-violet-500/20 text-violet-400 border border-violet-500/40">
+                      <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-violet-500/15 text-violet-400 border border-violet-500/30">
                         {lead()?.metadata?.estado_membresia}
                         <Show when={lead()?.metadata?.cantidad_membresias !== undefined}>
                           <span class="text-violet-400/80"> · {lead()?.metadata?.cantidad_membresias}</span>
@@ -755,19 +754,19 @@ export default function LeadDetail() {
               </div>
 
               {/* Actividades de interés (catálogo central N:M) */}
-              <div class="p-6 rounded-3xl bg-surface border border-edge space-y-3 shadow-xl">
+              <div class="p-3.5 sm:p-4 rounded-xl bg-surface border border-edge space-y-3">
                 <div class="flex items-center justify-between">
-                  <h3 class="text-xs font-bold uppercase tracking-wider text-accent-text">
+                  <h3 class="text-xs font-semibold uppercase tracking-wider text-accent-text">
                     Actividades de interés
                   </h3>
                   <button
                     type="button"
                     onClick={handleToggleActivityPicker}
-                    class="inline-flex items-center gap-1 px-3 py-1.5 bg-accent hover:bg-accent-hover text-white text-[11px] font-bold rounded-xl transition cursor-pointer"
+                    class="inline-flex items-center gap-1 px-2.5 py-1 bg-accent hover:bg-accent-hover text-white text-[11px] font-semibold rounded-lg transition cursor-pointer"
                   >
                     <Show
                       when={showActivityPicker()}
-                      fallback={<><Plus class="w-3 h-3" /><span>Agregar actividad</span></>}
+                      fallback={<><Plus class="w-3 h-3" /><span>Agregar</span></>}
                     >
                       <X class="w-3 h-3" />
                       <span>Cerrar</span>
@@ -785,9 +784,9 @@ export default function LeadDetail() {
                     <For each={interests()}>
                       {(interest) => (
                         <span
-                          class={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl border text-xs font-semibold transition ${
+                          class={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium transition ${
                             interest.is_active
-                              ? 'bg-accent/20 border-accent/40 text-accent-text'
+                              ? 'bg-accent/15 border-accent/40 text-accent-text'
                               : 'bg-elevate border-edge-strong text-muted'
                           }`}
                           title={
@@ -815,29 +814,29 @@ export default function LeadDetail() {
 
                 {/* Selector y creador en un solo flujo */}
                 <Show when={showActivityPicker()}>
-                  <div class="p-3 bg-app rounded-2xl border border-edge space-y-2">
+                  <div class="p-2.5 bg-app rounded-lg border border-edge space-y-2">
                     <input
                       type="text"
                       value={activitySearch()}
                       onInput={(e) => setActivitySearch(e.currentTarget.value)}
                       placeholder="Buscar actividad... (ej. Yoga)"
-                      class="w-full px-3 py-2 bg-surface border border-edge rounded-xl text-xs text-body focus:outline-none focus:border-accent"
+                      class="w-full px-2.5 py-1.5 bg-surface border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent"
                     />
 
-                    <div class="max-h-44 overflow-y-auto space-y-1">
+                    <div class="max-h-40 overflow-y-auto space-y-1">
                       <For each={filteredActivities()}>
                         {(act) => (
                           <button
                             type="button"
                             onClick={() => handleAddInterest(act.id)}
                             disabled={act.alreadyAssigned || activityBusy()}
-                            class={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition ${
+                            class={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition ${
                               act.alreadyAssigned
                                 ? 'bg-elevate/60 text-muted cursor-not-allowed'
                                 : 'bg-surface border border-edge hover:border-accent/50 text-body-soft cursor-pointer'
                             }`}
                           >
-                            <span class="font-semibold">{act.name}</span>
+                            <span class="font-medium">{act.name}</span>
                             <span class="text-[10px] text-muted">
                               {act.alreadyAssigned
                                 ? '(ya asociada)'
@@ -852,9 +851,9 @@ export default function LeadDetail() {
                           type="button"
                           onClick={() => handleCreateAndAssignInterest(activitySearch().trim())}
                           disabled={activityBusy()}
-                          class="w-full text-left px-3 py-2 rounded-xl bg-accent/10 hover:bg-accent/20 border border-accent/30 text-accent-text text-xs font-bold transition cursor-pointer"
+                          class="w-full text-left px-2.5 py-1.5 rounded-lg bg-accent/10 hover:bg-accent/20 border border-accent/30 text-accent-text text-xs font-semibold transition cursor-pointer"
                         >
-                          + Crear "{activitySearch().trim()}" y asociarla a este prospecto
+                          + Crear "{activitySearch().trim()}" y asociarla
                         </button>
                       </Show>
 
@@ -867,16 +866,16 @@ export default function LeadDetail() {
               </div>
 
               {/* Etiquetas / Tags */}
-              <div class="p-6 rounded-3xl bg-surface border border-edge space-y-3 shadow-xl">
+              <div class="p-3.5 sm:p-4 rounded-xl bg-surface border border-edge space-y-3">
                 <div class="flex items-center justify-between">
-                  <h3 class="text-xs font-bold uppercase tracking-wider text-accent-text">
+                  <h3 class="text-xs font-semibold uppercase tracking-wider text-accent-text">
                     Etiquetas
                   </h3>
                   <button
                     type="button"
                     onClick={handleSuggestTags}
                     disabled={generatingTags()}
-                    class="text-xs text-accent-text hover:underline font-bold disabled:opacity-50 cursor-pointer"
+                    class="text-xs text-accent-text hover:underline font-semibold disabled:opacity-50 cursor-pointer"
                   >
                     <Show
                       when={generatingTags()}
@@ -895,7 +894,7 @@ export default function LeadDetail() {
                 <div class="flex flex-wrap gap-1.5">
                   <For each={lead()?.tags}>
                     {(t) => (
-                      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-elevate border border-edge-strong text-xs font-semibold text-body-soft">
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-elevate border border-edge text-xs font-medium text-body-soft">
                         <span>#{t}</span>
                         <button
                           type="button"
@@ -911,18 +910,18 @@ export default function LeadDetail() {
 
                 {/* Sugerencias de IA */}
                 <Show when={suggestedTags().length > 0}>
-                  <div class="p-3 bg-app rounded-2xl border border-accent/20 space-y-2">
-                    <span class="text-[11px] text-accent-text font-bold flex items-center gap-1.5">
+                  <div class="p-2.5 bg-app rounded-lg border border-accent/20 space-y-1.5">
+                    <span class="text-[11px] text-accent-text font-semibold flex items-center gap-1">
                       <Lightbulb class="w-3.5 h-3.5" />
                       <span>Sugerencias de Workers AI:</span>
                     </span>
-                    <div class="flex flex-wrap gap-1.5">
+                    <div class="flex flex-wrap gap-1">
                       <For each={suggestedTags()}>
                         {(st) => (
                           <button
                             type="button"
                             onClick={() => handleAddTag(st)}
-                            class="px-2 py-0.5 rounded-lg bg-accent/10 hover:bg-accent/20 text-accent-text text-xs font-medium border border-accent/30 transition cursor-pointer"
+                            class="px-2 py-0.5 rounded-md bg-accent/10 hover:bg-accent/20 text-accent-text text-xs font-medium border border-accent/30 transition cursor-pointer"
                           >
                             + #{st}
                           </button>
@@ -938,18 +937,18 @@ export default function LeadDetail() {
                     e.preventDefault();
                     handleAddTag(newTagInput());
                   }}
-                  class="flex items-center gap-2 pt-2"
+                  class="flex items-center gap-2 pt-1"
                 >
                   <input
                     type="text"
                     value={newTagInput()}
                     onInput={(e) => setNewTagInput(e.currentTarget.value)}
                     placeholder="Nueva etiqueta..."
-                    class="flex-1 px-3 py-1.5 bg-app border border-edge rounded-xl text-xs text-body focus:outline-none focus:border-accent"
+                    class="flex-1 px-2.5 py-1.5 bg-app border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent"
                   />
                   <button
                     type="submit"
-                    class="px-3 py-1.5 bg-elevate hover:bg-elevate-strong text-body-soft rounded-xl text-xs font-bold transition"
+                    class="px-3 py-1.5 bg-elevate hover:bg-elevate-strong text-body-soft rounded-lg text-xs font-medium transition cursor-pointer"
                   >
                     Añadir
                   </button>
@@ -958,73 +957,73 @@ export default function LeadDetail() {
             </div>
 
             {/* Columna Derecha: Pestañas de Chat WhatsApp, IA y Bitácora (2 cols) */}
-            <div class="lg:col-span-2 space-y-6">
+            <div class="lg:col-span-2 space-y-4">
               {/* Tab Selector */}
-              <div class="p-1.5 bg-surface border border-edge rounded-2xl flex items-center gap-2">
+              <div class="p-1 bg-surface border border-edge rounded-xl flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => setActiveTab('chat')}
-                  class={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                  class={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer ${
                     activeTab() === 'chat'
-                      ? 'bg-emerald-600 text-white shadow-lg'
+                      ? 'bg-emerald-600 text-white shadow-xs'
                       : 'text-muted hover:text-body'
                   }`}
                 >
-                  <MessageSquare class="w-4 h-4" />
+                  <MessageSquare class="w-3.5 h-3.5" />
                   <span>Chat WhatsApp ({messages().length})</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setActiveTab('ai')}
-                  class={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                  class={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer ${
                     activeTab() === 'ai'
-                      ? 'bg-accent text-white shadow-lg'
+                      ? 'bg-accent text-white shadow-xs'
                       : 'text-muted hover:text-body'
                   }`}
                 >
-                  <Sparkles class="w-4 h-4" />
+                  <Sparkles class="w-3.5 h-3.5" />
                   <span>Redactor IA Llama 3</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setActiveTab('history')}
-                  class={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                  class={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer ${
                     activeTab() === 'history'
-                      ? 'bg-elevate text-body shadow-lg'
+                      ? 'bg-elevate text-body shadow-xs'
                       : 'text-muted hover:text-body'
                   }`}
                 >
-                  <History class="w-4 h-4" />
+                  <History class="w-3.5 h-3.5" />
                   <span>Bitácora ({activities().length})</span>
                 </button>
               </div>
 
               {/* TAB 1: CHAT WHATSAPP EN VIVO (Texto e Imágenes) */}
               <Show when={activeTab() === 'chat'}>
-                <div class="rounded-3xl bg-surface border border-edge overflow-hidden flex flex-col h-[600px] shadow-2xl">
+                <div class="rounded-xl bg-surface border border-edge overflow-hidden flex flex-col h-[560px]">
                   {/* Chat Header */}
-                  <div class="p-4 bg-app/80 border-b border-edge flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                      <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-bold flex items-center justify-center">
-                        <MessageSquare class="w-5 h-5" />
+                  <div class="p-3 bg-app/80 border-b border-edge flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold flex items-center justify-center">
+                        <MessageSquare class="w-4 h-4" />
                       </div>
                       <div>
-                        <h4 class="font-bold text-body text-sm flex items-center gap-2">
+                        <h4 class="font-semibold text-body text-xs flex items-center gap-1.5">
                           <span>{lead()?.full_name}</span>
-                          <span class="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                          <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                             Meta v25.0
                           </span>
                         </h4>
-                        <p class="text-[11px] text-emerald-400 flex items-center gap-1 font-semibold">
-                          <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+                        <p class="text-[10px] text-emerald-400 flex items-center gap-1 font-medium">
+                          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
                           <span>WhatsApp Conectado ({lead()?.phone})</span>
                         </p>
                       </div>
                     </div>
 
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-1.5">
                       {/* AI Status / Toggle */}
                       <Show
                         when={lead()?.handoff_at}
@@ -1032,7 +1031,7 @@ export default function LeadDetail() {
                           <button
                             type="button"
                             onClick={() => handleToggleLeadAi(false)}
-                            class={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer ${
+                            class={`px-2.5 py-1 rounded-lg text-xs font-medium transition flex items-center gap-1 border cursor-pointer ${
                               lead()?.ai_enabled === 1
                                 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
                                 : 'bg-elevate text-muted border-edge hover:text-body'
@@ -1040,42 +1039,42 @@ export default function LeadDetail() {
                             title="Alternar atención automática con IA"
                           >
                             <Bot class="w-3.5 h-3.5" />
-                            <span>{lead()?.ai_enabled === 1 ? 'IA Ventas Activa' : 'IA Pausada'}</span>
+                            <span>{lead()?.ai_enabled === 1 ? 'IA Activa' : 'IA Pausada'}</span>
                           </button>
                         }
                       >
                         <button
                           type="button"
                           onClick={() => handleToggleLeadAi(true)}
-                          class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-black text-xs font-black rounded-xl transition cursor-pointer"
+                          class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold rounded-lg transition cursor-pointer"
                         >
                           <TriangleAlert class="w-3.5 h-3.5" />
-                          <span>Reactivar IA (Fin Handoff)</span>
+                          <span>Reactivar IA</span>
                         </button>
                       </Show>
 
                       <A
                         href={`/inbox?leadId=${lead()?.id}`}
-                        class="px-3 py-1.5 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded-xl transition flex items-center gap-1"
+                        class="px-2.5 py-1 bg-accent hover:bg-accent-hover text-white text-xs font-medium rounded-lg transition flex items-center gap-1"
                       >
-                        <span>Abrir en Live Inbox</span>
+                        <span>Live Inbox</span>
                         <span>↗</span>
                       </A>
                     </div>
                   </div>
 
                   {/* Messages Feed */}
-                  <div class="flex-1 p-4 overflow-y-auto space-y-3 bg-app/40">
+                  <div class="flex-1 p-3.5 overflow-y-auto space-y-2.5 bg-app/40">
                     <Show
                       when={messages().length > 0}
                       fallback={
-                        <div class="h-full flex flex-col items-center justify-center text-muted space-y-2 p-8 text-center">
-                          <div class="w-12 h-12 rounded-2xl bg-surface border border-edge flex items-center justify-center text-muted">
-                            <MessageSquare class="w-6 h-6" />
+                        <div class="h-full flex flex-col items-center justify-center text-muted space-y-2 p-6 text-center">
+                          <div class="w-10 h-10 rounded-xl bg-surface border border-edge flex items-center justify-center text-muted">
+                            <MessageSquare class="w-5 h-5" />
                           </div>
-                          <p class="text-xs font-semibold">Aún no hay mensajes en esta conversación.</p>
-                          <p class="text-[11px] text-muted">
-                            Escribe abajo para enviar un mensaje o adjuntar una foto (comprobante, plan nutricional o de entrenamiento).
+                          <p class="text-xs font-medium">Aún no hay mensajes en esta conversación.</p>
+                          <p class="text-[11px] text-muted max-w-xs">
+                            Escribe abajo para enviar un mensaje o adjuntar una foto.
                           </p>
                         </div>
                       }
@@ -1086,15 +1085,15 @@ export default function LeadDetail() {
                           return (
                             <div class={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
                               <div
-                                class={`max-w-md p-3.5 rounded-2xl text-xs space-y-2 shadow-md ${
+                                class={`max-w-md p-3 rounded-xl text-xs space-y-1.5 shadow-xs ${
                                   isMe
                                     ? 'bg-emerald-700 text-white rounded-br-none'
-                                    : 'bg-elevate text-body rounded-bl-none'
+                                    : 'bg-surface border border-edge text-body rounded-bl-none'
                                 }`}
                               >
                                 {/* Image display if message_type is image */}
                                 <Show when={msg.message_type === 'image' && msg.media_url}>
-                                  <div class="rounded-xl overflow-hidden border border-black/20 bg-black/40">
+                                  <div class="rounded-lg overflow-hidden border border-black/20 bg-black/40">
                                     <img
                                       src={msg.media_url!}
                                       alt="Adjunto WhatsApp"
@@ -1106,15 +1105,15 @@ export default function LeadDetail() {
 
                                 {/* Sender Badge */}
                                 <div class="flex items-center justify-between gap-2 text-[10px] opacity-80 pb-0.5">
-                                  <span class="font-bold flex items-center gap-1">
+                                  <span class="font-medium flex items-center gap-1">
                                     <Show when={isMe && msg.ai_generated === 1}>
                                       <Bot class="w-3 h-3 inline" />
                                     </Show>
                                     <span>
                                       {isMe
                                         ? msg.ai_generated === 1
-                                          ? 'IA Ventas (Workers AI)'
-                                          : msg.user_name || 'Asesor Comercial'
+                                          ? 'IA Ventas'
+                                          : msg.user_name || 'Asesor'
                                         : lead()?.full_name || 'Prospecto'}
                                     </span>
                                   </span>
@@ -1122,7 +1121,7 @@ export default function LeadDetail() {
 
                                 <p class="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
 
-                                <div class="flex items-center justify-end gap-1.5 text-[10px] opacity-80 pt-1">
+                                <div class="flex items-center justify-end gap-1.5 text-[10px] opacity-80 pt-0.5">
                                   <span>
                                     {new Date(msg.created_at).toLocaleTimeString('es-ES', {
                                       hour: '2-digit',
@@ -1148,16 +1147,16 @@ export default function LeadDetail() {
 
                   {/* Image attachment preview bar */}
                   <Show when={imagePreview()}>
-                    <div class="px-4 py-2 bg-app/90 border-t border-edge flex items-center justify-between">
-                      <div class="flex items-center gap-3">
+                    <div class="px-3 py-2 bg-app/90 border-t border-edge flex items-center justify-between">
+                      <div class="flex items-center gap-2">
                         <img
                           src={imagePreview()!}
                           alt="Previsualización"
-                          class="w-12 h-12 object-cover rounded-xl border border-edge-strong"
+                          class="w-10 h-10 object-cover rounded-lg border border-edge-strong"
                         />
                         <div class="text-xs">
-                          <p class="font-bold text-body truncate max-w-xs">{selectedImage()?.name}</p>
-                          <p class="text-[10px] text-emerald-400">Listo para enviar como imagen</p>
+                          <p class="font-medium text-body truncate max-w-xs">{selectedImage()?.name}</p>
+                          <p class="text-[10px] text-emerald-400">Listo para enviar</p>
                         </div>
                       </div>
                       <button
@@ -1166,7 +1165,7 @@ export default function LeadDetail() {
                           setSelectedImage(null);
                           setImagePreview(null);
                         }}
-                        class="inline-flex items-center gap-1 text-muted hover:text-body text-xs font-bold"
+                        class="inline-flex items-center gap-1 text-muted hover:text-body text-xs font-medium cursor-pointer"
                       >
                         <X class="w-3.5 h-3.5" />
                         <span>Cancelar</span>
@@ -1175,16 +1174,16 @@ export default function LeadDetail() {
                   </Show>
 
                   {/* Chat Input & Fast Actions */}
-                  <div class="p-3 bg-app/95 border-t border-edge space-y-2">
+                  <div class="p-2.5 bg-app/95 border-t border-edge space-y-2">
                     {/* Quick Plantillas Dropdown / Chips */}
-                    <div class="flex items-center gap-2 overflow-x-auto pb-1 text-[11px]">
-                      <span class="text-muted shrink-0 font-bold">Plantillas:</span>
+                    <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-[11px]">
+                      <span class="text-muted shrink-0 font-medium">Plantillas:</span>
                       <For each={templates().slice(0, 3)}>
                         {(tmpl) => (
                           <button
                             type="button"
                             onClick={() => handleApplyTemplate(tmpl.content)}
-                            class="px-2.5 py-1 bg-surface hover:bg-elevate text-body-soft rounded-lg border border-edge shrink-0 truncate max-w-[150px] transition cursor-pointer"
+                            class="px-2 py-0.5 bg-surface hover:bg-elevate text-body-soft rounded-md border border-edge shrink-0 truncate max-w-[140px] transition cursor-pointer text-[10px]"
                             title={tmpl.content}
                           >
                             {tmpl.title}
@@ -1196,7 +1195,7 @@ export default function LeadDetail() {
                     <form onSubmit={handleSendChatMessage} class="flex items-center gap-2">
                       {/* Image Attachment Button */}
                       <label
-                        class="p-2.5 rounded-xl bg-surface hover:bg-elevate text-muted hover:text-body border border-edge transition cursor-pointer shrink-0 flex items-center justify-center"
+                        class="p-2 rounded-lg bg-surface hover:bg-elevate text-muted hover:text-body border border-edge transition cursor-pointer shrink-0 flex items-center justify-center"
                         title="Adjuntar imagen (comprobante, plan, etc.)"
                       >
                         <input
@@ -1205,7 +1204,7 @@ export default function LeadDetail() {
                           onChange={handleImageSelect}
                           class="hidden"
                         />
-                        <ImageIcon size={16} />
+                        <ImageIcon size={15} />
                       </label>
 
                       <input
@@ -1213,15 +1212,15 @@ export default function LeadDetail() {
                         value={chatInput()}
                         onInput={(e) => setChatInput(e.currentTarget.value)}
                         placeholder="Escribe un mensaje de WhatsApp..."
-                        class="flex-1 px-4 py-2.5 bg-surface border border-edge rounded-xl text-xs text-body placeholder-muted focus:outline-none focus:border-emerald-500 transition"
+                        class="flex-1 px-3 py-2 bg-surface border border-edge rounded-lg text-xs text-body placeholder-muted focus:outline-none focus:border-emerald-500 transition"
                       />
 
                       <button
                         type="submit"
                         disabled={sendingMsg() || (!chatInput().trim() && !selectedImage())}
-                        class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-extrabold transition shadow-lg disabled:opacity-40 cursor-pointer shrink-0 flex items-center gap-1.5"
+                        class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition disabled:opacity-40 cursor-pointer shrink-0 flex items-center gap-1.5"
                       >
-                        <Send size={13} />
+                        <Send size={12} />
                         <span>{sendingMsg() ? 'Enviando...' : 'Enviar'}</span>
                       </button>
                     </form>
@@ -1231,15 +1230,15 @@ export default function LeadDetail() {
 
               {/* TAB 2: REDACTOR DE WHATSAPP CON IA */}
               <Show when={activeTab() === 'ai'}>
-                <div class="p-6 rounded-3xl bg-gradient-to-br from-surface via-surface to-accent-deep/20 border border-accent/30 space-y-4 shadow-xl">
+                <div class="p-3.5 sm:p-4 rounded-xl bg-surface border border-edge space-y-3.5">
                   <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2.5">
-                      <Bot class="w-6 h-6 text-accent" />
+                    <div class="flex items-center gap-2">
+                      <Bot class="w-4 h-4 text-accent" />
                       <div>
-                        <h3 class="text-base font-extrabold text-body">
+                        <h3 class="text-sm font-bold text-body">
                           Generador de WhatsApp con IA
                         </h3>
-                        <p class="text-xs text-muted">
+                        <p class="text-[11px] text-muted">
                           Redacta mensajes persuasivos usando Cloudflare Workers AI (Llama 3.1)
                         </p>
                       </div>
@@ -1249,39 +1248,39 @@ export default function LeadDetail() {
                       type="button"
                       onClick={handleGenerateBriefing}
                       disabled={generatingBriefing()}
-                      class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-elevate hover:bg-elevate-strong text-body-soft text-xs font-semibold rounded-xl transition border border-edge-strong disabled:opacity-50 cursor-pointer"
+                      class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-elevate hover:bg-elevate-strong text-body-soft text-xs font-medium rounded-lg transition border border-edge disabled:opacity-50 cursor-pointer"
                     >
                       <FileText class="w-3.5 h-3.5" />
-                      <span>{generatingBriefing() ? 'Generando...' : 'Resumen Ejecutivo IA'}</span>
+                      <span>{generatingBriefing() ? 'Generando...' : 'Resumen IA'}</span>
                     </button>
                   </div>
 
                   {/* Briefing expandible */}
                   <Show when={aiBriefing()}>
-                    <div class="p-4 rounded-2xl bg-app/80 border border-accent/40 text-xs space-y-1.5 animate-fade-in">
-                      <span class="font-extrabold text-accent-text flex items-center gap-1.5">
+                    <div class="p-3 rounded-lg bg-app border border-edge text-xs space-y-1.5">
+                      <span class="font-semibold text-accent-text flex items-center gap-1.5">
                         <FileText class="w-3.5 h-3.5" />
                         <span>Resumen Ejecutivo del Prospecto:</span>
                       </span>
-                      <p class="text-body-soft whitespace-pre-wrap leading-relaxed">
+                      <p class="text-body-soft whitespace-pre-wrap leading-relaxed text-xs">
                         {aiBriefing()}
                       </p>
                     </div>
                   </Show>
 
                   {/* Selector de Tono */}
-                  <div class="flex flex-wrap items-center gap-2">
-                    <span class="text-xs text-muted font-bold">Tono del mensaje:</span>
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <span class="text-xs text-muted font-medium">Tono:</span>
                     {[
                       { id: 'bienvenida', label: 'Bienvenida & Cortesía' },
                       { id: 'seguimiento', label: 'Recordatorio / Cita' },
                       { id: 'cierre', label: 'Urgencia & Cierre' },
-                      { id: 'reactivacion', label: 'Reactivación Inactivo' },
+                      { id: 'reactivacion', label: 'Reactivación' },
                     ].map((t) => (
                       <button
                         type="button"
                         onClick={() => setAiTone(t.id)}
-                        class={`px-3 py-1.5 rounded-xl text-xs font-semibold transition border cursor-pointer ${
+                        class={`px-2.5 py-1 rounded-lg text-xs font-medium transition border cursor-pointer ${
                           aiTone() === t.id
                             ? 'bg-accent border-accent text-white'
                             : 'bg-app border-edge text-muted hover:text-body'
@@ -1293,14 +1292,14 @@ export default function LeadDetail() {
                   </div>
 
                   {/* Botón de Generación y Textarea */}
-                  <div class="space-y-3">
+                  <div class="space-y-2.5">
                     <button
                       type="button"
                       onClick={handleGenerateAiMessage}
                       disabled={generatingAi()}
-                      class="w-full py-3 bg-gradient-to-r from-accent-deep to-accent hover:from-accent hover:to-accent-hover text-white font-bold text-xs rounded-2xl shadow-accent-glow transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+                      class="w-full py-2 px-3 bg-accent hover:bg-accent-hover text-white font-semibold text-xs rounded-lg transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
                     >
-                      <Sparkles size={14} />
+                      <Sparkles size={13} />
                       <span>
                         {generatingAi()
                           ? 'Redactando con Cloudflare Workers AI...'
@@ -1309,14 +1308,14 @@ export default function LeadDetail() {
                     </button>
 
                     <textarea
-                      rows={4}
+                      rows={3}
                       value={aiMessage()}
                       onInput={(e) => {
                         setAiMessage(e.currentTarget.value);
                         setChatInput(e.currentTarget.value);
                       }}
                       placeholder="El mensaje generado aparecerá aquí..."
-                      class="w-full p-4 bg-app border border-edge rounded-2xl text-xs text-body-soft placeholder-muted focus:outline-none focus:border-accent transition"
+                      class="w-full p-2.5 bg-app border border-edge rounded-lg text-xs text-body placeholder-muted focus:outline-none focus:border-accent transition"
                     ></textarea>
 
                     <div class="flex gap-2">
@@ -1327,7 +1326,7 @@ export default function LeadDetail() {
                           setChatInput(aiMessage());
                         }}
                         disabled={!aiMessage().trim()}
-                        class="flex-1 py-3 bg-elevate hover:bg-elevate-strong text-body font-bold text-xs rounded-xl transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
+                        class="flex-1 py-1.5 px-3 bg-elevate hover:bg-elevate-strong text-body-soft font-medium text-xs rounded-lg transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5 border border-edge"
                       >
                         <MessageSquare size={13} />
                         <span>Pegar en Chat</span>
@@ -1352,7 +1351,7 @@ export default function LeadDetail() {
                           }
                         }}
                         disabled={!aiMessage().trim()}
-                        class="flex-1 py-3 bg-accent hover:bg-accent-hover text-white font-extrabold text-xs rounded-xl shadow-lg transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
+                        class="flex-1 py-1.5 px-3 bg-accent hover:bg-accent-hover text-white font-semibold text-xs rounded-lg transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
                       >
                         <Send size={13} />
                         <span>Enviar por WhatsApp</span>
@@ -1364,10 +1363,10 @@ export default function LeadDetail() {
                           window.open(deepLink, '_blank');
                         }}
                         disabled={!aiMessage().trim()}
-                        class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-xl shadow-lg transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
+                        class="flex-1 py-1.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-lg transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
                       >
                         <ExternalLink size={13} />
-                        <span>Abrir wa.me</span>
+                        <span>wa.me</span>
                       </button>
                     </div>
                   </div>
@@ -1376,11 +1375,11 @@ export default function LeadDetail() {
 
               {/* TAB 3: BITÁCORA Y HISTORIAL */}
               <Show when={activeTab() === 'history'}>
-                <div class="p-6 rounded-3xl bg-surface border border-edge space-y-4 shadow-xl">
+                <div class="p-3.5 sm:p-4 rounded-xl bg-surface border border-edge space-y-3.5">
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
-                      <History size={18} class="text-accent" />
-                      <h3 class="text-base font-bold text-body">Historial y Bitácora</h3>
+                      <History size={15} class="text-accent" />
+                      <h3 class="text-sm font-bold text-body">Historial y Bitácora</h3>
                     </div>
                     <span class="text-xs text-muted">
                       {activities().length} registros
@@ -1388,19 +1387,19 @@ export default function LeadDetail() {
                   </div>
 
                   {/* Formulario Nota */}
-                  <form onSubmit={handleAddNote} class="space-y-3">
+                  <form onSubmit={handleAddNote} class="space-y-2">
                     <textarea
                       rows={2}
                       value={newNote()}
                       onInput={(e) => setNewNote(e.currentTarget.value)}
                       placeholder="Escribe una nota rápida (ej: Interesado en pase Fit Pro de Bs 280, entrena natación)..."
-                      class="w-full p-3.5 bg-app border border-edge rounded-2xl text-xs text-body placeholder-muted focus:outline-none focus:border-accent transition"
+                      class="w-full p-2.5 bg-app border border-edge rounded-lg text-xs text-body placeholder-muted focus:outline-none focus:border-accent transition"
                     ></textarea>
                     <div class="flex justify-end">
                       <button
                         type="submit"
                         disabled={savingNote() || !newNote().trim()}
-                        class="px-5 py-2 bg-accent hover:bg-accent-hover text-white rounded-xl text-xs font-bold transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                        class="px-3.5 py-1.5 bg-accent hover:bg-accent-hover text-white rounded-lg text-xs font-semibold transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
                       >
                         <Plus size={13} />
                         <span>{savingNote() ? 'Guardando...' : 'Anotar en Bitácora'}</span>
@@ -1409,20 +1408,20 @@ export default function LeadDetail() {
                   </form>
 
                   {/* Feed */}
-                  <div class="space-y-3 pt-4 border-t border-edge/80 max-h-96 overflow-y-auto">
+                  <div class="space-y-2 pt-3 border-t border-edge max-h-96 overflow-y-auto">
                     <Show
                       when={activities().length > 0}
                       fallback={
-                        <div class="p-8 text-center text-muted text-xs">
+                        <div class="p-6 text-center text-muted text-xs">
                           No hay actividades previas registradas.
                         </div>
                       }
                     >
                       <For each={activities()}>
                         {(act) => (
-                          <div class="p-4 rounded-2xl bg-app/60 border border-edge/80 space-y-1.5">
+                          <div class="p-3 rounded-lg bg-app/60 border border-edge space-y-1">
                             <div class="flex items-center justify-between">
-                              <span class="px-2 py-0.5 rounded-lg bg-elevate text-[10px] font-bold text-body-soft uppercase tracking-wide flex items-center gap-1">
+                              <span class="px-1.5 py-0.5 rounded bg-elevate text-[10px] font-medium text-body-soft uppercase tracking-wide flex items-center gap-1">
                                 {act.action_type === 'whatsapp_sent' ? (
                                   <>
                                     <MessageSquare size={10} />

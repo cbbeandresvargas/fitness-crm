@@ -19,11 +19,9 @@ import {
   BookOpen,
   Sparkles,
   X,
-  SlidersHorizontal,
   Activity,
   Play,
   Cpu,
-  Send,
 } from 'lucide-solid';
 
 export default function WhatsAppSettings() {
@@ -243,70 +241,70 @@ export default function WhatsAppSettings() {
 
   return (
     <Layout title="Configuración WhatsApp & IA">
-      <div class="max-w-5xl mx-auto space-y-6">
+      <div class="max-w-5xl mx-auto space-y-4 sm:space-y-6">
         {/* Header Title */}
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-2xl bg-accent/10 border border-accent/20 text-accent flex items-center justify-center">
-              <Settings size={20} />
+        <div class="p-4 sm:p-5 rounded-xl bg-surface border border-edge flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-accent/10 border border-accent/20 text-accent flex items-center justify-center">
+              <Settings size={16} />
             </div>
             <div>
-              <h1 class="text-xl font-black text-body flex items-center gap-2">
-                <span>Integración WhatsApp Cloud API (v25.0) & IA Comercial</span>
+              <h1 class="text-base font-bold text-body flex items-center gap-2">
+                <span>WhatsApp Cloud API (v25.0) & IA Comercial</span>
               </h1>
               <p class="text-xs text-muted">
-                Credenciales seguras por variables de entorno y base de conocimiento para Fitness Club Pass Cochabamba.
+                Credenciales por variables de entorno y base de conocimiento para Fitness Club Pass Cochabamba.
               </p>
             </div>
           </div>
 
           <Show when={savedSuccess()}>
-            <span class="px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-xs font-bold flex items-center gap-1.5 animate-fade-in">
+            <span class="px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-xs font-semibold flex items-center gap-1 animate-fade-in">
               <CheckCircle2 size={13} />
-              <span>Cambios guardados</span>
+              <span>Guardado</span>
             </span>
           </Show>
         </div>
 
         {/* Tab Switcher */}
-        <div class="flex items-center gap-2 border-b border-edge pb-2 text-xs font-bold">
+        <div class="p-1 bg-surface border border-edge rounded-xl flex items-center gap-1 overflow-x-auto text-xs">
           <button
             type="button"
             onClick={() => setActiveTab('connection')}
-            class={`px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+            class={`px-3 py-1.5 rounded-lg font-medium transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
               activeTab() === 'connection'
-                ? 'bg-accent text-white shadow-md'
+                ? 'bg-accent text-white shadow-xs'
                 : 'text-muted hover:text-body hover:bg-elevate'
             }`}
           >
-            <Phone size={14} />
-            <span>Conexión Meta WhatsApp</span>
+            <Phone size={13} />
+            <span>Conexión Meta</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('ai')}
-            class={`px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+            class={`px-3 py-1.5 rounded-lg font-medium transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
               activeTab() === 'ai'
-                ? 'bg-accent text-white shadow-md'
+                ? 'bg-accent text-white shadow-xs'
                 : 'text-muted hover:text-body hover:bg-elevate'
             }`}
           >
-            <Bot size={14} />
+            <Bot size={13} />
             <span>Agente Comercial IA</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('kb')}
-            class={`px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+            class={`px-3 py-1.5 rounded-lg font-medium transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
               activeTab() === 'kb'
-                ? 'bg-accent text-white shadow-md'
+                ? 'bg-accent text-white shadow-xs'
                 : 'text-muted hover:text-body hover:bg-elevate'
             }`}
           >
-            <Database size={14} />
-            <span>Catálogo & Precios en Bs</span>
+            <Database size={13} />
+            <span>Catálogo & Precios</span>
           </button>
 
           <button
@@ -315,41 +313,41 @@ export default function WhatsAppSettings() {
               setActiveTab('diagnostics');
               if (!diagnostics()) handleRunDiagnostics();
             }}
-            class={`px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+            class={`px-3 py-1.5 rounded-lg font-medium transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
               activeTab() === 'diagnostics'
-                ? 'bg-accent text-white shadow-md'
+                ? 'bg-accent text-white shadow-xs'
                 : 'text-muted hover:text-body hover:bg-elevate'
             }`}
           >
-            <Activity size={14} />
-            <span>Diagnóstico & Pruebas en Vivo</span>
+            <Activity size={13} />
+            <span>Diagnóstico & Pruebas</span>
           </button>
         </div>
 
         <Show when={!loading()} fallback={<div class="p-8 text-center text-xs text-muted animate-pulse">Cargando ajustes...</div>}>
           {/* TAB 1: CONEXIÓN META WHATSAPP */}
           <Show when={activeTab() === 'connection'}>
-            <div class="space-y-6">
+            <div class="space-y-4">
               {/* Security Shield Banner */}
-              <div class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-3 text-xs">
-                <ShieldCheck size={20} class="text-emerald-400 shrink-0 mt-0.5" />
-                <div class="space-y-1">
-                  <p class="font-extrabold text-emerald-400">
-                    Modo de Alta Seguridad Activo (Single Number Environment Variables)
+              <div class="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-start gap-2.5 text-xs">
+                <ShieldCheck size={18} class="text-emerald-400 shrink-0 mt-0.5" />
+                <div class="space-y-0.5">
+                  <p class="font-semibold text-emerald-400">
+                    Modo de Alta Seguridad Activo
                   </p>
                   <p class="text-body-soft leading-relaxed text-[11px]">
-                    Las credenciales de WhatsApp se leen directamente desde el entorno seguro de Cloudflare Workers (<code class="font-mono text-emerald-300">.env</code> / <code class="font-mono text-emerald-300">.dev.vars</code>). No se exponen en base de datos ni a través del navegador.
+                    Las credenciales de WhatsApp se leen directamente desde el entorno seguro de Cloudflare Workers (<code class="font-mono text-emerald-300">.env</code> / <code class="font-mono text-emerald-300">.dev.vars</code>). No se exponen en base de datos.
                   </p>
                 </div>
               </div>
 
               {/* Status Banner */}
-              <div class="p-5 rounded-2xl bg-surface border border-edge space-y-4">
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-3">
-                    <div class={`w-3.5 h-3.5 rounded-full ${
+              <div class="p-4 sm:p-5 rounded-xl bg-surface border border-edge space-y-3.5 shadow-xs">
+                <div class="flex items-center justify-between flex-wrap gap-3">
+                  <div class="flex items-center gap-2.5">
+                    <div class={`w-3 h-3 rounded-full ${
                       settings()?.env_configured
-                        ? 'bg-emerald-400 shadow-[0_0_12px_#34d399]'
+                        ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]'
                         : 'bg-amber-400'
                     }`} />
                     <div>
@@ -369,21 +367,21 @@ export default function WhatsAppSettings() {
                     type="button"
                     onClick={handleTestConnection}
                     disabled={testing() || !settings()?.env_configured}
-                    class="px-4 py-2 bg-elevate hover:bg-elevate-strong text-body text-xs font-bold rounded-xl transition border border-edge disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                    class="px-3.5 py-1.5 bg-elevate hover:bg-elevate-strong text-body text-xs font-semibold rounded-lg transition border border-edge disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
                   >
-                    <RefreshCw size={13} class={testing() ? 'animate-spin' : ''} />
+                    <RefreshCw size={12} class={testing() ? 'animate-spin' : ''} />
                     <span>{testing() ? 'Probando...' : 'Probar Conexión con Meta'}</span>
                   </button>
                 </div>
 
                 <Show when={testResult()}>
-                  <div class={`p-3 rounded-xl text-xs flex items-center gap-2 ${
+                  <div class={`p-2.5 rounded-lg text-xs flex items-center gap-2 ${
                     testResult()?.success
-                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                      : 'bg-red-500/10 text-red-400 border border-red-500/30'
+                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/25'
+                      : 'bg-red-500/10 text-red-400 border border-red-500/25'
                   }`}>
-                    <Show when={testResult()?.success} fallback={<AlertCircle size={14} class="shrink-0" />}>
-                      <CheckCircle2 size={14} class="shrink-0" />
+                    <Show when={testResult()?.success} fallback={<AlertCircle size={13} class="shrink-0" />}>
+                      <CheckCircle2 size={13} class="shrink-0" />
                     </Show>
                     <span>{testResult()?.message}</span>
                   </div>
@@ -391,49 +389,49 @@ export default function WhatsAppSettings() {
               </div>
 
               {/* Webhook Info for Meta Developer Portal */}
-              <div class="p-5 rounded-2xl bg-surface border border-edge space-y-4">
-                <h3 class="text-xs font-bold text-body flex items-center gap-1.5">
-                  <Sparkles size={14} class="text-accent" />
-                  <span>Configuración del Webhook en Meta Developer Portal</span>
+              <div class="p-4 sm:p-5 rounded-xl bg-surface border border-edge space-y-3 shadow-xs">
+                <h3 class="text-xs font-bold text-body flex items-center gap-1.5 uppercase tracking-wider text-accent-text">
+                  <Sparkles size={13} class="text-accent" />
+                  <span>Configuración del Webhook en Meta Portal</span>
                 </h3>
 
-                <div class="space-y-3 text-xs">
+                <div class="space-y-2.5 text-xs">
                   <div>
-                    <label class="block text-muted font-bold mb-1">Callback URL (URL de Webhook):</label>
+                    <label class="block text-muted font-medium mb-1">Callback URL (URL de Webhook):</label>
                     <div class="flex items-center gap-2">
                       <input
                         type="text"
                         readonly
                         value={webhook()?.url || ''}
-                        class="w-full px-3 py-2 bg-app border border-edge rounded-xl font-mono text-[11px] text-body focus:outline-none"
+                        class="w-full px-3 py-1.5 bg-app border border-edge rounded-lg font-mono text-[11px] text-body focus:outline-none"
                       />
                       <button
                         type="button"
                         onClick={() => copyToClipboard(webhook()?.url || '', 'URL del Webhook')}
-                        class="p-2 bg-elevate hover:bg-elevate-strong rounded-xl border border-edge text-muted hover:text-body cursor-pointer shrink-0"
+                        class="p-2 bg-elevate hover:bg-elevate-strong rounded-lg border border-edge text-muted hover:text-body cursor-pointer shrink-0"
                         title="Copiar URL"
                       >
-                        <Copy size={14} />
+                        <Copy size={13} />
                       </button>
                     </div>
                   </div>
 
                   <div>
-                    <label class="block text-muted font-bold mb-1">Verify Token (Token de Verificación):</label>
+                    <label class="block text-muted font-medium mb-1">Verify Token (Token de Verificación):</label>
                     <div class="flex items-center gap-2">
                       <input
                         type="text"
                         readonly
                         value={webhook()?.verify_token || ''}
-                        class="w-full px-3 py-2 bg-app border border-edge rounded-xl font-mono text-[11px] text-body focus:outline-none"
+                        class="w-full px-3 py-1.5 bg-app border border-edge rounded-lg font-mono text-[11px] text-body focus:outline-none"
                       />
                       <button
                         type="button"
                         onClick={() => copyToClipboard(webhook()?.verify_token || '', 'Verify Token')}
-                        class="p-2 bg-elevate hover:bg-elevate-strong rounded-xl border border-edge text-muted hover:text-body cursor-pointer shrink-0"
+                        class="p-2 bg-elevate hover:bg-elevate-strong rounded-lg border border-edge text-muted hover:text-body cursor-pointer shrink-0"
                         title="Copiar Token"
                       >
-                        <Copy size={14} />
+                        <Copy size={13} />
                       </button>
                     </div>
                   </div>
@@ -444,81 +442,81 @@ export default function WhatsAppSettings() {
 
           {/* TAB 2: AGENTE COMERCIAL WORKERS AI */}
           <Show when={activeTab() === 'ai'}>
-            <form onSubmit={handleSaveAiSettings} class="p-5 rounded-2xl bg-surface border border-edge space-y-4 text-xs">
+            <form onSubmit={handleSaveAiSettings} class="p-4 sm:p-5 rounded-xl bg-surface border border-edge space-y-3.5 text-xs shadow-xs">
               <div class="flex items-center justify-between border-b border-edge pb-3">
                 <div class="flex items-center gap-2">
-                  <Bot size={18} class="text-accent" />
+                  <Bot size={16} class="text-accent" />
                   <div>
-                    <h3 class="font-bold text-body">Motor del Asesor Comercial con IA</h3>
+                    <h3 class="font-bold text-body text-xs">Motor del Asesor Comercial con IA</h3>
                     <p class="text-[11px] text-muted">Cloudflare Workers AI (Llama 3.2 Instruct)</p>
                   </div>
                 </div>
 
                 <label class="flex items-center gap-2 cursor-pointer">
-                  <span class="text-xs font-bold text-muted">Activar IA Global:</span>
+                  <span class="text-xs font-medium text-muted">Activar IA Global:</span>
                   <input
                     type="checkbox"
                     checked={aiEnabled()}
                     onChange={(e) => setAiEnabled(e.currentTarget.checked)}
-                    class="w-4 h-4 accent-accent rounded"
+                    class="w-3.5 h-3.5 accent-accent rounded"
                   />
                 </label>
               </div>
 
               {/* Modelo */}
               <div class="space-y-1">
-                <label class="font-bold text-muted">Modelo de Inteligencia Artificial:</label>
+                <label class="font-medium text-muted">Modelo de Inteligencia Artificial:</label>
                 <select
                   value={aiModel()}
                   onChange={(e) => setAiModel(e.currentTarget.value)}
-                  class="w-full px-3 py-2 bg-app border border-edge rounded-xl text-xs text-body focus:outline-none focus:border-accent"
+                  class="w-full px-3 py-2 bg-app border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent cursor-pointer"
                 >
                   <option value="@cf/meta/llama-3.2-3b-instruct">
-                    @cf/meta/llama-3.2-3b-instruct (Recomendado: ultra rápido, multilingüe y alta precisión en ventas)
+                    @cf/meta/llama-3.2-3b-instruct (Recomendado: ultra rápido y alta precisión)
                   </option>
                   <option value="@cf/meta/llama-3.2-1b-instruct">
                     @cf/meta/llama-3.2-1b-instruct (Ultra ligero y respuesta instantánea)
                   </option>
                   <option value="@cf/meta/llama-3.3-70b-instruct">
-                    @cf/meta/llama-3.3-70b-instruct (Razonamiento profundo para objeciones complejas)
+                    @cf/meta/llama-3.3-70b-instruct (Razonamiento profundo)
                   </option>
                 </select>
               </div>
 
               {/* Tono */}
               <div class="space-y-1">
-                <label class="font-bold text-muted">Tono y Personalidad del Asesor Virtual:</label>
+                <label class="font-medium text-muted">Tono y Personalidad del Asesor Virtual:</label>
                 <input
                   type="text"
                   value={aiTone()}
                   onInput={(e) => setAiTone(e.currentTarget.value)}
-                  placeholder="Ej: enérgico, asesor consultivo, empático y altamente enfocado en cerrar suscripciones"
-                  class="w-full px-3 py-2 bg-app border border-edge rounded-xl text-xs text-body focus:outline-none focus:border-accent"
+                  placeholder="Ej: enérgico, asesor consultivo, empático y enfocado en cerrar suscripciones"
+                  class="w-full px-3 py-2 bg-app border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent"
                 />
               </div>
 
               {/* Instrucciones de Ventas */}
               <div class="space-y-1">
-                <label class="font-bold text-muted">
+                <label class="font-medium text-muted">
                   Estrategia y Reglas de Negocio para el Cierre de Ventas:
                 </label>
                 <textarea
-                  rows={6}
+                  rows={5}
                   value={aiInstructions()}
                   onInput={(e) => setAiInstructions(e.currentTarget.value)}
-                  placeholder="Fitness Club Pass es la plataforma de pases multideporte en Cochabamba, Bolivia. Con una sola membresía en la app, el usuario accede a múltiples centros deportivos, gimnasios, natación, crossfit y pádel..."
-                  class="w-full px-3 py-2 bg-app border border-edge rounded-xl text-xs text-body focus:outline-none focus:border-accent leading-relaxed"
+                  placeholder="Fitness Club Pass es la plataforma de pases multideporte en Cochabamba, Bolivia..."
+                  class="w-full p-2.5 bg-app border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent leading-relaxed"
                 />
               </div>
 
-              <div class="flex justify-end pt-2">
+              <div class="flex justify-end pt-1">
                 <button
                   type="submit"
                   disabled={saving()}
-                  class="px-6 py-2.5 bg-accent hover:bg-accent-hover text-white text-xs font-extrabold rounded-xl transition shadow-md disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                  class="px-4 py-2 bg-accent hover:bg-accent-hover text-white text-xs font-semibold rounded-lg transition shadow-xs disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
                 >
-                  <Show when={saving()} fallback={<Bot size={14} />}>
-                    <RefreshCw size={14} class="animate-spin" />
+                  <Show when={saving()} fallback={<Bot size={13} />}>
+                    <RefreshCw size={13} class="animate-spin" />
                   </Show>
                   <span>{saving() ? 'Guardando...' : 'Guardar Ajustes de IA'}</span>
                 </button>
@@ -528,23 +526,23 @@ export default function WhatsAppSettings() {
 
           {/* TAB 3: CATÁLOGO & PRECIOS (KNOWLEDGE BASE) */}
           <Show when={activeTab() === 'kb'}>
-            <div class="space-y-4">
-              <div class="flex items-center justify-between">
+            <div class="space-y-3.5">
+              <div class="flex items-center justify-between flex-wrap gap-2">
                 <div>
-                  <h3 class="text-xs font-black text-body">
-                    Catálogo Oficial y Respuestas a Objeciones (Knowledge Base)
+                  <h3 class="text-xs font-bold text-body uppercase tracking-wider text-muted">
+                    Base de Conocimiento & Catálogo Oficial
                   </h3>
                   <p class="text-[11px] text-muted">
-                    Esta información es la única fuente de verdad inyectada a la IA para evitar alucinaciones en precios en Bolivianos (Bs) y centros aliados.
+                    Fuente de verdad inyectada a la IA para evitar alucinaciones en precios en Bolivianos (Bs).
                   </p>
                 </div>
 
                 <button
                   type="button"
                   onClick={openNewKbModal}
-                  class="px-3.5 py-1.5 bg-accent hover:bg-accent-hover text-white text-xs font-extrabold rounded-xl transition shadow-sm cursor-pointer flex items-center gap-1.5"
+                  class="px-3 py-1.5 bg-accent hover:bg-accent-hover text-white text-xs font-semibold rounded-lg transition shadow-xs cursor-pointer flex items-center gap-1"
                 >
-                  <Plus size={14} />
+                  <Plus size={13} />
                   <span>Nueva Entrada</span>
                 </button>
               </div>
@@ -553,32 +551,32 @@ export default function WhatsAppSettings() {
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <For each={kbEntries()}>
                   {(entry) => (
-                    <div class="p-4 rounded-2xl bg-surface border border-edge space-y-2 relative group hover:border-accent/40 transition">
+                    <div class="p-3.5 rounded-xl bg-surface border border-edge space-y-2 relative group hover:border-accent/40 transition shadow-xs">
                       <div class="flex items-center justify-between">
-                        <span class="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-app border border-edge text-accent-text">
+                        <span class="px-2 py-0.5 rounded-md text-[9px] font-semibold uppercase tracking-wider bg-app border border-edge text-accent-text">
                           {formatCategoryLabel(entry.category)}
                         </span>
                         <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
                           <button
                             type="button"
                             onClick={() => openEditKbModal(entry)}
-                            class="p-1.5 hover:bg-elevate rounded text-muted hover:text-body cursor-pointer"
+                            class="p-1 hover:bg-elevate rounded text-muted hover:text-body cursor-pointer"
                             title="Editar"
                           >
-                            <Pencil size={13} />
+                            <Pencil size={12} />
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDeleteKb(entry.id)}
-                            class="p-1.5 hover:bg-elevate rounded text-rose-400 cursor-pointer"
+                            class="p-1 hover:bg-elevate rounded text-rose-400 cursor-pointer"
                             title="Eliminar"
                           >
-                            <Trash2 size={13} />
+                            <Trash2 size={12} />
                           </button>
                         </div>
                       </div>
 
-                      <h4 class="text-xs font-extrabold text-body">{entry.title}</h4>
+                      <h4 class="text-xs font-semibold text-body">{entry.title}</h4>
                       <p class="text-[11px] text-muted whitespace-pre-wrap leading-relaxed">
                         {entry.content}
                       </p>
@@ -591,16 +589,16 @@ export default function WhatsAppSettings() {
 
           {/* TAB 4: DIAGNÓSTICO EN TIEMPO REAL & SIMULADOR DE IA */}
           <Show when={activeTab() === 'diagnostics'}>
-            <div class="space-y-6 animate-fade-in">
+            <div class="space-y-4">
               {/* Header with Run Diagnostics button */}
-              <div class="flex items-center justify-between">
+              <div class="flex items-center justify-between flex-wrap gap-2">
                 <div>
-                  <h3 class="text-xs font-black text-body flex items-center gap-2">
-                    <Activity size={16} class="text-accent" />
-                    <span>Diagnóstico de Salud del Sistema (Meta WhatsApp & Workers AI)</span>
+                  <h3 class="text-xs font-bold text-body flex items-center gap-1.5 uppercase tracking-wider text-accent-text">
+                    <Activity size={14} class="text-accent" />
+                    <span>Diagnóstico de Salud del Sistema</span>
                   </h3>
                   <p class="text-[11px] text-muted">
-                    Verifica la conectividad con Meta Graph API v25.0, la disponibilidad del modelo de IA y el estado de la base de datos D1.
+                    Verifica Meta WhatsApp v25.0, Workers AI y la base de datos D1.
                   </p>
                 </div>
 
@@ -608,183 +606,172 @@ export default function WhatsAppSettings() {
                   type="button"
                   onClick={handleRunDiagnostics}
                   disabled={runningDiag()}
-                  class="px-4 py-2 bg-accent hover:bg-accent-hover text-white text-xs font-extrabold rounded-xl transition shadow-md disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                  class="px-3.5 py-1.5 bg-accent hover:bg-accent-hover text-white text-xs font-semibold rounded-lg transition shadow-xs disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
                 >
-                  <RefreshCw size={14} class={runningDiag() ? 'animate-spin' : ''} />
-                  <span>{runningDiag() ? 'Comprobando Sistema...' : 'Ejecutar Diagnóstico Ahora'}</span>
+                  <RefreshCw size={12} class={runningDiag() ? 'animate-spin' : ''} />
+                  <span>{runningDiag() ? 'Comprobando...' : 'Ejecutar Diagnóstico'}</span>
                 </button>
               </div>
 
               {/* 3 Status Cards */}
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {/* Meta API Status Card */}
-                <div class="p-5 rounded-2xl bg-surface border border-edge space-y-3">
+                <div class="p-3.5 sm:p-4 rounded-xl bg-surface border border-edge space-y-2.5 shadow-xs">
                   <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                      <Phone size={16} class="text-accent" />
+                    <div class="flex items-center gap-1.5">
+                      <Phone size={14} class="text-accent" />
                       <h4 class="text-xs font-bold text-body">Meta WhatsApp API</h4>
                     </div>
                     <Show
                       when={diagnostics()?.metaApi?.status === 'ok'}
                       fallback={
-                        <span class="px-2 py-0.5 rounded-lg bg-red-500/10 text-red-400 border border-red-500/30 text-[10px] font-bold flex items-center gap-1">
-                          <AlertCircle size={10} />
+                        <span class="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-red-500/10 text-red-400 border border-red-500/25 flex items-center gap-0.5">
+                          <AlertCircle size={9} />
                           <span>Desconectado</span>
                         </span>
                       }
                     >
-                      <span class="px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold flex items-center gap-1">
-                        <CheckCircle2 size={10} />
+                      <span class="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 flex items-center gap-0.5">
+                        <CheckCircle2 size={9} />
                         <span>Operativo</span>
                       </span>
                     </Show>
                   </div>
 
-                  <div class="space-y-1.5 text-[11px]">
+                  <div class="space-y-1 text-[11px]">
                     <div class="flex justify-between">
-                      <span class="text-muted">Teléfono verificado:</span>
-                      <span class="font-mono text-body font-bold">
+                      <span class="text-muted">Teléfono:</span>
+                      <span class="font-mono text-body font-medium">
                         {diagnostics()?.metaApi?.display_phone_number || settings()?.display_phone_number || '+591 60750474'}
                       </span>
                     </div>
                     <div class="flex justify-between">
-                      <span class="text-muted">Nombre verificado:</span>
-                      <span class="text-body font-bold">
+                      <span class="text-muted">Nombre:</span>
+                      <span class="text-body font-medium truncate max-w-[120px]">
                         {diagnostics()?.metaApi?.verified_name || settings()?.verified_name || 'Fitness Club Pass'}
                       </span>
                     </div>
                     <div class="flex justify-between">
-                      <span class="text-muted">Calidad de número:</span>
-                      <span class="text-emerald-400 font-bold uppercase">
+                      <span class="text-muted">Calidad:</span>
+                      <span class="text-emerald-400 font-semibold">
                         {diagnostics()?.metaApi?.quality_rating || 'GREEN (Óptimo)'}
                       </span>
                     </div>
-                    <Show when={diagnostics()?.metaApi?.error}>
-                      <div class="p-2 rounded-lg bg-red-500/10 text-red-400 text-[10px] font-mono mt-2">
-                        {diagnostics()?.metaApi?.error}
-                      </div>
-                    </Show>
                   </div>
                 </div>
 
                 {/* Workers AI Card */}
-                <div class="p-5 rounded-2xl bg-surface border border-edge space-y-3">
+                <div class="p-3.5 sm:p-4 rounded-xl bg-surface border border-edge space-y-2.5 shadow-xs">
                   <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                      <Cpu size={16} class="text-accent" />
-                      <h4 class="text-xs font-bold text-body">Cloudflare Workers AI</h4>
+                    <div class="flex items-center gap-1.5">
+                      <Cpu size={14} class="text-accent" />
+                      <h4 class="text-xs font-bold text-body">Workers AI</h4>
                     </div>
                     <Show
                       when={diagnostics()?.workersAi?.status === 'ok'}
                       fallback={
-                        <span class="px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[10px] font-bold flex items-center gap-1">
-                          <AlertCircle size={10} />
-                          <span>Fallo / Fallback</span>
+                        <span class="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/25 flex items-center gap-0.5">
+                          <AlertCircle size={9} />
+                          <span>Fallback</span>
                         </span>
                       }
                     >
-                      <span class="px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold flex items-center gap-1">
-                        <CheckCircle2 size={10} />
+                      <span class="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 flex items-center gap-0.5">
+                        <CheckCircle2 size={9} />
                         <span>Activo</span>
                       </span>
                     </Show>
                   </div>
 
-                  <div class="space-y-1.5 text-[11px]">
+                  <div class="space-y-1 text-[11px]">
                     <div class="flex justify-between">
-                      <span class="text-muted">Modelo evaluado:</span>
-                      <span class="font-mono text-body text-[10px]">
-                        {diagnostics()?.workersAi?.model || '@cf/meta/llama-3.2-3b-instruct'}
+                      <span class="text-muted">Modelo:</span>
+                      <span class="font-mono text-body text-[10px] truncate max-w-[130px]">
+                        {diagnostics()?.workersAi?.model || 'llama-3.2-3b'}
                       </span>
                     </div>
                     <div class="flex justify-between">
-                      <span class="text-muted">Latencia de respuesta:</span>
-                      <span class="text-accent font-bold font-mono">
+                      <span class="text-muted">Latencia:</span>
+                      <span class="text-accent font-semibold font-mono">
                         {diagnostics()?.workersAi?.latencyMs ? `${diagnostics()?.workersAi?.latencyMs} ms` : 'N/A'}
                       </span>
                     </div>
                     <div class="flex justify-between">
-                      <span class="text-muted">Prueba de inferencia:</span>
-                      <span class="text-emerald-400 font-bold">
+                      <span class="text-muted">Inferencia:</span>
+                      <span class="text-emerald-400 font-medium">
                         {diagnostics()?.workersAi?.response || 'Respondiendo'}
                       </span>
                     </div>
-                    <Show when={diagnostics()?.workersAi?.error}>
-                      <div class="p-2 rounded-lg bg-amber-500/10 text-amber-400 text-[10px] font-mono mt-2">
-                        {diagnostics()?.workersAi?.error}
-                      </div>
-                    </Show>
                   </div>
                 </div>
 
                 {/* Base de Datos Card */}
-                <div class="p-5 rounded-2xl bg-surface border border-edge space-y-3">
+                <div class="p-3.5 sm:p-4 rounded-xl bg-surface border border-edge space-y-2.5 shadow-xs">
                   <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                      <Database size={16} class="text-accent" />
-                      <h4 class="text-xs font-bold text-body">Base de Datos D1</h4>
+                    <div class="flex items-center gap-1.5">
+                      <Database size={14} class="text-accent" />
+                      <h4 class="text-xs font-bold text-body">D1 Database</h4>
                     </div>
-                    <span class="px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold flex items-center gap-1">
-                      <CheckCircle2 size={10} />
+                    <span class="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 flex items-center gap-0.5">
+                      <CheckCircle2 size={9} />
                       <span>Conectado</span>
                     </span>
                   </div>
 
-                  <div class="space-y-1.5 text-[11px]">
+                  <div class="space-y-1 text-[11px]">
                     <div class="flex justify-between">
-                      <span class="text-muted">Total prospectos (leads):</span>
-                      <span class="font-bold text-body">{diagnostics()?.database?.leadsCount ?? '...'}</span>
+                      <span class="text-muted">Prospectos:</span>
+                      <span class="font-semibold text-body">{diagnostics()?.database?.leadsCount ?? '...'}</span>
                     </div>
                     <div class="flex justify-between">
-                      <span class="text-muted">Mensajes en historial:</span>
-                      <span class="font-bold text-body">{diagnostics()?.database?.messagesCount ?? '...'}</span>
+                      <span class="text-muted">Mensajes:</span>
+                      <span class="font-semibold text-body">{diagnostics()?.database?.messagesCount ?? '...'}</span>
                     </div>
                     <div class="flex justify-between">
-                      <span class="text-muted">Catálogo oficial (KB):</span>
-                      <span class="font-bold text-body">{diagnostics()?.database?.kbEntriesCount ?? '...'} planes</span>
+                      <span class="text-muted">Catálogo:</span>
+                      <span class="font-semibold text-body">{diagnostics()?.database?.kbEntriesCount ?? '...'} planes</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Live AI Simulation & Testing Panel */}
-              <div class="p-5 rounded-2xl bg-surface border border-edge space-y-4">
-                <div class="flex items-center justify-between border-b border-edge pb-3">
+              <div class="p-4 sm:p-5 rounded-xl bg-surface border border-edge space-y-3 shadow-xs">
+                <div class="flex items-center justify-between border-b border-edge pb-2.5 flex-wrap gap-2">
                   <div class="flex items-center gap-2">
-                    <Bot size={18} class="text-accent" />
+                    <Bot size={16} class="text-accent" />
                     <div>
-                      <h4 class="text-xs font-bold text-body">Simulador de Conversación de Ventas con IA</h4>
+                      <h4 class="text-xs font-bold text-body">Simulador de Conversación IA</h4>
                       <p class="text-[11px] text-muted">
-                        Envía un mensaje de prueba a la IA y observa el proceso de razonamiento, la acción elegida y la entrega por WhatsApp.
+                        Envía un mensaje de prueba a la IA y observa el razonamiento y respuesta.
                       </p>
                     </div>
                   </div>
 
-                  <label class="flex items-center gap-2 cursor-pointer bg-elevate px-3 py-1.5 rounded-xl border border-edge">
+                  <label class="flex items-center gap-2 cursor-pointer bg-elevate px-2.5 py-1 rounded-lg border border-edge text-xs">
                     <input
                       type="checkbox"
                       checked={sendLiveWhatsApp()}
                       onChange={(e) => setSendLiveWhatsApp(e.currentTarget.checked)}
                       class="w-3.5 h-3.5 accent-accent rounded cursor-pointer"
                     />
-                    <span class="text-[11px] font-bold text-body">Enviar mensaje real a WhatsApp (+59170795878)</span>
+                    <span class="text-[11px] font-medium text-body">Enviar a WhatsApp (+59170795878)</span>
                   </label>
                 </div>
 
                 {/* Predefined Test Prompts */}
-                <div class="flex flex-wrap items-center gap-2 text-xs">
-                  <span class="text-muted font-bold text-[11px]">Ejemplos rápidos:</span>
+                <div class="flex flex-wrap items-center gap-1.5 text-xs">
+                  <span class="text-muted font-medium text-[10px]">Ejemplos:</span>
                   {[
-                    'hola, que planes tienen disponibles?',
-                    'hola, quisiera saber precios y si tienen pase de prueba',
-                    'cuanto cuesta el plan pro y que gimnasios incluye?',
-                    'quiero pagar por qr para activar mi cuenta hoy',
-                    'quiero hablar con un asesor humano por favor',
+                    'hola, que planes tienen?',
+                    'quisiera saber precios',
+                    'cuanto cuesta el plan pro?',
+                    'quiero pagar por qr',
                   ].map((preset) => (
                     <button
                       type="button"
                       onClick={() => setSimMessage(preset)}
-                      class="px-2.5 py-1 rounded-lg bg-app border border-edge hover:border-accent text-body-soft text-[10px] font-medium transition cursor-pointer"
+                      class="px-2 py-0.5 rounded-md bg-app border border-edge hover:border-accent text-body-soft text-[10px] font-medium transition cursor-pointer"
                     >
                       {preset}
                     </button>
@@ -798,57 +785,57 @@ export default function WhatsAppSettings() {
                     value={simMessage()}
                     onInput={(e) => setSimMessage(e.currentTarget.value)}
                     placeholder="Escribe el mensaje del cliente a simular..."
-                    class="flex-1 px-4 py-2.5 bg-app border border-edge rounded-xl text-xs text-body focus:outline-none focus:border-accent"
+                    class="flex-1 px-3 py-2 bg-app border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent"
                   />
 
                   <button
                     type="button"
                     onClick={handleSimulateAi}
                     disabled={simulating() || !simMessage().trim()}
-                    class="px-5 py-2.5 bg-accent hover:bg-accent-hover text-white text-xs font-extrabold rounded-xl transition shadow-md disabled:opacity-50 cursor-pointer flex items-center gap-2 shrink-0"
+                    class="px-4 py-2 bg-accent hover:bg-accent-hover text-white text-xs font-semibold rounded-lg transition shadow-xs disabled:opacity-50 cursor-pointer flex items-center gap-1.5 shrink-0"
                   >
-                    <Show when={simulating()} fallback={<Play size={13} fill="currentColor" />}>
-                      <RefreshCw size={13} class="animate-spin" />
+                    <Show when={simulating()} fallback={<Play size={12} fill="currentColor" />}>
+                      <RefreshCw size={12} class="animate-spin" />
                     </Show>
-                    <span>{simulating() ? 'Procesando IA...' : 'Probar IA'}</span>
+                    <span>{simulating() ? 'Procesando...' : 'Probar IA'}</span>
                   </button>
                 </div>
 
                 {/* Simulation Output */}
                 <Show when={simResult()}>
-                  <div class="p-4 rounded-2xl bg-app border border-accent/30 space-y-3 animate-fade-in text-xs">
-                    <div class="flex items-center justify-between border-b border-edge pb-2">
-                      <span class="font-black text-body flex items-center gap-1.5">
-                        <CheckCircle2 size={14} class="text-emerald-400" />
+                  <div class="p-3.5 rounded-lg bg-app border border-accent/25 space-y-2 text-xs">
+                    <div class="flex items-center justify-between border-b border-edge pb-1.5">
+                      <span class="font-semibold text-body flex items-center gap-1">
+                        <CheckCircle2 size={13} class="text-emerald-400" />
                         <span>Resultado de la Inferencia:</span>
                       </span>
-                      <span class="font-mono text-muted text-[11px]">
+                      <span class="font-mono text-muted text-[10px]">
                         Tiempo: {simResult()?.durationMs} ms | Acción: {simResult()?.action?.action || 'N/A'}
                       </span>
                     </div>
 
                     <div class="space-y-1">
-                      <span class="text-muted text-[11px] font-bold">Respuesta generada para el cliente:</span>
-                      <p class="p-3 rounded-xl bg-surface border border-edge text-body-soft whitespace-pre-wrap leading-relaxed font-sans text-xs">
+                      <span class="text-muted text-[10px] font-medium">Respuesta:</span>
+                      <p class="p-2.5 rounded-lg bg-surface border border-edge text-body-soft whitespace-pre-wrap leading-relaxed text-xs">
                         {simResult()?.action?.reply || simResult()?.action?.text || simResult()?.action?.farewell || 'Sin texto de respuesta'}
                       </p>
                     </div>
 
                     <Show when={simResult()?.deliveryResult}>
-                      <div class="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-between text-[11px]">
-                        <span class="flex items-center gap-1.5 font-bold">
-                          <CheckCircle2 size={13} />
-                          <span>Entregado a Meta WhatsApp Cloud API</span>
+                      <div class="p-2 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-between text-[10px]">
+                        <span class="flex items-center gap-1 font-medium">
+                          <CheckCircle2 size={12} />
+                          <span>Entregado a Meta WhatsApp API</span>
                         </span>
-                        <span class="font-mono text-[10px]">
+                        <span class="font-mono">
                           ID: {simResult()?.deliveryResult?.waMessageId || 'N/A'}
                         </span>
                       </div>
                     </Show>
 
                     <Show when={simResult()?.error}>
-                      <div class="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-[11px] flex items-center gap-1.5">
-                        <AlertCircle size={13} />
+                      <div class="p-2 rounded-md bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] flex items-center gap-1">
+                        <AlertCircle size={12} />
                         <span>{simResult()?.error}</span>
                       </div>
                     </Show>
@@ -862,72 +849,72 @@ export default function WhatsAppSettings() {
         {/* Modal Nueva / Editar Entrada de KB */}
         <Show when={showKbModal()}>
           <div class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div class="w-full max-w-lg bg-surface border border-edge rounded-3xl p-6 space-y-4 shadow-2xl animate-fade-in">
-              <div class="flex items-center justify-between border-b border-edge pb-3">
-                <h3 class="text-sm font-black text-body flex items-center gap-2">
-                  <BookOpen size={16} class="text-accent" />
-                  <span>{editingKbId() ? 'Editar Entrada de Catálogo' : 'Nueva Entrada de Conocimiento'}</span>
+            <div class="w-full max-w-md bg-surface border border-edge rounded-xl p-4 sm:p-5 space-y-3.5 shadow-xl animate-fade-in">
+              <div class="flex items-center justify-between border-b border-edge pb-2.5">
+                <h3 class="text-xs font-bold text-body flex items-center gap-1.5 uppercase tracking-wider text-accent-text">
+                  <BookOpen size={14} class="text-accent" />
+                  <span>{editingKbId() ? 'Editar Entrada de Catálogo' : 'Nueva Entrada'}</span>
                 </h3>
                 <button
                   type="button"
                   onClick={() => setShowKbModal(false)}
                   class="text-muted hover:text-body p-1 cursor-pointer"
                 >
-                  <X size={16} />
+                  <X size={14} />
                 </button>
               </div>
 
               <form onSubmit={handleSaveKb} class="space-y-3 text-xs">
                 <div class="space-y-1">
-                  <label class="font-bold text-muted">Categoría:</label>
+                  <label class="font-medium text-muted">Categoría:</label>
                   <select
                     value={kbCategory()}
                     onChange={(e) => setKbCategory(e.currentTarget.value)}
-                    class="w-full px-3 py-2 bg-app border border-edge rounded-xl text-xs text-body focus:outline-none focus:border-accent cursor-pointer"
+                    class="w-full px-2.5 py-1.5 bg-app border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent cursor-pointer"
                   >
                     <option value="plan_precio">Planes y Precios (en Bs)</option>
                     <option value="como_funciona_app">Cómo funciona la App & Pases</option>
-                    <option value="centros_aliados">Centros, Gimnasios y Sedes en Cochabamba</option>
+                    <option value="centros_aliados">Centros y Gimnasios en Cochabamba</option>
                     <option value="objecion_frecuente">Manejo de Objeción & Cierre</option>
                     <option value="politica">Políticas de Activación y Garantías</option>
                   </select>
                 </div>
 
                 <div class="space-y-1">
-                  <label class="font-bold text-muted">Título / Plan / Tema:</label>
+                  <label class="font-medium text-muted">Título / Plan / Tema:</label>
                   <input
                     type="text"
                     required
                     value={kbTitle()}
                     onInput={(e) => setKbTitle(e.currentTarget.value)}
                     placeholder="Ej: Pase Fit Pro (Bs 280 / mes)"
-                    class="w-full px-3 py-2 bg-app border border-edge rounded-xl text-xs text-body focus:outline-none focus:border-accent"
+                    class="w-full px-2.5 py-1.5 bg-app border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent"
                   />
                 </div>
 
                 <div class="space-y-1">
-                  <label class="font-bold text-muted">Contenido / Precios en Bs / Argumentos:</label>
+                  <label class="font-medium text-muted">Contenido / Precios en Bs / Argumentos:</label>
                   <textarea
                     rows={4}
                     required
                     value={kbContent()}
                     onInput={(e) => setKbContent(e.currentTarget.value)}
                     placeholder="Detalla precios en Bolivianos (Bs), qué disciplinas o pases incluye y beneficios..."
-                    class="w-full px-3 py-2 bg-app border border-edge rounded-xl text-xs text-body focus:outline-none focus:border-accent leading-relaxed"
+                    class="w-full p-2.5 bg-app border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent leading-relaxed"
                   />
                 </div>
 
-                <div class="flex items-center justify-end gap-2 pt-2">
+                <div class="flex items-center justify-end gap-2 pt-2 border-t border-edge">
                   <button
                     type="button"
                     onClick={() => setShowKbModal(false)}
-                    class="px-4 py-2 rounded-xl text-xs font-bold text-muted hover:bg-elevate cursor-pointer"
+                    class="px-3 py-1.5 rounded-lg text-xs font-medium text-body-soft hover:bg-elevate cursor-pointer border border-edge"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
-                    class="px-5 py-2 bg-accent hover:bg-accent-hover text-white text-xs font-extrabold rounded-xl transition shadow-md cursor-pointer"
+                    class="px-4 py-1.5 bg-accent hover:bg-accent-hover text-white text-xs font-semibold rounded-lg transition shadow-xs cursor-pointer"
                   >
                     Guardar Entrada
                   </button>

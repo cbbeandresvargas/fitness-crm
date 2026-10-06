@@ -97,11 +97,11 @@ export default function ActivityCatalog() {
 
   return (
     <Layout title="Catálogo de Actividades">
-      <div class="space-y-6 max-w-4xl mx-auto">
+      <div class="space-y-4 sm:space-y-6 max-w-4xl mx-auto">
         {/* Cabecera */}
-        <div class="p-8 rounded-3xl bg-surface border border-edge space-y-3">
-          <h2 class="text-2xl font-black text-body flex items-center gap-2.5">
-            <ActivityIcon class="w-6 h-6 text-accent" />
+        <div class="p-4 sm:p-5 rounded-xl bg-surface border border-edge space-y-1.5">
+          <h2 class="text-base font-bold text-body flex items-center gap-2">
+            <ActivityIcon class="w-5 h-5 text-accent" />
             <span>Catálogo de Actividades</span>
           </h2>
           <p class="text-xs text-muted max-w-2xl leading-relaxed">
@@ -114,7 +114,7 @@ export default function ActivityCatalog() {
         {/* Añadir actividad */}
         <form
           onSubmit={handleCreate}
-          class="p-5 sm:p-6 rounded-3xl bg-surface border border-edge flex flex-col sm:flex-row gap-3 shadow-xl"
+          class="p-3 sm:p-4 rounded-xl bg-surface border border-edge flex flex-col sm:flex-row gap-2.5 shadow-xs"
         >
           <input
             type="text"
@@ -122,25 +122,25 @@ export default function ActivityCatalog() {
             onInput={(e) => setNewName(e.currentTarget.value)}
             placeholder="Nombre de la actividad (ej. Yoga, Boxeo, Spinning...)"
             maxlength="60"
-            class="flex-1 px-4 py-2.5 bg-app border border-edge rounded-2xl text-xs text-body focus:outline-none focus:border-accent"
+            class="flex-1 px-3 py-2 bg-app border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent"
           />
           <button
             type="submit"
             disabled={!newName().trim() || saving()}
-            class="px-6 py-2.5 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded-2xl transition shadow-accent-glow disabled:opacity-50 cursor-pointer whitespace-nowrap flex items-center justify-center gap-1.5"
+            class="px-4 py-2 bg-accent hover:bg-accent-hover text-white text-xs font-semibold rounded-lg transition disabled:opacity-50 cursor-pointer whitespace-nowrap flex items-center justify-center gap-1.5 shadow-xs"
           >
-            <Plus class="w-4 h-4" />
+            <Plus class="w-3.5 h-3.5" />
             <span>{saving() ? 'Guardando...' : 'Añadir actividad'}</span>
           </button>
         </form>
 
         {/* Listado */}
-        <div class="p-5 sm:p-6 rounded-3xl bg-surface border border-edge space-y-4 shadow-xl">
+        <div class="p-4 sm:p-5 rounded-xl bg-surface border border-edge space-y-3.5 shadow-xs">
           <div class="flex items-center justify-between">
-            <h3 class="text-base font-bold text-body">Actividades del catálogo</h3>
-            <span class="text-xs text-muted">
+            <h3 class="text-xs font-bold text-body uppercase tracking-wider text-muted">Actividades del catálogo</h3>
+            <span class="text-[11px] text-muted">
               {activities().filter((a) => a.is_active).length} activas ·{' '}
-              {activities().filter((a) => !a.is_active).length} eliminadas
+              {activities().filter((a) => !a.is_active).length} inactivas
             </span>
           </div>
 
@@ -149,38 +149,38 @@ export default function ActivityCatalog() {
             fallback={
               <Show
                 when={loading()}
-                fallback={<p class="text-xs text-muted">El catálogo está vacío.</p>}
+                fallback={<p class="text-xs text-muted py-4 text-center">El catálogo está vacío.</p>}
               >
                 <div class="flex justify-center py-6">
-                  <div class="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
+                  <div class="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin"></div>
                 </div>
               </Show>
             }
           >
-            <div class="overflow-x-auto rounded-2xl border border-edge">
+            <div class="overflow-x-auto rounded-lg border border-edge">
               <table class="w-full text-left text-xs">
-                <thead class="bg-app text-muted font-bold uppercase text-[10px]">
+                <thead class="bg-app text-muted font-semibold uppercase text-[10px]">
                   <tr>
-                    <th class="p-3 border-b border-edge">Actividad</th>
-                    <th class="p-3 border-b border-edge">Prospectos interesados</th>
+                    <th class="py-2 px-3 border-b border-edge">Actividad</th>
+                    <th class="py-2 px-3 border-b border-edge">Prospectos interesados</th>
                     <Show when={user()?.role === 'admin'}>
-                      <th class="p-3 border-b border-edge text-right">Acciones</th>
+                      <th class="py-2 px-3 border-b border-edge text-right">Acciones</th>
                     </Show>
                   </tr>
                 </thead>
-                <tbody class="divide-y divide-edge/60 bg-app/40">
+                <tbody class="divide-y divide-edge/60 bg-app/40 text-xs">
                   <For each={activities()}>
                     {(activity) => (
-                      <tr class={activity.is_active ? '' : 'opacity-50'}>
-                        <td class="p-3">
+                      <tr class={`hover:bg-elevate/40 transition ${activity.is_active ? '' : 'opacity-50'}`}>
+                        <td class="py-2 px-3">
                           <Show
                             when={editingId() === activity.id}
                             fallback={
-                              <span class="font-bold text-body">
+                              <span class="font-medium text-body">
                                 {activity.name}
                                 <Show when={!activity.is_active}>
-                                  <span class="ml-2 text-[10px] font-semibold text-muted">
-                                    (eliminada)
+                                  <span class="ml-1.5 text-[10px] text-muted font-normal">
+                                    (inactiva)
                                   </span>
                                 </Show>
                               </span>
@@ -191,29 +191,29 @@ export default function ActivityCatalog() {
                               value={editName()}
                               onInput={(e) => setEditName(e.currentTarget.value)}
                               maxlength="60"
-                              class="w-full max-w-xs px-3 py-1.5 bg-app border border-edge rounded-xl text-xs text-body focus:outline-none focus:border-accent"
+                              class="w-full max-w-xs px-2.5 py-1 bg-app border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent"
                             />
                           </Show>
                         </td>
-                        <td class="p-3">
-                          <span class="font-bold text-accent-text">
+                        <td class="py-2 px-3">
+                          <span class="font-semibold text-accent-text">
                             {activity.prospect_count || 0}
                           </span>
-                          <span class="text-muted"> prospecto(s)</span>
+                          <span class="text-muted text-[11px]"> prospecto(s)</span>
                         </td>
                         <Show when={user()?.role === 'admin'}>
-                          <td class="p-3 text-right">
-                            <div class="inline-flex items-center gap-1.5">
+                          <td class="py-2 px-3 text-right">
+                            <div class="inline-flex items-center gap-1">
                               <Show
                                 when={editingId() === activity.id}
                                 fallback={
                                   <button
                                     type="button"
                                     onClick={() => handleStartEdit(activity)}
-                                    class="p-2 bg-elevate hover:bg-elevate-strong text-body-soft rounded-xl font-semibold transition cursor-pointer flex items-center justify-center"
+                                    class="p-1.5 bg-elevate hover:bg-elevate-strong text-body-soft rounded-lg transition cursor-pointer flex items-center justify-center border border-edge"
                                     title="Renombrar"
                                   >
-                                    <Pencil class="w-3.5 h-3.5" />
+                                    <Pencil class="w-3 h-3" />
                                   </button>
                                 }
                               >
@@ -221,15 +221,15 @@ export default function ActivityCatalog() {
                                   type="button"
                                   onClick={() => handleSaveEdit(activity.id)}
                                   disabled={saving() || !editName().trim()}
-                                  class="px-3 py-1.5 bg-accent hover:bg-accent-hover text-white rounded-xl font-bold transition cursor-pointer disabled:opacity-50 inline-flex items-center gap-1"
+                                  class="px-2.5 py-1 bg-accent hover:bg-accent-hover text-white rounded-lg text-xs font-semibold transition cursor-pointer disabled:opacity-50 inline-flex items-center gap-1"
                                 >
-                                  <Check class="w-3.5 h-3.5" />
+                                  <Check class="w-3 h-3" />
                                   <span>Guardar</span>
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => setEditingId(null)}
-                                  class="px-3 py-1.5 bg-elevate hover:bg-elevate-strong text-body-soft rounded-xl font-semibold transition cursor-pointer"
+                                  class="px-2.5 py-1 bg-elevate hover:bg-elevate-strong text-body-soft rounded-lg text-xs font-medium transition cursor-pointer border border-edge"
                                 >
                                   Cancelar
                                 </button>
@@ -238,14 +238,14 @@ export default function ActivityCatalog() {
                                 <button
                                   type="button"
                                   onClick={() => handleDelete(activity)}
-                                  class="p-2 bg-red-950/40 hover:bg-red-900/60 text-red-400 rounded-xl font-semibold transition cursor-pointer flex items-center justify-center"
+                                  class="p-1.5 bg-red-950/40 hover:bg-red-900/60 text-red-400 rounded-lg transition cursor-pointer flex items-center justify-center border border-red-900/40"
                                   title={
                                     (activity.prospect_count || 0) > 0
                                       ? `Asociada a ${activity.prospect_count} prospecto(s)`
                                       : 'Eliminar del catálogo'
                                   }
                                 >
-                                  <Trash class="w-3.5 h-3.5" />
+                                  <Trash class="w-3 h-3" />
                                 </button>
                               </Show>
                             </div>

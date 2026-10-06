@@ -12,14 +12,14 @@ export function SegmentBadge(props: { segment: FcSegment | null | undefined }) {
     <Show
       when={props.segment ? FC_SEGMENTS[props.segment] : null}
       fallback={
-        <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold inline-block bg-elevate border border-edge-strong text-muted">
+        <span class="rounded-md px-2 py-0.5 text-[11px] font-medium inline-block bg-elevate border border-edge text-muted">
           Sin segmento
         </span>
       }
     >
       {(seg) => (
         <span
-          class={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold border ${seg().chipClasses}`}
+          class={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-medium border ${seg().chipClasses}`}
           title={seg().description}
         >
           <Show
@@ -27,13 +27,13 @@ export function SegmentBadge(props: { segment: FcSegment | null | undefined }) {
             fallback={
               <Show
                 when={seg().id === 'B'}
-                fallback={<Clock class="w-3 h-3 text-amber-800 dark:text-amber-400" />}
+                fallback={<Clock class="w-3 h-3 shrink-0 text-amber-800 dark:text-amber-400" />}
               >
-                <Target class="w-3 h-3 text-orange-700 dark:text-orange-400" />
+                <Target class="w-3 h-3 shrink-0 text-orange-700 dark:text-orange-400" />
               </Show>
             }
           >
-            <Flame class="w-3 h-3 text-accent-text" />
+            <Flame class="w-3 h-3 shrink-0 text-accent-text" />
           </Show>
           <span>{seg().label}</span>
         </span>

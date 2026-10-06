@@ -26,16 +26,18 @@ export interface LeadFormFieldsProps {
  */
 export function LeadFormFields(props: LeadFormFieldsProps) {
   const inputClass =
-    'w-full px-4 py-2.5 bg-app border border-edge rounded-2xl text-xs text-body focus:outline-none focus:border-accent';
-  const labelClass = 'block text-xs font-bold text-body-soft mb-1';
+    'w-full px-3 py-1.5 bg-app border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent transition';
+  const labelClass = 'block text-[11px] font-medium text-body-soft mb-1';
 
   return (
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
       <div>
-        <label class={labelClass}>Nombre *</label>
+        <label for="lead-field-firstname" class={labelClass}>Nombre *</label>
         <input
+          id="lead-field-firstname"
           type="text"
           required
+          aria-required="true"
           value={props.firstName()}
           onInput={(e) => props.setFirstName(e.currentTarget.value)}
           placeholder="Ej. Sofía"
@@ -44,10 +46,12 @@ export function LeadFormFields(props: LeadFormFieldsProps) {
       </div>
 
       <div>
-        <label class={labelClass}>Apellido *</label>
+        <label for="lead-field-lastname" class={labelClass}>Apellido *</label>
         <input
+          id="lead-field-lastname"
           type="text"
           required
+          aria-required="true"
           value={props.lastName()}
           onInput={(e) => props.setLastName(e.currentTarget.value)}
           placeholder="Ej. Morales"
@@ -56,10 +60,12 @@ export function LeadFormFields(props: LeadFormFieldsProps) {
       </div>
 
       <div>
-        <label class={labelClass}>WhatsApp *</label>
+        <label for="lead-field-phone" class={labelClass}>WhatsApp *</label>
         <input
+          id="lead-field-phone"
           type="text"
           required
+          aria-required="true"
           value={props.phone()}
           onInput={(e) => props.setPhone(e.currentTarget.value)}
           placeholder="+591 70000000"
@@ -68,8 +74,9 @@ export function LeadFormFields(props: LeadFormFieldsProps) {
       </div>
 
       <div>
-        <label class={labelClass}>Correo Electrónico (Opcional)</label>
+        <label for="lead-field-email" class={labelClass}>Correo Electrónico (Opcional)</label>
         <input
+          id="lead-field-email"
           type="email"
           value={props.email()}
           onInput={(e) => props.setEmail(e.currentTarget.value)}
@@ -79,8 +86,9 @@ export function LeadFormFields(props: LeadFormFieldsProps) {
       </div>
 
       <div>
-        <label class={labelClass}>CI (Opcional)</label>
+        <label for="lead-field-ci" class={labelClass}>CI (Opcional)</label>
         <input
+          id="lead-field-ci"
           type="text"
           value={props.ci()}
           onInput={(e) => props.setCi(e.currentTarget.value)}
@@ -90,8 +98,9 @@ export function LeadFormFields(props: LeadFormFieldsProps) {
       </div>
 
       <div>
-        <label class={labelClass}>Estado del Lead</label>
+        <label for="lead-field-status" class={labelClass}>Estado del Lead</label>
         <select
+          id="lead-field-status"
           value={props.status()}
           onChange={(e) => props.setStatus(e.currentTarget.value)}
           class={inputClass}
@@ -103,8 +112,9 @@ export function LeadFormFields(props: LeadFormFieldsProps) {
       </div>
 
       <div class="md:col-span-2">
-        <label class={labelClass}>Ciudad (Opcional)</label>
+        <label for="lead-field-city" class={labelClass}>Ciudad (Opcional)</label>
         <select
+          id="lead-field-city"
           value={props.city()}
           onChange={(e) => props.setCity(e.currentTarget.value)}
           class={inputClass}

@@ -288,19 +288,19 @@ export default function WhatsAppInbox() {
     <Layout title="Bandeja de Entrada WhatsApp">
       <div class="h-[calc(100vh-5rem)] flex flex-col -m-4 md:-m-8 bg-app overflow-hidden">
         {/* Top Header */}
-        <div class="px-6 py-3 bg-surface/90 border-b border-edge flex items-center justify-between shrink-0">
-          <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
-              <MessageSquare size={18} />
+        <div class="px-4 py-2.5 bg-surface border-b border-edge flex items-center justify-between shrink-0">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
+              <MessageSquare size={16} />
             </div>
             <div>
-              <h1 class="text-sm font-extrabold text-body flex items-center gap-2">
-                WhatsApp Live Inbox
-                <span class="px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-bold">
+              <h1 class="text-xs sm:text-sm font-bold text-body flex items-center gap-1.5">
+                <span>WhatsApp Live Inbox</span>
+                <span class="px-1.5 py-0.2 rounded text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold">
                   Meta v25.0
                 </span>
               </h1>
-              <p class="text-xs text-muted">
+              <p class="text-[11px] text-muted hidden sm:block">
                 Respuestas automáticas con IA y gestión comercial para Fitness Club Pass Cochabamba
               </p>
             </div>
@@ -309,9 +309,9 @@ export default function WhatsAppInbox() {
           <div class="flex items-center gap-2">
             <A
               href="/settings/whatsapp"
-              class="px-3 py-1.5 rounded-xl bg-elevate hover:bg-elevate-strong text-body text-xs font-bold border border-edge transition flex items-center gap-1.5"
+              class="px-2.5 py-1.5 rounded-lg bg-elevate hover:bg-elevate-strong text-body text-xs font-medium border border-edge transition flex items-center gap-1.5"
             >
-              <Settings size={14} />
+              <Settings size={13} />
               <span>Ajustes & IA Comercial</span>
             </A>
           </div>
@@ -321,22 +321,22 @@ export default function WhatsAppInbox() {
         <div class="flex-1 flex overflow-hidden">
           {/* LEFT COLUMN: LIST */}
           <div
-            class={`w-full md:w-80 lg:w-96 border-r border-edge bg-surface/60 flex flex-col shrink-0 ${
+            class={`w-full md:w-72 lg:w-80 border-r border-edge bg-surface/60 flex flex-col shrink-0 ${
               selectedLeadId() ? 'hidden md:flex' : 'flex'
             }`}
           >
             {/* Search & Filter Tabs */}
-            <div class="p-3 border-b border-edge space-y-2">
+            <div class="p-2.5 border-b border-edge space-y-2">
               <div class="relative">
                 <input
                   type="text"
-                  placeholder="Buscar por nombre, teléfono o mensaje..."
+                  placeholder="Buscar prospecto o mensaje..."
                   value={searchQuery()}
                   onInput={(e) => setSearchQuery(e.currentTarget.value)}
-                  class="w-full pl-9 pr-3 py-2 bg-app border border-edge rounded-xl text-xs text-body placeholder-muted focus:outline-none focus:border-accent"
+                  class="w-full pl-8 pr-2.5 py-1.5 bg-app border border-edge rounded-lg text-xs text-body placeholder-muted focus:outline-none focus:border-accent"
                 />
-                <span class="absolute left-3 top-2.5 text-muted">
-                  <Search size={14} />
+                <span class="absolute left-2.5 top-2 text-muted">
+                  <Search size={13} />
                 </span>
               </div>
 
@@ -345,9 +345,9 @@ export default function WhatsAppInbox() {
                 <button
                   type="button"
                   onClick={() => setFilterMode('all')}
-                  class={`px-2.5 py-1 rounded-lg font-bold transition whitespace-nowrap cursor-pointer ${
+                  class={`px-2 py-0.5 rounded-md font-medium transition whitespace-nowrap cursor-pointer ${
                     filterMode() === 'all'
-                      ? 'bg-accent text-white shadow-sm'
+                      ? 'bg-accent text-white shadow-xs'
                       : 'bg-elevate text-muted hover:text-body'
                   }`}
                 >
@@ -356,37 +356,37 @@ export default function WhatsAppInbox() {
                 <button
                   type="button"
                   onClick={() => setFilterMode('unread')}
-                  class={`px-2.5 py-1 rounded-lg font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+                  class={`px-2 py-0.5 rounded-md font-medium transition whitespace-nowrap cursor-pointer flex items-center gap-1 ${
                     filterMode() === 'unread'
-                      ? 'bg-accent text-white shadow-sm'
+                      ? 'bg-accent text-white shadow-xs'
                       : 'bg-elevate text-muted hover:text-body'
                   }`}
                 >
-                  <Mail size={12} />
+                  <Mail size={11} />
                   <span>Sin leer</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setFilterMode('ai')}
-                  class={`px-2.5 py-1 rounded-lg font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+                  class={`px-2 py-0.5 rounded-md font-medium transition whitespace-nowrap cursor-pointer flex items-center gap-1 ${
                     filterMode() === 'ai'
-                      ? 'bg-accent text-white shadow-sm'
+                      ? 'bg-accent text-white shadow-xs'
                       : 'bg-elevate text-muted hover:text-body'
                   }`}
                 >
-                  <Bot size={12} />
+                  <Bot size={11} />
                   <span>IA Activa</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setFilterMode('handoff')}
-                  class={`px-2.5 py-1 rounded-lg font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+                  class={`px-2 py-0.5 rounded-md font-semibold transition whitespace-nowrap cursor-pointer flex items-center gap-1 ${
                     filterMode() === 'handoff'
-                      ? 'bg-amber-500 text-black shadow-sm'
+                      ? 'bg-amber-500 text-black shadow-xs'
                       : 'bg-elevate text-amber-400 hover:text-body'
                   }`}
                 >
-                  <AlertTriangle size={12} />
+                  <AlertTriangle size={11} />
                   <span>Handoff</span>
                 </button>
               </div>
@@ -397,8 +397,8 @@ export default function WhatsAppInbox() {
               <Show
                 when={!loadingList()}
                 fallback={
-                  <div class="p-8 text-center text-xs text-muted animate-pulse flex items-center justify-center gap-2">
-                    <RefreshCw size={14} class="animate-spin" />
+                  <div class="p-6 text-center text-xs text-muted animate-pulse flex items-center justify-center gap-2">
+                    <RefreshCw size={13} class="animate-spin" />
                     <span>Cargando conversaciones...</span>
                   </div>
                 }
@@ -406,11 +406,11 @@ export default function WhatsAppInbox() {
                 <Show
                   when={filteredConversations().length > 0}
                   fallback={
-                    <div class="p-8 text-center space-y-2">
-                      <div class="w-12 h-12 rounded-2xl bg-surface border border-edge flex items-center justify-center mx-auto text-muted">
-                        <MessageSquare size={22} />
+                    <div class="p-6 text-center space-y-2">
+                      <div class="w-10 h-10 rounded-xl bg-surface border border-edge flex items-center justify-center mx-auto text-muted">
+                        <MessageSquare size={18} />
                       </div>
-                      <p class="text-xs text-muted font-bold">No hay conversaciones</p>
+                      <p class="text-xs text-muted font-medium">No hay conversaciones</p>
                       <p class="text-[11px] text-muted">Los mensajes entrantes de WhatsApp aparecerán aquí automáticamente.</p>
                     </div>
                   }
@@ -419,17 +419,17 @@ export default function WhatsAppInbox() {
                     {(conv) => (
                       <div
                         onClick={() => selectConversation(conv.leadId)}
-                        class={`p-3.5 flex items-start gap-3 transition cursor-pointer select-none ${
+                        class={`p-2.5 sm:p-3 flex items-start gap-2.5 transition cursor-pointer select-none ${
                           selectedLeadId() === conv.leadId
-                            ? 'bg-accent/15 border-l-4 border-l-accent'
+                            ? 'bg-accent/15 border-l-2 border-l-accent'
                             : 'hover:bg-elevate/40'
                         }`}
                       >
                         {/* Avatar */}
-                        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-surface to-elevate-strong border border-edge flex items-center justify-center font-black text-body text-xs shrink-0 relative">
+                        <div class="w-8 h-8 rounded-lg bg-elevate border border-edge flex items-center justify-center font-bold text-body text-xs shrink-0 relative">
                           {conv.leadName.charAt(0).toUpperCase()}
                           <Show when={conv.unreadCount > 0}>
-                            <span class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 text-white text-[9px] font-black flex items-center justify-center shadow-md">
+                            <span class="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 text-white text-[8px] font-bold flex items-center justify-center shadow-xs">
                               {conv.unreadCount}
                             </span>
                           </Show>
@@ -438,7 +438,7 @@ export default function WhatsAppInbox() {
                         {/* Middle info */}
                         <div class="flex-1 min-w-0 space-y-0.5">
                           <div class="flex items-center justify-between">
-                            <span class="text-xs font-bold text-body truncate">
+                            <span class="text-xs font-semibold text-body truncate">
                               {conv.leadName}
                             </span>
                             <span class="text-[10px] text-muted shrink-0">
@@ -454,19 +454,19 @@ export default function WhatsAppInbox() {
                           </p>
 
                           {/* Status and Badges */}
-                          <div class="flex items-center gap-1.5 pt-1">
-                            <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-surface border border-edge text-muted">
+                          <div class="flex items-center gap-1 pt-0.5">
+                            <span class="px-1.5 py-0.2 rounded text-[9px] font-medium bg-surface border border-edge text-muted">
                               {conv.leadStatus.toUpperCase()}
                             </span>
                             <Show when={conv.aiEnabled && !conv.isHandoff}>
-                              <span class="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-accent/20 text-accent-text border border-accent/30 flex items-center gap-1">
-                                <Bot size={10} />
+                              <span class="px-1.5 py-0.2 rounded text-[9px] font-medium bg-accent/15 text-accent-text border border-accent/25 flex items-center gap-0.5">
+                                <Bot size={9} />
                                 <span>IA Activa</span>
                               </span>
                             </Show>
                             <Show when={conv.isHandoff}>
-                              <span class="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1">
-                                <AlertTriangle size={10} />
+                              <span class="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-0.5">
+                                <AlertTriangle size={9} />
                                 <span>Requiere Asesor</span>
                               </span>
                             </Show>
@@ -490,8 +490,8 @@ export default function WhatsAppInbox() {
               when={selectedLeadId() && activeLead()}
               fallback={
                 <div class="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-3">
-                  <div class="w-16 h-16 rounded-3xl bg-surface border border-edge flex items-center justify-center text-muted shadow-xl">
-                    <MessageSquare size={32} />
+                  <div class="w-12 h-12 rounded-xl bg-surface border border-edge flex items-center justify-center text-muted shadow-xs">
+                    <MessageSquare size={24} />
                   </div>
                   <h3 class="text-sm font-bold text-body">Selecciona una conversación</h3>
                   <p class="text-xs text-muted max-w-sm">
@@ -501,38 +501,38 @@ export default function WhatsAppInbox() {
               }
             >
               {/* Chat Header */}
-              <div class="p-3.5 bg-surface/90 border-b border-edge flex flex-wrap items-center justify-between gap-3 shrink-0">
-                <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+              <div class="p-2.5 sm:p-3 bg-surface border-b border-edge flex flex-wrap items-center justify-between gap-2.5 shrink-0">
+                <div class="flex items-center gap-2.5 min-w-0">
                   {/* Botón Volver a lista en móvil */}
                   <button
                     type="button"
                     onClick={handleBackToList}
-                    class="md:hidden p-2 rounded-xl bg-app border border-edge text-body-soft hover:text-body transition cursor-pointer flex items-center justify-center shrink-0"
+                    class="md:hidden p-1.5 rounded-lg bg-app border border-edge text-body-soft hover:text-body transition cursor-pointer flex items-center justify-center shrink-0"
                     title="Volver a la lista de conversaciones"
                     aria-label="Volver a la lista de conversaciones"
                   >
-                    <ArrowLeft size={16} />
+                    <ArrowLeft size={14} />
                   </button>
 
-                  <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-accent to-accent-hover text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
+                  <div class="w-8 h-8 rounded-lg bg-accent text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
                     {activeLead()?.full_name?.charAt(0) || 'L'}
                   </div>
                   <div class="min-w-0">
                     <div class="flex items-center gap-2">
-                      <span class="font-extrabold text-xs text-body truncate">
+                      <span class="font-bold text-xs text-body truncate">
                         {activeLead()?.full_name}
                       </span>
                       <A
                         href={`/leads/${activeLead()?.id}`}
-                        class="text-[11px] text-accent-text hover:underline font-bold flex items-center gap-1"
+                        class="text-[11px] text-accent-text hover:underline font-semibold flex items-center gap-0.5"
                       >
                         <span>Ficha</span>
-                        <ExternalLink size={11} />
+                        <ExternalLink size={10} />
                       </A>
                     </div>
                     <div class="flex items-center gap-2 text-[11px] text-muted">
                       <span class="flex items-center gap-1">
-                        <Phone size={11} />
+                        <Phone size={10} />
                         <span>{activeLead()?.phone}</span>
                       </span>
                       <span>•</span>
@@ -543,7 +543,7 @@ export default function WhatsAppInbox() {
                           value={activeLead()?.status || 'nuevo'}
                           onChange={(e) => handleUpdateStatus(e.currentTarget.value)}
                           disabled={updatingStage()}
-                          class="px-2 py-0.5 rounded-lg bg-app border border-edge text-[10px] font-bold text-body focus:outline-none focus:border-accent cursor-pointer"
+                          class="px-1.5 py-0.5 rounded-md bg-app border border-edge text-[10px] font-semibold text-body focus:outline-none focus:border-accent cursor-pointer"
                         >
                           <option value="nuevo">Nuevo</option>
                           <option value="contactado">Contactado</option>
@@ -557,16 +557,16 @@ export default function WhatsAppInbox() {
                 </div>
 
                 {/* AI Status & Controls */}
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1.5">
                   <button
                     type="button"
                     onClick={handleTriggerAi}
                     disabled={triggeringAi() || !activeLead()}
-                    class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-accent hover:bg-accent-hover text-white border border-accent/40 shadow-sm cursor-pointer disabled:opacity-50"
+                    class="px-2.5 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1 bg-accent hover:bg-accent-hover text-white border border-accent/40 shadow-xs cursor-pointer disabled:opacity-50"
                     title="Generar y enviar respuesta de IA para el último mensaje de este cliente"
                   >
-                    <Show when={triggeringAi()} fallback={<Sparkles size={13} />}>
-                      <RefreshCw size={13} class="animate-spin" />
+                    <Show when={triggeringAi()} fallback={<Sparkles size={12} />}>
+                      <RefreshCw size={12} class="animate-spin" />
                     </Show>
                     <span>{triggeringAi() ? 'Pensando...' : 'Disparar IA'}</span>
                   </button>
@@ -578,33 +578,33 @@ export default function WhatsAppInbox() {
                         type="button"
                         onClick={() => handleToggleAi(false)}
                         disabled={togglingAi()}
-                        class={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer ${
+                        class={`px-2.5 py-1 rounded-lg text-xs font-medium transition flex items-center gap-1 border cursor-pointer ${
                           activeLead()?.ai_enabled
                             ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
                             : 'bg-elevate text-muted border-edge hover:text-body'
                         }`}
                         title="Pausar o reactivar respuestas de IA para este chat"
                       >
-                        <Show when={activeLead()?.ai_enabled} fallback={<User size={13} />}>
-                          <Bot size={13} class="text-emerald-400" />
+                        <Show when={activeLead()?.ai_enabled} fallback={<User size={12} />}>
+                          <Bot size={12} class="text-emerald-400" />
                         </Show>
-                        <span>{activeLead()?.ai_enabled ? 'IA Activa' : 'Control Manual'}</span>
+                        <span>{activeLead()?.ai_enabled ? 'IA Activa' : 'Manual'}</span>
                       </button>
                     }
                   >
-                    <div class="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-xl">
-                      <span class="text-xs text-amber-300 font-bold flex items-center gap-1">
-                        <AlertTriangle size={13} />
-                        <span>Handoff Activo</span>
+                    <div class="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-lg">
+                      <span class="text-xs text-amber-300 font-semibold flex items-center gap-1">
+                        <AlertTriangle size={12} />
+                        <span>Handoff</span>
                       </span>
                       <button
                         type="button"
                         onClick={() => handleToggleAi(true)}
                         disabled={togglingAi()}
-                        class="px-2 py-0.5 bg-amber-500 hover:bg-amber-400 text-black text-[10px] font-black rounded-lg transition cursor-pointer flex items-center gap-1"
+                        class="px-1.5 py-0.2 bg-amber-500 hover:bg-amber-400 text-black text-[10px] font-bold rounded transition cursor-pointer flex items-center gap-1"
                       >
-                        <RefreshCw size={10} class={togglingAi() ? 'animate-spin' : ''} />
-                        <span>{togglingAi() ? 'Reactivando...' : 'Reactivar IA'}</span>
+                        <RefreshCw size={9} class={togglingAi() ? 'animate-spin' : ''} />
+                        <span>{togglingAi() ? 'Reactivando...' : 'Reactivar'}</span>
                       </button>
                     </div>
                   </Show>
@@ -614,13 +614,13 @@ export default function WhatsAppInbox() {
               {/* Chat Messages Scroll Container */}
               <div
                 ref={chatContainerRef}
-                class="flex-1 p-4 overflow-y-auto space-y-3 bg-gradient-to-b from-app to-surface/20"
+                class="flex-1 p-3 overflow-y-auto space-y-2 bg-app/50"
               >
                 <Show
                   when={!loadingChat()}
                   fallback={
-                    <div class="p-8 text-center text-xs text-muted animate-pulse flex items-center justify-center gap-2">
-                      <RefreshCw size={14} class="animate-spin" />
+                    <div class="p-6 text-center text-xs text-muted animate-pulse flex items-center justify-center gap-2">
+                      <RefreshCw size={13} class="animate-spin" />
                       <span>Cargando mensajes...</span>
                     </div>
                   }
@@ -628,7 +628,7 @@ export default function WhatsAppInbox() {
                   <Show
                     when={messages().length > 0}
                     fallback={
-                      <div class="p-8 text-center text-xs text-muted space-y-1">
+                      <div class="p-6 text-center text-xs text-muted space-y-1">
                         <p>No hay mensajes registrados aún en este chat.</p>
                         <p class="text-[11px]">Envía un mensaje inicial o una plantilla abajo para comenzar la conversación.</p>
                       </div>
@@ -644,7 +644,7 @@ export default function WhatsAppInbox() {
                             }`}
                           >
                             <div
-                              class={`max-w-[75%] rounded-2xl px-4 py-2.5 text-xs shadow-md space-y-1 relative ${
+                              class={`max-w-[78%] rounded-xl px-3 py-2 text-xs shadow-xs space-y-1 relative ${
                                 isOutbound
                                   ? 'bg-emerald-700 text-white rounded-tr-none'
                                   : 'bg-surface border border-edge text-body rounded-tl-none'
@@ -652,12 +652,12 @@ export default function WhatsAppInbox() {
                             >
                               {/* Sender Badge */}
                               <div class="flex items-center justify-between gap-2 text-[10px] opacity-80 pb-0.5">
-                                <span class="font-bold flex items-center gap-1">
+                                <span class="font-medium flex items-center gap-1">
                                   <Show
                                     when={isOutbound}
                                     fallback={
                                       <>
-                                        <User size={11} />
+                                        <User size={10} />
                                         <span>{activeLead()?.full_name || 'Prospecto'}</span>
                                       </>
                                     }
@@ -666,13 +666,13 @@ export default function WhatsAppInbox() {
                                       when={msg.ai_generated === 1}
                                       fallback={
                                         <>
-                                          <User size={11} />
+                                          <User size={10} />
                                           <span>{msg.user_name || 'Asesor Comercial'}</span>
                                         </>
                                       }
                                     >
-                                      <Bot size={11} />
-                                      <span>IA Closer (Fitness Club Pass)</span>
+                                      <Bot size={10} />
+                                      <span>IA Closer</span>
                                     </Show>
                                   </Show>
                                 </span>
@@ -683,7 +683,7 @@ export default function WhatsAppInbox() {
                                 <img
                                   src={msg.media_url!}
                                   alt="Imagen de chat"
-                                  class="w-full max-h-48 object-cover rounded-xl border border-white/10"
+                                  class="w-full max-h-48 object-cover rounded-lg border border-white/10"
                                 />
                               </Show>
 
@@ -719,10 +719,10 @@ export default function WhatsAppInbox() {
               </div>
 
               {/* Chat Input Bar */}
-              <div class="p-3 bg-surface/95 border-t border-edge space-y-2 shrink-0">
+              <div class="p-2.5 bg-surface border-t border-edge space-y-2 shrink-0">
                 {/* Quick Templates Pills */}
-                <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px]">
-                  <span class="text-muted shrink-0 font-bold text-[10px] flex items-center gap-1">
+                <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-[11px]">
+                  <span class="text-muted shrink-0 font-medium text-[10px] flex items-center gap-1">
                     <Sparkles size={11} class="text-accent-text" />
                     <span>Plantillas:</span>
                   </span>
@@ -739,7 +739,7 @@ export default function WhatsAppInbox() {
                             .replace(/\{agente\}/gi, 'tu Asesor');
                           setChatInput(text);
                         }}
-                        class="px-2.5 py-1 bg-elevate hover:bg-elevate-strong text-body-soft rounded-lg border border-edge shrink-0 truncate max-w-[160px] transition cursor-pointer"
+                        class="px-2 py-0.5 bg-elevate hover:bg-elevate-strong text-body-soft rounded-md border border-edge shrink-0 truncate max-w-[150px] transition cursor-pointer text-[10px]"
                         title={tmpl.content}
                       >
                         {tmpl.title}
@@ -750,19 +750,19 @@ export default function WhatsAppInbox() {
 
                 {/* Image Preview if selected */}
                 <Show when={imagePreview()}>
-                  <div class="relative inline-block border border-edge rounded-xl overflow-hidden bg-app/80 p-1">
+                  <div class="relative inline-block border border-edge rounded-lg overflow-hidden bg-app/80 p-1">
                     <img
                       src={imagePreview()!}
                       alt="Vista previa adjunto"
-                      class="h-20 w-auto rounded-lg object-cover"
+                      class="h-16 w-auto rounded-md object-cover"
                     />
                     <button
                       type="button"
                       onClick={handleRemoveImage}
-                      class="absolute top-1.5 right-1.5 bg-red-600/90 hover:bg-red-500 text-white w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center shadow cursor-pointer"
+                      class="absolute top-1 right-1 bg-red-600/90 hover:bg-red-500 text-white w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center shadow cursor-pointer"
                       title="Quitar imagen"
                     >
-                      <X size={12} />
+                      <X size={10} />
                     </button>
                   </div>
                 </Show>
@@ -780,10 +780,10 @@ export default function WhatsAppInbox() {
                   <button
                     type="button"
                     onClick={() => fileInputRef?.click()}
-                    class="p-2.5 bg-elevate hover:bg-elevate-strong text-body-soft rounded-xl border border-edge transition cursor-pointer flex items-center justify-center shrink-0"
+                    class="p-2 bg-elevate hover:bg-elevate-strong text-body-soft rounded-lg border border-edge transition cursor-pointer flex items-center justify-center shrink-0"
                     title="Adjuntar imagen o comprobante"
                   >
-                    <Image size={15} />
+                    <Image size={14} />
                   </button>
 
                   <input
@@ -791,15 +791,15 @@ export default function WhatsAppInbox() {
                     value={chatInput()}
                     onInput={(e) => setChatInput(e.currentTarget.value)}
                     placeholder="Escribe un mensaje o envía una foto..."
-                    class="flex-1 px-4 py-2.5 bg-app border border-edge rounded-xl text-xs text-body placeholder-muted focus:outline-none focus:border-emerald-500 transition"
+                    class="flex-1 px-3 py-2 bg-app border border-edge rounded-lg text-xs text-body placeholder-muted focus:outline-none focus:border-emerald-500 transition"
                   />
 
                   <button
                     type="submit"
                     disabled={sending() || (!chatInput().trim() && !selectedImage())}
-                    class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black transition shadow-md disabled:opacity-40 cursor-pointer shrink-0 flex items-center gap-1.5"
+                    class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition disabled:opacity-40 cursor-pointer shrink-0 flex items-center gap-1.5"
                   >
-                    <Send size={13} />
+                    <Send size={12} />
                     <span>{sending() ? 'Enviando...' : 'Enviar'}</span>
                   </button>
                 </form>

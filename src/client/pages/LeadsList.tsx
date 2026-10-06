@@ -141,43 +141,43 @@ export default function LeadsList() {
 
   return (
     <Layout title="Lista de Prospectos">
-      <div class="space-y-6 max-w-7xl mx-auto">
+      <div class="space-y-4 max-w-7xl mx-auto">
         {/* Controles y Filtros */}
-        <div class="p-6 rounded-3xl bg-surface border border-edge space-y-4 shadow-xl">
-          <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+        <div class="p-3.5 sm:p-4 rounded-xl bg-surface border border-edge space-y-3">
+          <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
             {/* Buscador reactivo */}
             <div class="relative flex-1 max-w-md">
-              <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-muted">
-                <Search class="w-4 h-4" />
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted">
+                <Search class="w-3.5 h-3.5" />
               </span>
               <input
                 type="text"
                 value={search()}
                 onInput={(e) => onSearchInput(e.currentTarget.value)}
                 placeholder="Buscar por nombre, teléfono o correo..."
-                class="w-full pl-10 pr-9 py-2.5 bg-app border border-edge rounded-2xl text-xs text-body placeholder-muted focus:outline-none focus:border-accent transition"
+                class="w-full pl-8 pr-8 py-2 bg-app border border-edge rounded-lg text-xs text-body placeholder-muted focus:outline-none focus:border-accent transition"
               />
               <Show when={search()}>
                 <button
                   type="button"
                   onClick={() => onSearchInput('')}
-                  class="absolute inset-y-0 right-0 pr-3 flex items-center text-muted hover:text-body"
+                  class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-muted hover:text-body cursor-pointer"
                   title="Limpiar búsqueda"
                 >
-                  <X class="w-4 h-4" />
+                  <X class="w-3.5 h-3.5" />
                 </button>
               </Show>
             </div>
 
             {/* Alternador de Vista & Botón Nuevo */}
-            <div class="flex items-center gap-3 self-end md:self-auto">
-              <div class="p-1 bg-app border border-edge rounded-xl flex items-center">
+            <div class="flex items-center gap-2 self-end md:self-auto">
+              <div class="p-0.5 bg-app border border-edge rounded-lg flex items-center">
                 <button
                   type="button"
                   onClick={() => setViewMode('table')}
-                  class={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                  class={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition cursor-pointer ${
                     viewMode() === 'table'
-                      ? 'bg-accent text-white shadow-sm'
+                      ? 'bg-accent text-white shadow-xs'
                       : 'text-muted hover:text-body'
                   }`}
                 >
@@ -187,9 +187,9 @@ export default function LeadsList() {
                 <button
                   type="button"
                   onClick={() => setViewMode('cards')}
-                  class={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                  class={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition cursor-pointer ${
                     viewMode() === 'cards'
-                      ? 'bg-accent text-white shadow-sm'
+                      ? 'bg-accent text-white shadow-xs'
                       : 'text-muted hover:text-body'
                   }`}
                 >
@@ -200,18 +200,18 @@ export default function LeadsList() {
 
               <A
                 href="/leads/new"
-                class="px-4 py-2 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded-2xl transition shadow-accent-glow flex items-center gap-1.5"
+                class="px-3 py-1.5 bg-accent hover:bg-accent-hover text-white text-xs font-semibold rounded-lg transition flex items-center gap-1.5"
               >
-                <Plus class="w-4 h-4" />
+                <Plus class="w-3.5 h-3.5" />
                 <span>Nuevo Prospecto</span>
               </A>
             </div>
           </div>
 
           {/* Filtros rápidos por Segmento y Estado */}
-          <div class="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-edge/80">
-            <div class="flex flex-wrap items-center gap-2">
-              <span class="text-xs font-bold text-muted mr-1">Segmento:</span>
+          <div class="flex flex-wrap items-center justify-between gap-2.5 pt-2.5 border-t border-edge/80">
+            <div class="flex flex-wrap items-center gap-1.5">
+              <span class="text-xs font-semibold text-muted mr-1">Segmento:</span>
               {[
                 { id: '', label: 'Todos' },
                 ...(['A', 'B', 'C'] as const).map((id) => ({
@@ -222,9 +222,9 @@ export default function LeadsList() {
                 <button
                   type="button"
                   onClick={() => setFilterSegment(seg.id)}
-                  class={`px-3 py-1 rounded-xl text-xs font-semibold transition border cursor-pointer ${
+                  class={`px-2.5 py-1 rounded-lg text-xs font-medium transition border cursor-pointer ${
                     segment() === seg.id
-                      ? 'bg-accent/20 border-accent text-accent-text'
+                      ? 'bg-accent/15 border-accent/60 text-accent-text'
                       : 'bg-app border-edge text-muted hover:text-body hover:border-edge-strong'
                   }`}
                 >
@@ -238,7 +238,7 @@ export default function LeadsList() {
               <select
                 value={status()}
                 onChange={(e) => setFilterStatus(e.currentTarget.value)}
-                class="px-3 py-1.5 bg-app border border-edge rounded-xl text-xs text-body-soft focus:outline-none focus:border-accent"
+                class="px-2.5 py-1 bg-app border border-edge rounded-lg text-xs text-body-soft focus:outline-none focus:border-accent cursor-pointer"
               >
                 <option value="">Todos los Estados</option>
                 <For each={LEAD_STATUS_OPTIONS}>
@@ -250,7 +250,7 @@ export default function LeadsList() {
                 <select
                   value={agentId()}
                   onChange={(e) => setFilterAgent(e.currentTarget.value)}
-                  class="px-3 py-1.5 bg-app border border-edge rounded-xl text-xs text-body-soft focus:outline-none focus:border-accent"
+                  class="px-2.5 py-1 bg-app border border-edge rounded-lg text-xs text-body-soft focus:outline-none focus:border-accent cursor-pointer"
                 >
                   <option value="">Todos los Asesores</option>
                   <For each={agents()}>
@@ -263,7 +263,7 @@ export default function LeadsList() {
                 <button
                   type="button"
                   onClick={clearFilters}
-                  class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs text-muted hover:text-red-400 transition"
+                  class="inline-flex items-center gap-1 px-2 py-1 text-xs text-muted hover:text-red-400 transition cursor-pointer"
                   title="Restablecer todos los filtros"
                 >
                   <X class="w-3.5 h-3.5" />
@@ -323,63 +323,63 @@ export default function LeadsList() {
           >
             {/* Vista Tabla */}
             <Show when={viewMode() === 'table'}>
-              <div class="rounded-3xl bg-surface border border-edge overflow-hidden shadow-2xl">
+              <div class="rounded-xl bg-surface border border-edge overflow-hidden">
                 <div class="overflow-x-auto">
                   <table class="w-full text-left text-xs">
-                    <thead class="bg-app/80 border-b border-edge text-muted uppercase font-bold tracking-wider">
+                    <thead class="bg-app/80 border-b border-edge text-muted uppercase font-bold tracking-wider text-[10px]">
                       <tr>
-                        <th class="p-4">Prospecto</th>
-                        <th class="p-4">Ciudad</th>
-                        <th class="p-4">Segmento</th>
-                        <th class="p-4">Estado del Lead</th>
-                        <th class="p-4">Membresía</th>
-                        <th class="p-4">Actividades de interés</th>
-                        <th class="p-4">Asesor</th>
-                        <th class="p-4 text-right">Acciones</th>
+                        <th class="py-2.5 px-3">Prospecto</th>
+                        <th class="py-2.5 px-3">Ciudad</th>
+                        <th class="py-2.5 px-3">Segmento</th>
+                        <th class="py-2.5 px-3">Estado del Lead</th>
+                        <th class="py-2.5 px-3">Membresía</th>
+                        <th class="py-2.5 px-3">Actividades</th>
+                        <th class="py-2.5 px-3">Asesor</th>
+                        <th class="py-2.5 px-3 text-right">Acciones</th>
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-edge/60">
                       <For each={leads()}>
                         {(lead) => (
                           <tr class="hover:bg-elevate/40 transition">
-                            <td class="p-4">
-                              <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-full bg-elevate border border-edge-strong flex items-center justify-center font-bold text-accent-text text-xs shrink-0">
+                            <td class="py-2.5 px-3">
+                              <div class="flex items-center gap-2.5">
+                                <div class="w-7 h-7 rounded-lg bg-elevate border border-edge-strong flex items-center justify-center font-bold text-accent-text text-xs shrink-0">
                                   {lead.full_name.slice(0, 2).toUpperCase()}
                                 </div>
                                 <div class="space-y-0.5 min-w-0">
                                   <A
                                     href={`/leads/${lead.id}`}
-                                    class="font-bold text-body hover:text-accent-text transition truncate block"
+                                    class="font-semibold text-body hover:text-accent-text transition truncate block"
                                   >
                                     {lead.full_name}
                                   </A>
-                                  <div class="text-[11px] text-muted flex items-center gap-2">
+                                  <div class="text-[11px] text-muted flex items-center gap-1.5">
                                     <span>{lead.phone}</span>
                                     <Show when={lead.email}>
                                       <span>•</span>
-                                      <span class="truncate max-w-[140px]">{lead.email}</span>
+                                      <span class="truncate max-w-[130px]">{lead.email}</span>
                                     </Show>
                                   </div>
                                 </div>
                               </div>
                             </td>
 
-                            <td class="p-4 text-xs font-semibold text-body-soft whitespace-nowrap">
+                            <td class="py-2.5 px-3 text-xs font-medium text-body-soft whitespace-nowrap">
                               {cityFromMetadata(lead.metadata) || (
                                 <span class="text-muted font-normal">—</span>
                               )}
                             </td>
 
-                            <td class="p-4">
+                            <td class="py-2.5 px-3">
                               <SegmentBadge segment={lead.segment} />
                             </td>
 
-                            <td class="p-4">
+                            <td class="py-2.5 px-3">
                               <select
                                 value={lead.status}
                                 onChange={(e) => handleStatusChange(lead.id, e.currentTarget.value)}
-                                class="bg-app border border-edge rounded-xl px-2.5 py-1 text-xs text-body-soft focus:outline-none focus:border-accent cursor-pointer"
+                                class="bg-app border border-edge rounded-lg px-2 py-1 text-xs text-body-soft focus:outline-none focus:border-accent cursor-pointer"
                               >
                                 <For each={LEAD_STATUS_OPTIONS}>
                                   {(opt) => <option value={opt.value}>{opt.label}</option>}
@@ -387,43 +387,36 @@ export default function LeadsList() {
                               </select>
                             </td>
 
-                            <td class="p-4">
+                            <td class="py-2.5 px-3">
                               <Show
                                 when={lead.metadata.estado_membresia}
                                 fallback={<span class="text-muted text-xs">—</span>}
                               >
-                                <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold inline-block bg-violet-500/20 text-violet-400 border border-violet-500/40">
+                                <span class="px-2 py-0.5 rounded-md text-[10px] font-bold inline-block bg-violet-500/15 text-violet-400 border border-violet-500/30">
                                   {lead.metadata.estado_membresia}
                                 </span>
                               </Show>
                               <Show when={lead.metadata.cantidad_membresias !== undefined}>
-                                <span class="block text-[10px] text-muted mt-1">
-                                  Cantidad: {lead.metadata.cantidad_membresias}
+                                <span class="block text-[10px] text-muted mt-0.5">
+                                  Cant: {lead.metadata.cantidad_membresias}
                                 </span>
                               </Show>
                             </td>
 
-                            <td class="p-4">
+                            <td class="py-2.5 px-3">
                               <Show
                                 when={(lead.interests || []).length > 0}
                                 fallback={<span class="text-muted text-xs">—</span>}
                               >
-                                {/* Chips en una sola línea horizontal: overflow
-                                    horizontal, nunca crecimiento vertical de la fila */}
-                                <div class="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap max-w-[300px] pb-0.5">
+                                <div class="flex items-center gap-1 overflow-x-auto whitespace-nowrap max-w-[240px] pb-0.5">
                                   <For each={lead.interests}>
                                     {(interest) => (
                                       <span
-                                        class={`px-2 py-0.5 rounded-lg border text-[10px] font-bold shrink-0 whitespace-nowrap ${
+                                        class={`px-1.5 py-0.5 rounded border text-[10px] font-medium shrink-0 whitespace-nowrap ${
                                           interest.is_active
-                                            ? 'bg-accent/20 border-accent/40 text-accent-text'
-                                            : 'bg-elevate border-edge-strong text-muted'
+                                            ? 'bg-accent/15 border-accent/30 text-accent-text'
+                                            : 'bg-elevate border-edge text-muted'
                                         }`}
-                                        title={
-                                          interest.is_active
-                                            ? undefined
-                                            : 'Eliminada del catálogo (atenuada)'
-                                        }
                                       >
                                         {interest.name}
                                       </span>
@@ -433,34 +426,34 @@ export default function LeadsList() {
                               </Show>
                             </td>
 
-                            <td class="p-4 text-body-soft">
+                            <td class="py-2.5 px-3 text-body-soft">
                               {lead.assigned_name || 'Sin asignar'}
                             </td>
 
-                            <td class="p-4 text-right">
-                              <div class="inline-flex items-center gap-1.5">
+                            <td class="py-2.5 px-3 text-right">
+                              <div class="inline-flex items-center gap-1">
                                 <a
                                   href={`https://wa.me/${lead.phone.replace(/^\+/, '')}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  class="p-2 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 rounded-xl transition flex items-center justify-center"
+                                  class="p-1.5 bg-emerald-600/15 hover:bg-emerald-600/30 text-emerald-400 rounded-lg transition flex items-center justify-center"
                                   title="Abrir WhatsApp directo"
                                 >
-                                  <MessageSquare class="w-4 h-4" />
+                                  <MessageSquare class="w-3.5 h-3.5" />
                                 </a>
                                 <A
                                   href={`/leads/${lead.id}`}
-                                  class="px-3 py-1.5 bg-elevate hover:bg-elevate-strong text-body-soft rounded-xl font-semibold transition"
+                                  class="px-2.5 py-1 bg-elevate hover:bg-elevate-strong text-body-soft rounded-lg text-xs font-medium transition"
                                 >
                                   Ficha
                                 </A>
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteLead(lead.id, lead.full_name)}
-                                  class="p-2 text-muted hover:text-red-400 rounded-xl hover:bg-red-950/40 transition cursor-pointer flex items-center justify-center"
+                                  class="p-1.5 text-muted hover:text-red-400 rounded-lg hover:bg-red-950/40 transition cursor-pointer flex items-center justify-center"
                                   title="Eliminar prospecto"
                                 >
-                                  <Trash class="w-4 h-4" />
+                                  <Trash class="w-3.5 h-3.5" />
                                 </button>
                               </div>
                             </td>
@@ -475,20 +468,20 @@ export default function LeadsList() {
 
             {/* Vista Tarjetas (Pipeline Cards) */}
             <Show when={viewMode() === 'cards'}>
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
                 <For each={leads()}>
                   {(lead) => (
-                    <div class="p-5 rounded-3xl bg-surface border border-edge hover:border-edge-strong transition space-y-4 shadow-xl flex flex-col justify-between">
-                      <div class="space-y-3">
-                        <div class="flex items-start justify-between gap-3">
-                          <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-2xl bg-elevate border border-edge-strong flex items-center justify-center font-bold text-accent-text text-xs shrink-0">
+                    <div class="p-3.5 rounded-xl bg-surface border border-edge hover:border-edge-strong transition space-y-3 flex flex-col justify-between">
+                      <div class="space-y-2.5">
+                        <div class="flex items-start justify-between gap-2.5">
+                          <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-elevate border border-edge-strong flex items-center justify-center font-bold text-accent-text text-xs shrink-0">
                               {lead.full_name.slice(0, 2).toUpperCase()}
                             </div>
                             <div>
                               <A
                                 href={`/leads/${lead.id}`}
-                                class="font-bold text-body text-base hover:text-accent-text transition block truncate"
+                                class="font-semibold text-body text-sm hover:text-accent-text transition block truncate"
                               >
                                 {lead.full_name}
                               </A>
@@ -496,57 +489,52 @@ export default function LeadsList() {
                             </div>
                           </div>
 
-                           <SegmentBadge segment={lead.segment} />
-                         </div>
+                          <SegmentBadge segment={lead.segment} />
+                        </div>
 
-                         <div class="p-3 rounded-2xl bg-app/70 border border-edge/80 space-y-1">
-                           <div class="flex items-center justify-between gap-2 text-xs overflow-hidden">
-                             <span class="text-muted shrink-0">Actividades:</span>
-                             <Show
-                               when={(lead.interests || []).length > 0}
-                               fallback={<span class="text-muted">Sin actividades</span>}
-                             >
-                               <div class="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap max-w-[220px]">
-                                 <For each={lead.interests}>
-                                   {(interest) => (
-                                     <span
-                                       class={`px-2 py-0.5 rounded-lg border text-[10px] font-bold shrink-0 whitespace-nowrap ${
-                                         interest.is_active
-                                           ? 'bg-accent/20 border-accent/40 text-accent-text'
-                                           : 'bg-elevate border-edge-strong text-muted'
-                                       }`}
-                                       title={
-                                         interest.is_active
-                                           ? undefined
-                                           : 'Eliminada del catálogo (atenuada)'
-                                       }
-                                     >
-                                       {interest.name}
-                                     </span>
-                                   )}
-                                 </For>
-                               </div>
-                             </Show>
-                           </div>
+                        <div class="p-2.5 rounded-lg bg-app/70 border border-edge/80 space-y-1">
+                          <div class="flex items-center justify-between gap-2 text-xs overflow-hidden">
+                            <span class="text-muted shrink-0 text-[11px]">Actividades:</span>
+                            <Show
+                              when={(lead.interests || []).length > 0}
+                              fallback={<span class="text-muted text-[11px]">Sin actividades</span>}
+                            >
+                              <div class="flex items-center gap-1 overflow-x-auto whitespace-nowrap max-w-[200px]">
+                                <For each={lead.interests}>
+                                  {(interest) => (
+                                    <span
+                                      class={`px-1.5 py-0.5 rounded border text-[10px] font-medium shrink-0 whitespace-nowrap ${
+                                        interest.is_active
+                                          ? 'bg-accent/15 border-accent/30 text-accent-text'
+                                          : 'bg-elevate border-edge text-muted'
+                                      }`}
+                                    >
+                                      {interest.name}
+                                    </span>
+                                  )}
+                                </For>
+                              </div>
+                            </Show>
+                          </div>
                           <div class="flex items-center justify-between text-xs">
-                            <span class="text-muted">Presupuesto:</span>
-                            <span class="font-bold text-emerald-400">
+                            <span class="text-muted text-[11px]">Presupuesto:</span>
+                            <span class="font-semibold text-emerald-400 text-xs">
                               ${lead.metadata.presupuesto || 0} USD
                             </span>
                           </div>
                           <div class="flex items-center justify-between text-xs">
-                            <span class="text-muted">Ciudad:</span>
-                            <span class="text-body-soft">
+                            <span class="text-muted text-[11px]">Ciudad:</span>
+                            <span class="text-body-soft text-[11px]">
                               {cityFromMetadata(lead.metadata) || 'Sin especificar'}
                             </span>
                           </div>
                           <div class="flex items-center justify-between text-xs">
-                            <span class="text-muted">Membresía:</span>
+                            <span class="text-muted text-[11px]">Membresía:</span>
                             <Show
                               when={lead.metadata.estado_membresia}
-                              fallback={<span class="text-muted">Sin dato</span>}
+                              fallback={<span class="text-muted text-[11px]">Sin dato</span>}
                             >
-                              <span class="px-2 py-0.5 rounded-lg bg-violet-500/20 border border-violet-500/40 text-violet-400 text-[10px] font-bold">
+                              <span class="px-1.5 py-0.5 rounded bg-violet-500/15 border border-violet-500/30 text-violet-400 text-[10px] font-semibold">
                                 {lead.metadata.estado_membresia}
                                 <Show when={lead.metadata.cantidad_membresias !== undefined}>
                                   <span class="text-violet-400/80"> · {lead.metadata.cantidad_membresias}</span>
@@ -557,10 +545,10 @@ export default function LeadsList() {
                         </div>
 
                         {/* Tags */}
-                        <div class="flex flex-wrap gap-1.5">
+                        <div class="flex flex-wrap gap-1">
                           <For each={lead.tags}>
                             {(t) => (
-                              <span class="px-2 py-0.5 rounded-lg bg-elevate text-muted text-[10px] font-medium">
+                              <span class="px-1.5 py-0.5 rounded bg-elevate text-muted text-[10px] font-medium">
                                 #{t}
                               </span>
                             )}
@@ -568,11 +556,11 @@ export default function LeadsList() {
                         </div>
                       </div>
 
-                      <div class="pt-3 border-t border-edge flex items-center justify-between gap-3">
+                      <div class="pt-2.5 border-t border-edge flex items-center justify-between gap-2">
                         <select
                           value={lead.status}
                           onChange={(e) => handleStatusChange(lead.id, e.currentTarget.value)}
-                          class="bg-app border border-edge rounded-xl px-2.5 py-1 text-[11px] text-body-soft focus:outline-none focus:border-accent cursor-pointer"
+                          class="bg-app border border-edge rounded-lg px-2 py-1 text-xs text-body-soft focus:outline-none focus:border-accent cursor-pointer"
                         >
                           <For each={LEAD_STATUS_OPTIONS}>
                             {(opt) => <option value={opt.value}>{opt.label}</option>}
@@ -584,16 +572,16 @@ export default function LeadsList() {
                             href={`https://wa.me/${lead.phone.replace(/^\+/, '')}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            class="p-2 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 rounded-xl transition flex items-center justify-center"
+                            class="p-1.5 bg-emerald-600/15 hover:bg-emerald-600/30 text-emerald-400 rounded-lg transition flex items-center justify-center"
                             title="WhatsApp"
                           >
-                            <MessageSquare class="w-4 h-4" />
+                            <MessageSquare class="w-3.5 h-3.5" />
                           </a>
                           <A
                             href={`/leads/${lead.id}`}
-                            class="px-3 py-1.5 bg-accent hover:bg-accent-hover text-white rounded-xl text-xs font-bold transition shadow-accent-glow"
+                            class="px-2.5 py-1 bg-accent hover:bg-accent-hover text-white rounded-lg text-xs font-semibold transition"
                           >
-                            Ver Ficha
+                            Ficha
                           </A>
                         </div>
                       </div>

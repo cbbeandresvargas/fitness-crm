@@ -40,37 +40,37 @@ export default function Login() {
       <div class="absolute top-4 right-4">
         <ThemeToggle />
       </div>
-      <div class="max-w-md w-full space-y-6">
+      <div class="max-w-sm w-full space-y-4">
         {/* Brand */}
-        <div class="text-center space-y-2">
-          <div class="inline-flex w-16 h-16 rounded-3xl bg-gradient-to-tr from-accent-deep to-accent items-center justify-center text-white shadow-accent-glow mb-2">
-            <Zap class="w-8 h-8 text-white" />
+        <div class="text-center space-y-1.5">
+          <div class="inline-flex w-10 h-10 rounded-xl bg-accent items-center justify-center text-white mb-1 shadow-xs">
+            <Zap class="w-5 h-5 text-white" />
           </div>
-          <h1 class="text-3xl font-black tracking-tight text-body flex items-center justify-center gap-1.5">
+          <h1 class="text-lg font-bold tracking-tight text-body flex items-center justify-center gap-1">
             FITNESS<span class="text-accent-text">CLUB</span>
           </h1>
           <p class="text-xs text-muted">
-            Plataforma de gestión comercial y seguimiento para gimnasios
+            Gestión comercial y seguimiento para gimnasios
           </p>
         </div>
 
         {/* Card de Inicio de Sesión Oficial */}
-        <div class="p-8 rounded-3xl bg-surface border border-edge space-y-5 shadow-2xl">
-          <div class="space-y-1">
-            <h2 class="text-base font-bold text-body">Iniciar Sesión</h2>
-            <p class="text-xs text-muted">Ingresa tus credenciales autorizadas para acceder</p>
+        <div class="p-5 sm:p-6 rounded-xl bg-surface border border-edge space-y-4 shadow-sm">
+          <div class="space-y-0.5">
+            <h2 class="text-sm font-bold text-body">Iniciar Sesión</h2>
+            <p class="text-xs text-muted">Ingresa tus credenciales autorizadas</p>
           </div>
 
           <Show when={error()}>
-            <div class="p-3.5 rounded-2xl bg-red-950/80 border border-red-800 text-red-200 text-xs font-semibold flex items-center gap-2.5 animate-fade-in">
+            <div class="p-2.5 rounded-lg bg-red-950/80 border border-red-800 text-red-200 text-xs font-medium flex items-center gap-2 animate-fade-in">
               <TriangleAlert class="w-4 h-4 shrink-0 text-red-300" />
               <span>{error()}</span>
             </div>
           </Show>
 
-          <form onSubmit={handleSubmit} class="space-y-4">
+          <form onSubmit={handleSubmit} class="space-y-3">
             <div>
-              <label class="block text-xs font-bold text-muted mb-1.5">
+              <label class="block text-xs font-medium text-muted mb-1">
                 Correo Electrónico
               </label>
               <input
@@ -80,12 +80,12 @@ export default function Login() {
                 value={email()}
                 onInput={(e) => setEmail(e.currentTarget.value)}
                 placeholder="ejemplo@fitnessclub.fit"
-                class="w-full px-4 py-2.5 bg-app border border-edge rounded-2xl text-xs text-body focus:outline-none focus:border-accent transition"
+                class="w-full px-3 py-2 bg-app border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent transition"
               />
             </div>
 
             <div>
-              <label class="block text-xs font-bold text-muted mb-1.5">
+              <label class="block text-xs font-medium text-muted mb-1">
                 Contraseña
               </label>
               <input
@@ -95,20 +95,20 @@ export default function Login() {
                 value={password()}
                 onInput={(e) => setPassword(e.currentTarget.value)}
                 placeholder="••••••••"
-                class="w-full px-4 py-2.5 bg-app border border-edge rounded-2xl text-xs text-body focus:outline-none focus:border-accent transition"
+                class="w-full px-3 py-2 bg-app border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent transition"
               />
             </div>
 
             <button
               type="submit"
               disabled={submitting()}
-              class="w-full py-3 bg-accent hover:bg-accent-hover text-white font-extrabold text-xs rounded-2xl shadow-accent-glow transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+              class="w-full py-2 px-3 bg-accent hover:bg-accent-hover text-white font-semibold text-xs rounded-lg transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2 mt-1 shadow-xs"
             >
               <Show
                 when={submitting()}
                 fallback={<span>Ingresar al Sistema</span>}
               >
-                <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <div class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                 <span>Verificando...</span>
               </Show>
             </button>
