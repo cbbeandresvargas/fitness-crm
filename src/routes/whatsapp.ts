@@ -112,156 +112,163 @@ whatsappRoutes.post('/api/whatsapp/webhook', async (c) => {
     return c.json({ error: 'Invalid JSON' }, 400);
   }
 
-  // Meta responde 200 inmediatamente para evitar reintentos
-  const responsePromise = (async () => {
-    try {
-      const entry = payload.entry?.[0];
-      const changes = entry?.changes?.[0];
-      const value = changes?.value;
-      if (!value) return;
+  try {
+    const now = new Date().toISOString();
 
-      const now = new Date().toISOString();
+    for (const entry of payload.entry || []) {
+      for (const change of entry.changes || []) {
+        const value = change.value;
+        if (!value) continue;
 
-      // A) Procesar actualizaciones de estado de mensajes enviados (sent, delivered, read)
-      if (Array.isArray(value.statuses)) {
-        for (const st of value.statuses) {
-          const waId = st.id;
-          const status = st.status; // 'sent' | 'delivered' | 'read' | 'failed'
-          if (waId && ['sent', 'delivered', 'read', 'failed'].includes(status)) {
-            await c.env.DB.prepare(`
-              UPDATE whatsapp_messages 
-              SET status = ? 
-              WHERE whatsapp_message_id = ?
-            `)
-              .bind(status, waId)
-              .run();
+        // A) Procesar actualizaciones de estado de mensajes enviados (sent, delivered, read)
+        if (Array.isArray(value.statuses)) {
+          for (const st of value.statuses) {
+            const waId = st.id;
+            const status = st.status; // 'sent' | 'delivered' | 'read' | 'failed'
+            if (waId && ['sent', 'delivered', 'read', 'failed'].includes(status)) {
+              await c.env.DB.prepare(`
+                UPDATE whatsapp_messages 
+                SET status = ? 
+                WHERE whatsapp_message_id = ?
+              `)
+                .bind(status, waId)
+                .run();
+            }
           }
         }
-      }
 
-      // B) Procesar mensajes entrantes (Inbound Messages)
-      if (Array.isArray(value.messages)) {
-        for (const msg of value.messages) {
-          const waMessageId = msg.id;
-          const senderPhone = `+${msg.from}`;
-          const contactProfile = value.contacts?.find((ct: any) => ct.wa_id === msg.from);
-          const profileName = contactProfile?.profile?.name || null;
-          const msgType = msg.type || 'text';
-          const content = msg.text?.body || (msgType === 'image' ? 'Imagen recibida' : 'Archivo multimedia');
-          const mediaUrl = msg.image?.id || null;
+        // B) Procesar mensajes entrantes (Inbound Messages)
+        if (Array.isArray(value.messages)) {
+          for (const msg of value.messages) {
+            const waMessageId = msg.id;
+            const senderPhone = `+${msg.from}`;
+            const contactProfile = value.contacts?.find((ct: any) => ct.wa_id === msg.from);
+            const profileName = contactProfile?.profile?.name || null;
+            const msgType = msg.type || 'text';
+            const content = msg.text?.body || (msgType === 'image' ? 'Imagen recibida' : 'Archivo multimedia');
+            const mediaUrl = msg.image?.id || null;
 
-          // 1. Idempotencia: Verificar si el mensaje ya fue procesado
-          const existing = await c.env.DB.prepare(
-            'SELECT id FROM whatsapp_messages WHERE whatsapp_message_id = ?'
-          )
-            .bind(waMessageId)
-            .first();
-
-          if (existing) {
-            console.log(`[Meta Webhook] Mensaje ${waMessageId} ya procesado previamente. Ignorando.`);
-            continue;
-          }
-
-          // 2. Buscar o auto-crear prospecto (Lead)
-          let lead = await c.env.DB.prepare('SELECT * FROM leads WHERE phone = ?')
-            .bind(senderPhone)
-            .first<Lead>();
-
-          if (!lead) {
-            // También probar con normalización alternativa sin '+'
-            const clean = normalizeRecipient(senderPhone);
-            lead = await c.env.DB.prepare(
-              'SELECT * FROM leads WHERE phone LIKE ? OR phone LIKE ?'
+            // 1. Idempotencia: Verificar si el mensaje ya fue procesado
+            const existing = await c.env.DB.prepare(
+              'SELECT id FROM whatsapp_messages WHERE whatsapp_message_id = ?'
             )
-              .bind(`%${clean.slice(-10)}`, `%${clean}%`)
+              .bind(waMessageId)
+              .first();
+
+            if (existing) {
+              console.log(`[Meta Webhook] Mensaje ${waMessageId} ya procesado previamente. Ignorando.`);
+              continue;
+            }
+
+            // 2. Buscar o auto-crear prospecto (Lead)
+            let lead = await c.env.DB.prepare('SELECT * FROM leads WHERE phone = ?')
+              .bind(senderPhone)
               .first<Lead>();
-          }
 
-          if (!lead) {
-            // Auto-creación de prospecto nuevo desde WhatsApp
-            const newLeadId = `lead_${crypto.randomUUID().slice(0, 8)}`;
-            const leadName = profileName ? profileName.trim() : `WhatsApp ${senderPhone.slice(-4)}`;
+            if (!lead) {
+              // También probar con normalización alternativa sin '+'
+              const clean = normalizeRecipient(senderPhone);
+              lead = await c.env.DB.prepare(
+                'SELECT * FROM leads WHERE phone LIKE ? OR phone LIKE ?'
+              )
+                .bind(`%${clean.slice(-10)}`, `%${clean}%`)
+                .first<Lead>();
+            }
 
+            if (!lead) {
+              // Auto-creación de prospecto nuevo desde WhatsApp
+              const newLeadId = `lead_${crypto.randomUUID().slice(0, 8)}`;
+              const leadName = profileName ? profileName.trim() : `WhatsApp ${senderPhone.slice(-4)}`;
+
+              await c.env.DB.prepare(`
+                INSERT INTO leads (
+                  id, full_name, phone, status, segment, tags, metadata, last_contacted_at, last_inbound_at, ai_enabled, created_at, updated_at
+                ) VALUES (?, ?, ?, 'nuevo', 'B', '["WhatsApp Inbound"]', '{}', ?, ?, 1, ?, ?)
+              `)
+                .bind(newLeadId, leadName, senderPhone, now, now, now, now)
+                .run();
+
+              await c.env.DB.prepare(`
+                INSERT INTO activity_logs (id, lead_id, action_type, details, created_at)
+                VALUES (?, ?, 'creation', 'Prospecto creado automáticamente desde mensaje entrante de WhatsApp.', ?)
+              `)
+                .bind(`act_${crypto.randomUUID().slice(0, 8)}`, newLeadId, now)
+                .run();
+
+              lead = await c.env.DB.prepare('SELECT * FROM leads WHERE id = ?')
+                .bind(newLeadId)
+                .first<Lead>();
+            } else {
+              // Actualizar timestamp de último mensaje entrante
+              await c.env.DB.prepare(`
+                UPDATE leads 
+                SET last_inbound_at = ?, last_contacted_at = ?, updated_at = ? 
+                WHERE id = ?
+              `)
+                .bind(now, now, now, lead.id)
+                .run();
+            }
+
+            if (!lead) continue;
+
+            // 3. Insertar mensaje en whatsapp_messages
+            const msgDbId = `msg_${crypto.randomUUID().slice(0, 8)}`;
             await c.env.DB.prepare(`
-              INSERT INTO leads (
-                id, full_name, phone, status, segment, tags, metadata, last_contacted_at, last_inbound_at, ai_enabled, created_at, updated_at
-              ) VALUES (?, ?, ?, 'nuevo', 'B', '["WhatsApp Inbound"]', '{}', ?, ?, 1, ?, ?)
+              INSERT INTO whatsapp_messages (
+                id, lead_id, user_id, sender, message_type, content, media_url, status, whatsapp_message_id, ai_generated, raw_payload, created_at
+              ) VALUES (?, ?, NULL, 'lead', ?, ?, ?, 'delivered', ?, 0, ?, ?)
             `)
-              .bind(newLeadId, leadName, senderPhone, now, now, now, now)
+              .bind(
+                msgDbId,
+                lead.id,
+                msgType,
+                content,
+                mediaUrl,
+                waMessageId,
+                JSON.stringify(msg),
+                now
+              )
               .run();
 
             await c.env.DB.prepare(`
               INSERT INTO activity_logs (id, lead_id, action_type, details, created_at)
-              VALUES (?, ?, 'creation', 'Prospecto creado automáticamente desde mensaje entrante de WhatsApp.', ?)
+              VALUES (?, ?, 'whatsapp_sent', ?, ?)
             `)
-              .bind(`act_${crypto.randomUUID().slice(0, 8)}`, newLeadId, now)
+              .bind(
+                `act_${crypto.randomUUID().slice(0, 8)}`,
+                lead.id,
+                `WhatsApp recibido de ${lead.full_name}: "${content.slice(0, 80)}"`,
+                now
+              )
               .run();
 
-            lead = await c.env.DB.prepare('SELECT * FROM leads WHERE id = ?')
-              .bind(newLeadId)
-              .first<Lead>();
-          } else {
-            // Actualizar timestamp de último mensaje entrante
-            await c.env.DB.prepare(`
-              UPDATE leads 
-              SET last_inbound_at = ?, last_contacted_at = ?, updated_at = ? 
-              WHERE id = ?
-            `)
-              .bind(now, now, now, lead.id)
-              .run();
-          }
+            // 4. Disparar turno del Agente de Ventas con Cloudflare Workers AI
+            if (lead.ai_enabled === 1 && !lead.handoff_at) {
+              console.log(`[Sales Agent] Disparando turno de IA para lead ${lead.id} (${lead.full_name})...`);
+              const aiPromise = runSalesAgentTurn({
+                env: c.env,
+                leadId: lead.id,
+                incomingText: content,
+                credentials: creds,
+              }).catch((aiErr) => {
+                console.error('[Sales Agent] Error ejecutando turno de IA:', aiErr);
+              });
 
-          if (!lead) continue;
-
-          // 3. Insertar mensaje en whatsapp_messages
-          const msgDbId = `msg_${crypto.randomUUID().slice(0, 8)}`;
-          await c.env.DB.prepare(`
-            INSERT INTO whatsapp_messages (
-              id, lead_id, user_id, sender, message_type, content, media_url, status, whatsapp_message_id, ai_generated, raw_payload, created_at
-            ) VALUES (?, ?, NULL, 'lead', ?, ?, ?, 'delivered', ?, 0, ?, ?)
-          `)
-            .bind(
-              msgDbId,
-              lead.id,
-              msgType,
-              content,
-              mediaUrl,
-              waMessageId,
-              JSON.stringify(msg),
-              now
-            )
-            .run();
-
-          await c.env.DB.prepare(`
-            INSERT INTO activity_logs (id, lead_id, action_type, details, created_at)
-            VALUES (?, ?, 'whatsapp_received', ?, ?)
-          `)
-            .bind(
-              `act_${crypto.randomUUID().slice(0, 8)}`,
-              lead.id,
-              `WhatsApp recibido de ${lead.full_name}: "${content.slice(0, 80)}"`,
-              now
-            )
-            .run();
-
-          // 4. Disparar turno del Agente de Ventas con Cloudflare Workers AI
-          if (lead.ai_enabled === 1 && !lead.handoff_at) {
-            console.log(`[Sales Agent] Disparando turno de IA para lead ${lead.id} (${lead.full_name})...`);
-            await runSalesAgentTurn({
-              env: c.env,
-              leadId: lead.id,
-              incomingText: content,
-              credentials: creds,
-            });
+              if (c.executionCtx && typeof c.executionCtx.waitUntil === 'function') {
+                c.executionCtx.waitUntil(aiPromise);
+              } else {
+                await aiPromise;
+              }
+            }
           }
         }
       }
-    } catch (procErr) {
-      console.error('[Meta Webhook POST] Error procesando evento en segundo plano:', procErr);
     }
-  })();
+  } catch (procErr) {
+    console.error('[Meta Webhook POST] Error procesando evento de webhook:', procErr);
+  }
 
-  // Responde 200 inmediatamente a Meta
+  // Responde 200 inmediatamente a Meta tras persistir en DB
   return c.json({ success: true }, 200);
 });
 
@@ -659,7 +666,7 @@ whatsappRoutes.post('/api/whatsapp/leads/:id/toggle-ai', async (c) => {
 
     await c.env.DB.prepare(`
       INSERT INTO activity_logs (id, lead_id, user_id, action_type, details, created_at)
-      VALUES (?, ?, ?, 'ai_action', ?, ?)
+      VALUES (?, ?, ?, 'ai_generated', ?, ?)
     `)
       .bind(
         `act_${crypto.randomUUID().slice(0, 8)}`,
@@ -688,7 +695,7 @@ whatsappRoutes.post('/api/whatsapp/leads/:id/toggle-ai', async (c) => {
 
   await c.env.DB.prepare(`
     INSERT INTO activity_logs (id, lead_id, user_id, action_type, details, created_at)
-    VALUES (?, ?, ?, 'ai_action', ?, ?)
+    VALUES (?, ?, ?, 'ai_generated', ?, ?)
   `)
     .bind(
       `act_${crypto.randomUUID().slice(0, 8)}`,

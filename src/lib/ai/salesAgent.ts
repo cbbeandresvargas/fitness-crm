@@ -394,7 +394,7 @@ export async function runSalesAgentTurn(params: {
 
         await env.DB.prepare(`
           INSERT INTO activity_logs (id, lead_id, action_type, details, created_at)
-          VALUES (?, ?, 'ai_action', ?, ?)
+          VALUES (?, ?, 'ai_generated', ?, ?)
         `)
           .bind(
             `act_${crypto.randomUUID().slice(0, 8)}`,
