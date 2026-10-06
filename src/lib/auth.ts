@@ -81,7 +81,28 @@ export async function authMiddleware(
 ) {
   const session = await getSession(c);
   if (session) {
-    c.set('user', session);
+    // Validar en D1 que el usuario exista y no esté inactivo (is_active !== 0)
+    // para revocar de inmediato el acceso a usuarios dados de baja
+    try {
+      const activeUser = await c.env.DB.prepare(
+        'SELECT id, role, is_active FROM users WHERE id = ?'
+      )
+        .bind(session.userId)
+        .first<{ id: string; role: any; is_active: number }>();
+
+      if (!activeUser || activeUser.is_active === 0) {
+        // Usuario inactivo o dado de baja: destruir sesión y cookie
+        await destroySession(c);
+        c.set('user', undefined);
+      } else {
+        // Sincronizar rol actualizado
+        session.role = activeUser.role;
+        c.set('user', session);
+      }
+    } catch (err) {
+      console.warn('Advertencia verificando estado activo en authMiddleware:', err);
+      c.set('user', session);
+    }
   }
   await next();
 }
@@ -95,6 +116,7 @@ export async function requireAuth(
   // Rutas públicas, assets estáticos o inicio de sesión
   if (
     path === '/login' ||
+    path === '/api/health' ||
     path.startsWith('/auth') ||
     path.startsWith('/api/auth') ||
     path.startsWith('/api/whatsapp/webhook') ||

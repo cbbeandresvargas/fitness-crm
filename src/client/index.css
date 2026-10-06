@@ -19,6 +19,9 @@
   --accent-hover: #ff6666;
   --accent-deep: #cc3333;
   --accent-text: #cc3333;
+  --status-emerald: #15803d;
+  --status-amber: #92400e;
+  --status-orange: #c2410c;
 }
 
 .dark {
@@ -36,6 +39,9 @@
   --accent-hover: #ff6666;
   --accent-deep: #cc3333;
   --accent-text: #ff9933;
+  --status-emerald: #34d399;
+  --status-amber: #fbbf24;
+  --status-orange: #fb923c;
 }
 
 @theme inline {
@@ -52,6 +58,9 @@
   --color-accent-hover: var(--accent-hover);
   --color-accent-deep: var(--accent-deep);
   --color-accent-text: var(--accent-text);
+  --color-status-emerald: var(--status-emerald);
+  --color-status-amber: var(--status-amber);
+  --color-status-orange: var(--status-orange);
 }
 
 body {

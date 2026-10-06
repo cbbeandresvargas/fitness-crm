@@ -80,8 +80,8 @@ export function verifyMetaSignature(
   appSecret: string | undefined
 ): boolean {
   if (!appSecret || appSecret.trim() === '') {
-    // Si no se configuró appSecret, la capa de firma está desactivada
-    return true;
+    // Fail-closed estricto: sin appSecret no se valida ninguna firma
+    return false;
   }
   if (!signatureHeader || !signatureHeader.startsWith('sha256=')) {
     return false;

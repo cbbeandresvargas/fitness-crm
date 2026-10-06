@@ -86,6 +86,11 @@ const config = {
     envFile.ADMIN_SECRET ||
     devVarsFile.ADMIN_SECRET ||
     '',
+  ENCRYPTION_KEY:
+    process.env.ENCRYPTION_KEY ||
+    envFile.ENCRYPTION_KEY ||
+    devVarsFile.ENCRYPTION_KEY ||
+    '',
   META_GRAPH_API_VERSION:
     process.env.META_GRAPH_API_VERSION ||
     envFile.META_GRAPH_API_VERSION ||
@@ -140,10 +145,14 @@ if (!config.KV_NAMESPACE_ID) {
   missing.push('KV_NAMESPACE_ID  ->  créalo con:  npx wrangler kv namespace create KV');
 }
 if (missing.length > 0) {
-  console.error('❌ [env-sync] Faltan valores requeridos en .env — NO se sobrescribió wrangler.jsonc:');
-  for (const m of missing) console.error(`   - ${m}`);
-  console.error('ℹ️  Copia los IDs generados a tu .env y vuelve a ejecutar: npm run config:sync');
-  process.exit(1);
+  if (process.env.CI) {
+    console.warn('⚠️  [env-sync] Modo CI detectado: omitiendo validación estricta de IDs en .env.');
+  } else {
+    console.error('❌ [env-sync] Faltan valores requeridos en .env — NO se sobrescribió wrangler.jsonc:');
+    for (const m of missing) console.error(`   - ${m}`);
+    console.error('ℹ️  Copia los IDs generados a tu .env y vuelve a ejecutar: npm run config:sync');
+    process.exit(1);
+  }
 }
 
 let template = fs.readFileSync(templatePath, 'utf-8');
@@ -178,6 +187,7 @@ const devVarsContent = [
   `CLOUDFLARE_ACCOUNT_ID=${config.CLOUDFLARE_ACCOUNT_ID}`,
   config.CLOUDFLARE_API_TOKEN ? `CLOUDFLARE_API_TOKEN=${config.CLOUDFLARE_API_TOKEN}` : '',
   config.ADMIN_SECRET ? `ADMIN_SECRET=${config.ADMIN_SECRET}` : '',
+  config.ENCRYPTION_KEY ? `ENCRYPTION_KEY=${config.ENCRYPTION_KEY}` : '',
   `META_GRAPH_API_VERSION=${config.META_GRAPH_API_VERSION}`,
   `META_GRAPH_BASE_URL=${config.META_GRAPH_BASE_URL}`,
   config.META_WA_PHONE_NUMBER_ID ? `META_WA_PHONE_NUMBER_ID=${config.META_WA_PHONE_NUMBER_ID}` : '',

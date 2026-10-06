@@ -18,7 +18,8 @@
     "predeploy": "npm run config:sync",
     "deploy": "npm run build && wrangler deploy",
     "d1:init": "wrangler d1 execute fitness-crm-db --local --file=src/db/schema.sql && wrangler d1 execute fitness-crm-db --local --file=src/db/seed.sql",
-    "d1:migrate:remote": "wrangler d1 execute fitness-crm-db --remote --file=src/db/schema.sql -y"
+    "d1:migrate:remote": "wrangler d1 execute fitness-crm-db --remote --file=src/db/schema.sql -y",
+    "test": "vitest run"
   },
   "dependencies": {
     "@solidjs/router": "^1.0.0",
@@ -40,6 +41,7 @@
     "typescript": "^5.8.2",
     "vite": "^8.3.0",
     "vite-plugin-solid": "^2.11.14",
+    "vitest": "^5.0.3",
     "wrangler": "^4.140.0"
   }
 }

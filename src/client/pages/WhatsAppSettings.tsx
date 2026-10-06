@@ -1,5 +1,6 @@
 import { createSignal, onMount, For, Show } from 'solid-js';
 import { Layout } from '../components/Layout';
+import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
 import { WhatsAppSettings as SettingsType, WebhookInfo, KnowledgeBaseEntry } from '../types';
 import {
@@ -26,6 +27,7 @@ import {
 } from 'lucide-solid';
 
 export default function WhatsAppSettings() {
+  const { showToast } = useAuth();
   const [activeTab, setActiveTab] = createSignal<'connection' | 'ai' | 'kb' | 'diagnostics'>('connection');
   const [settings, setSettings] = createSignal<(SettingsType & { env_configured?: boolean }) | null>(null);
   const [webhook, setWebhook] = createSignal<WebhookInfo | null>(null);
@@ -97,10 +99,11 @@ export default function WhatsAppSettings() {
       if (res.success) {
         setSavedSuccess(true);
         setTimeout(() => setSavedSuccess(false), 3000);
+        showToast('Configuración de IA guardada con éxito', 'success');
         await loadData();
       }
     } catch (err: any) {
-      alert(`Error al guardar: ${err.message || 'Error desconocido'}`);
+      showToast(`Error al guardar: ${err.message || 'Error desconocido'}`, 'error');
     } finally {
       setSaving(false);
     }
@@ -118,17 +121,20 @@ export default function WhatsAppSettings() {
           success: true,
           message: `Conexión Exitosa con Meta Graph API v25.0: Número verificado ${res.details?.display_phone_number || settings()?.phone_number_id} (${res.details?.verified_name || 'Fitness Club Pass'})`,
         });
+        showToast('Conexión con Meta Graph API verificada', 'success');
       } else {
         setTestResult({
           success: false,
           message: `Error al conectar: ${res.error || 'No se pudo autenticar'}`,
         });
+        showToast(`Fallo en la prueba de conexión: ${res.error || 'No se pudo autenticar'}`, 'error');
       }
     } catch (err: any) {
       setTestResult({
         success: false,
         message: `Fallo de conexión: ${err.message}`,
       });
+      showToast(`Fallo de conexión: ${err.message}`, 'error');
     } finally {
       setTesting(false);
     }
@@ -136,7 +142,7 @@ export default function WhatsAppSettings() {
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
-    alert(`${label} copiado al portapapeles.`);
+    showToast(`${label} copiado al portapapeles`, 'info');
   };
 
   const handleRunDiagnostics = async () => {
@@ -144,8 +150,9 @@ export default function WhatsAppSettings() {
     try {
       const res = await api.getWhatsAppDiagnostics();
       setDiagnostics(res);
+      showToast('Diagnóstico de WhatsApp completado', 'success');
     } catch (err: any) {
-      alert(`Error ejecutando diagnóstico: ${err.message}`);
+      showToast(`Error ejecutando diagnóstico: ${err.message}`, 'error');
     } finally {
       setRunningDiag(false);
     }
@@ -199,8 +206,9 @@ export default function WhatsAppSettings() {
       setShowKbModal(false);
       const kbRes = await api.getKnowledgeBase();
       setKbEntries(kbRes.entries || []);
+      showToast('Entrada de base de conocimiento guardada', 'success');
     } catch (err: any) {
-      alert(`Error guardando entrada: ${err.message}`);
+      showToast(`Error guardando entrada: ${err.message}`, 'error');
     }
   };
 
@@ -210,8 +218,9 @@ export default function WhatsAppSettings() {
       await api.deleteKnowledgeBaseEntry(id);
       const kbRes = await api.getKnowledgeBase();
       setKbEntries(kbRes.entries || []);
+      showToast('Entrada de conocimiento eliminada', 'info');
     } catch (err: any) {
-      alert(`Error eliminando entrada: ${err.message}`);
+      showToast(`Error eliminando entrada: ${err.message}`, 'error');
     }
   };
 

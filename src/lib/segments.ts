@@ -37,14 +37,14 @@ export const FC_SEGMENTS: Record<FcSegment, FcSegmentConfig> = {
     label: 'Registrados que nunca pagaron',
     icon: '',
     description: 'Registrados en FC que conocen el producto pero nunca han comprado una membresía.',
-    chipClasses: 'bg-orange-500/20 border-orange-500/40 text-orange-400',
+    chipClasses: 'bg-orange-500/20 border-orange-500/40 text-orange-700 dark:text-orange-400',
   },
   C: {
     id: 'C',
     label: 'Usuarios con actividad/interés reciente',
     icon: '',
     description: 'Actividad o interés reciente en FC que aún no califica para A ni B.',
-    chipClasses: 'bg-amber-500/20 border-amber-500/40 text-amber-400',
+    chipClasses: 'bg-amber-500/20 border-amber-500/40 text-amber-800 dark:text-amber-400',
   },
 };
 
@@ -75,7 +75,8 @@ function isWithinDays(dateStr: string | null | undefined, maxDays: number): bool
   const date = new Date(dateStr);
   if (Number.isNaN(date.getTime())) return false;
   const diffMs = Date.now() - date.getTime();
-  return diffMs >= 0 && diffMs <= maxDays * 24 * 60 * 60 * 1000;
+  // Permitir margen de clock skew de hasta 5 minutos en el futuro (-300,000 ms)
+  return diffMs >= -300000 && diffMs <= maxDays * 24 * 60 * 60 * 1000;
 }
 
 /**

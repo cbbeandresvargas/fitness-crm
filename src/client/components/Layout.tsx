@@ -112,12 +112,7 @@ export function Layout(props: { children: JSX.Element; title?: string }) {
             }`}
           >
             <MessageSquare class="w-4 h-4 shrink-0" />
-            <div class="flex items-center justify-between flex-1">
-              <span>Chat WhatsApp</span>
-              <span class="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                v25.0
-              </span>
-            </div>
+            <span>Chat WhatsApp</span>
           </A>
 
           <A

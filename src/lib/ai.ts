@@ -142,15 +142,15 @@ export function buildLeadContextPrompt(options: {
   }
   const tagsStr = safeTags.length > 0 ? safeTags.join(', ') : 'Multideporte';
 
-  const systemPrompt = `Eres el asesor y closer comercial de élite de "Fitness Club Pass", la aplicación de pases multideporte en Cochabamba, Bolivia.
-Con una sola membresía en la app, los clientes tienen pases para acceder a múltiples centros deportivos, gimnasios, natación, crossfit y pádel en Cochabamba.
-Todos los precios están en Bolivianos (Bs).
-Tu función es generar mensajes de WhatsApp personalizados, altamente persuasivos y consultivos para que el prospecto adquiera su membresía en la app.
-Reglas:
-1. Sé conciso y directo (máximo 3 párrafos cortos).
-2. NO uses emojis. Mantén un tono profesional, claro y formal pero cercano.
-3. Incluye siempre una sola llamada a la acción (CTA) fácil de responder.
-4. Recuerda que no somos un solo gimnasio: somos la app que te da acceso a múltiples centros en Cochabamba.`;
+  const systemPrompt = `Eres el asesor comercial por WhatsApp de "Fitness Club Pass" en Cochabamba, Bolivia.
+Con una sola membresía en la app, los clientes acceden a gimnasios, crossfit, natación y pádel en toda la ciudad. Todos los precios están en Bolivianos (Bs).
+
+DIRECTIVAS ESTRICTAS DE RESPUESTA:
+1. Respuestas DIRECTAS, CONCISAS Y CONVERSACIONALES: típicamente de 1 a 3 frases breves.
+2. Cero rodeos, sin intros aburridas ni repeticiones corporativas.
+3. Si es un saludo o pregunta simple, responde en 1 o 2 oraciones breves. Si preguntan planes o precios, resume solo lo indispensable en líneas cortas.
+4. Incluye siempre un llamado a la acción (CTA) natural y claro para Bolivia (ej. agendar visita al gimnasio, coordinar clase de prueba o activar su pase).
+5. NO uses emojis. Lenguaje cercano, natural y profesional.`;
 
   const userPrompt = `Prospecto:
 - Nombre: ${lead.full_name}
@@ -193,24 +193,23 @@ export async function generateAiWhatsAppMessage(
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt },
     ],
-    350
+    200
   );
 
   if (aiOutput) {
     return aiOutput;
   }
 
-  // Fallback enriquecido cuando no hay GPU o conexión activa
+  // Fallback directo y conversacional
   const meta = lead.metadata || {};
-  const objetivo = meta.objetivo || 'entrenar con total libertad';
-  const nombre = lead.full_name.split(' ')[0] || 'campeón';
+  const nombre = lead.full_name.split(' ')[0] || '';
 
   if (lead.segment === 'A') {
-    return `¡Hola ${nombre}! Te escribe ${agentName} de Fitness Club Pass Cochabamba. Tenemos tu pase listo para acceder a gimnasios, crossfit, natación y pádel con una sola app. ¿Te gustaría que te activemos tu suscripción con tarifa preferencial hoy?`;
+    return `¡Hola ${nombre}! Te escribe ${agentName} de Fitness Club Pass. Tenemos tu pase listo para ingresar a la red de gimnasios en Cochabamba. ¿Te gustaría coordinar la activación de tu suscripción hoy?`;
   } else if (lead.segment === 'C') {
-    return `Hola ${nombre}, ¿cómo estás? Te saluda ${agentName} de Fitness Club Pass Cochabamba. Con nuestra app puedes entrenar cerca de donde estés en la ciudad desde solo Bs 180 al mes. ¿Aún estás con ganas de entrenar?`;
+    return `Hola ${nombre}, te saluda ${agentName} de Fitness Club Pass. Tienes pases multideporte en Cochabamba desde Bs 180 al mes. ¿Qué zona te queda más cómoda para entrenar?`;
   } else {
-    return `¡Hola ${nombre}! Te saluda ${agentName} de Fitness Club Pass Cochabamba. Con una sola membresía en Bs tienes acceso a múltiples gimnasios y disciplinas en la ciudad. ¿Qué centros o disciplinas te gustaría probar primero?`;
+    return `¡Hola ${nombre}! Te escribe ${agentName} de Fitness Club Pass Cochabamba. Con una sola membresía en Bs tienes acceso a múltiples gimnasios y disciplinas. ¿Qué deporte te interesa probar primero?`;
   }
 }
 

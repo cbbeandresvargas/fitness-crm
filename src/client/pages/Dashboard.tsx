@@ -4,6 +4,7 @@ import { Layout } from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
 import { DashboardData } from '../types';
+import { SegmentBadge } from '../components/SegmentBadge';
 import {
   RefreshCw,
   Plus,
@@ -246,19 +247,7 @@ export default function Dashboard() {
                             >
                               {lead.full_name}
                             </A>
-                            <span
-                              class={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
-                                lead.segment === 'A'
-                                   ? 'bg-emerald-500/20 text-emerald-400'
-                                  : lead.segment === 'B'
-                                  ? 'bg-blue-500/20 text-blue-400'
-                                  : lead.segment === 'C'
-                                  ? 'bg-amber-500/20 text-amber-400'
-                                  : 'bg-elevate text-muted'
-                              }`}
-                            >
-                              Seg {lead.segment}
-                            </span>
+                            <SegmentBadge segment={lead.segment} />
                           </div>
                           <p class="text-xs text-muted truncate">
                             {lead.notes_summary || lead.metadata.objetivo || 'Sin notas registradas'}

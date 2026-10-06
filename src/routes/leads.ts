@@ -997,6 +997,7 @@ leadsRoutes.delete('/api/leads/:id', async (c) => {
   }
 
   await c.env.DB.batch([
+    c.env.DB.prepare('DELETE FROM prospect_activities WHERE lead_id = ?').bind(leadId),
     c.env.DB.prepare('DELETE FROM activity_logs WHERE lead_id = ?').bind(leadId),
     c.env.DB.prepare('DELETE FROM whatsapp_messages WHERE lead_id = ?').bind(leadId),
     c.env.DB.prepare('DELETE FROM leads WHERE id = ?').bind(leadId),

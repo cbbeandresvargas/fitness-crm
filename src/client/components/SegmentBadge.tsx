@@ -27,9 +27,9 @@ export function SegmentBadge(props: { segment: FcSegment | null | undefined }) {
             fallback={
               <Show
                 when={seg().id === 'B'}
-                fallback={<Clock class="w-3 h-3 text-amber-400" />}
+                fallback={<Clock class="w-3 h-3 text-amber-800 dark:text-amber-400" />}
               >
-                <Target class="w-3 h-3 text-orange-400" />
+                <Target class="w-3 h-3 text-orange-700 dark:text-orange-400" />
               </Show>
             }
           >

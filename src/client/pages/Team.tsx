@@ -1,4 +1,4 @@
-import { createSignal, onMount, For, Show } from 'solid-js';
+import { createSignal, createEffect, For, Show } from 'solid-js';
 import { Layout } from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
@@ -6,7 +6,7 @@ import { User, AuditLog } from '../types';
 import { ShieldAlert, ShieldCheck, Lock, UserPlus } from 'lucide-solid';
 
 export default function Team() {
-  const { user, showToast } = useAuth();
+  const { user, loading: loadingAuth, showToast } = useAuth();
   const [users, setUsers] = createSignal<User[]>([]);
   const [auditLogs, setAuditLogs] = createSignal<AuditLog[]>([]);
   const [loading, setLoading] = createSignal(true);
@@ -31,11 +31,13 @@ export default function Team() {
     }
   };
 
-  onMount(() => {
-    if (user()?.role === 'admin') {
-      loadTeamData();
-    } else {
-      setLoading(false);
+  createEffect(() => {
+    if (!loadingAuth()) {
+      if (user()?.role === 'admin') {
+        loadTeamData();
+      } else {
+        setLoading(false);
+      }
     }
   });
 

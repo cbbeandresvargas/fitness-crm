@@ -3,22 +3,49 @@ import { Lead, LeadSegment, User } from './types';
 import { computeFcSegment } from './segments';
 
 /**
- * Normaliza un número telefónico para comparación estricta y formato WhatsApp
+ * Normaliza un número telefónico para comparación estricta y formato WhatsApp.
+ * Territorio objetivo: Exclusivamente Bolivia (+591, móviles de 8 dígitos).
+ * Limpia cualquier carácter no numérico y formatea:
+ * - 8 dígitos (ej. 7XXXXXXX o 6XXXXXXX) -> +591XXXXXXXX
+ * - Inicia con 591 o +591 (11 dígitos) -> +591XXXXXXXX
  */
 export function normalizePhone(rawPhone: string): string {
   if (!rawPhone) return '';
-  // Elimina espacios, guiones, paréntesis y puntos
-  let cleaned = rawPhone.replace(/[\s\-\(\)\.]/g, '');
-  // Si no inicia con +, pero tiene 10 o más dígitos
-  if (!cleaned.startsWith('+')) {
-    // Si tiene 10 dígitos (ej. México/Colombia), asumimos +52 si no trae código o agregamos +
-    if (cleaned.length === 10) {
-      cleaned = '+52' + cleaned;
-    } else {
-      cleaned = '+' + cleaned;
+  const trimmed = rawPhone.trim();
+  if (!trimmed) return '';
+
+  // Descartar si contiene letras o signos más mal posicionados/duplicados
+  if (/[a-zA-Z]/.test(trimmed)) return '';
+  if ((trimmed.match(/\+/g) || []).length > 1) return '';
+  if (trimmed.includes('+') && !trimmed.startsWith('+')) return '';
+
+  // Extraer sólo dígitos
+  const digits = trimmed.replace(/\D/g, '');
+  if (!digits) return '';
+
+  // Caso Bolivia móvil: 8 dígitos que empiezan con 6 o 7
+  if (digits.length === 8) {
+    if (/^[67]/.test(digits)) {
+      return `+591${digits}`;
     }
+    // Números de 8 dígitos que no inician con 6 ni 7 no son móviles válidos de Bolivia
+    return '';
   }
-  return cleaned;
+
+  // Caso Bolivia con código 591 (11 dígitos: 591 + 8 dígitos móviles)
+  if (digits.length === 11 && digits.startsWith('591')) {
+    if (/^591[67]/.test(digits)) {
+      return `+${digits}`;
+    }
+    return '';
+  }
+
+  // Si tenía un + inicial y longitud válida internacional (entre 9 y 15 dígitos)
+  if (trimmed.startsWith('+') && digits.length >= 9 && digits.length <= 15) {
+    return `+${digits}`;
+  }
+
+  return '';
 }
 
 /**

@@ -1,6 +1,7 @@
 import { createSignal, onMount, onCleanup, For, Show, createMemo } from 'solid-js';
 import { A, useSearchParams } from '@solidjs/router';
 import { Layout } from '../components/Layout';
+import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
 import { ConversationSummary, WhatsAppMessage, MessageTemplate } from '../types';
 import {
@@ -22,9 +23,11 @@ import {
   Phone,
   Mail,
   ChevronRight,
+  ArrowLeft,
 } from 'lucide-solid';
 
 export default function WhatsAppInbox() {
+  const { showToast } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const leadParam = Array.isArray(searchParams.leadId) ? searchParams.leadId[0] : searchParams.leadId;
   const [conversations, setConversations] = createSignal<ConversationSummary[]>([]);
@@ -80,7 +83,8 @@ export default function WhatsAppInbox() {
       const res = await api.getWhatsAppInbox();
       setConversations(res.conversations || []);
       
-      if (!selectedLeadId() && res.conversations && res.conversations.length > 0) {
+      const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
+      if (!selectedLeadId() && isDesktop && res.conversations && res.conversations.length > 0) {
         selectConversation(res.conversations[0].leadId);
       }
     } catch (err) {
@@ -127,6 +131,11 @@ export default function WhatsAppInbox() {
     loadChat(leadId, false);
   };
 
+  const handleBackToList = () => {
+    setSelectedLeadId('');
+    setSearchParams({});
+  };
+
   const handleSendMessage = async (e?: Event) => {
     if (e) e.preventDefault();
     const text = chatInput().trim();
@@ -153,7 +162,7 @@ export default function WhatsAppInbox() {
         await loadInboxList();
       }
     } catch (err: any) {
-      alert(`Error al enviar mensaje: ${err.message || 'Error desconocido'}`);
+      showToast(`Error al enviar mensaje: ${err.message || 'Error desconocido'}`, 'error');
     } finally {
       setSending(false);
     }
@@ -178,7 +187,7 @@ export default function WhatsAppInbox() {
 
       await loadInboxList();
     } catch (err: any) {
-      alert(`Error actualizando IA: ${err.message}`);
+      showToast(`Error actualizando IA: ${err.message}`, 'error');
     } finally {
       setTogglingAi(false);
     }
@@ -195,10 +204,10 @@ export default function WhatsAppInbox() {
         await loadChat(lead.id, false);
         await loadInboxList();
       } else {
-        alert(`Error al generar respuesta de IA: ${res.error || 'No se pudo generar'}`);
+        showToast(`Error al generar respuesta de IA: ${res.error || 'No se pudo generar'}`, 'error');
       }
     } catch (err: any) {
-      alert(`Error al ejecutar IA: ${err.message}`);
+      showToast(`Error al ejecutar IA: ${err.message}`, 'error');
     } finally {
       setTriggeringAi(false);
     }
@@ -217,7 +226,7 @@ export default function WhatsAppInbox() {
       });
       await loadInboxList();
     } catch (err: any) {
-      alert(`Error actualizando etapa: ${err.message}`);
+      showToast(`Error actualizando etapa: ${err.message}`, 'error');
     } finally {
       setUpdatingStage(false);
     }
@@ -230,8 +239,9 @@ export default function WhatsAppInbox() {
       setTemplates(tmplRes?.templates || []);
     } catch {}
 
-    // Polling inteligente cada 3.5 segundos para sincronizar en tiempo real
+    // Polling inteligente cada 3.5 segundos para sincronizar en tiempo real (pausado si pestaña inactiva)
     pollingTimer = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       const leadId = selectedLeadId();
       if (leadId) {
         loadChat(leadId, true);
@@ -310,7 +320,11 @@ export default function WhatsAppInbox() {
         {/* Main Split Layout: Left Conversations List, Right Chat Thread */}
         <div class="flex-1 flex overflow-hidden">
           {/* LEFT COLUMN: LIST */}
-          <div class="w-full md:w-80 lg:w-96 border-r border-edge bg-surface/60 flex flex-col shrink-0">
+          <div
+            class={`w-full md:w-80 lg:w-96 border-r border-edge bg-surface/60 flex flex-col shrink-0 ${
+              selectedLeadId() ? 'hidden md:flex' : 'flex'
+            }`}
+          >
             {/* Search & Filter Tabs */}
             <div class="p-3 border-b border-edge space-y-2">
               <div class="relative">
@@ -467,7 +481,11 @@ export default function WhatsAppInbox() {
           </div>
 
           {/* RIGHT COLUMN: ACTIVE CHAT THREAD */}
-          <div class="flex-1 flex flex-col bg-app/80 min-w-0">
+          <div
+            class={`flex-1 flex flex-col bg-app/80 min-w-0 ${
+              !selectedLeadId() ? 'hidden md:flex' : 'flex'
+            }`}
+          >
             <Show
               when={selectedLeadId() && activeLead()}
               fallback={
@@ -484,7 +502,18 @@ export default function WhatsAppInbox() {
             >
               {/* Chat Header */}
               <div class="p-3.5 bg-surface/90 border-b border-edge flex flex-wrap items-center justify-between gap-3 shrink-0">
-                <div class="flex items-center gap-3 min-w-0">
+                <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                  {/* Botón Volver a lista en móvil */}
+                  <button
+                    type="button"
+                    onClick={handleBackToList}
+                    class="md:hidden p-2 rounded-xl bg-app border border-edge text-body-soft hover:text-body transition cursor-pointer flex items-center justify-center shrink-0"
+                    title="Volver a la lista de conversaciones"
+                    aria-label="Volver a la lista de conversaciones"
+                  >
+                    <ArrowLeft size={16} />
+                  </button>
+
                   <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-accent to-accent-hover text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
                     {activeLead()?.full_name?.charAt(0) || 'L'}
                   </div>

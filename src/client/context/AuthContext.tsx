@@ -5,6 +5,7 @@ import {
   createEffect,
   JSX,
   Show,
+  For,
 } from 'solid-js';
 import { SessionData } from '../types';
 import { api } from '../api';
@@ -96,32 +97,34 @@ export function AuthProvider(props: { children: JSX.Element }) {
       {/* Floating Toast Notification Container */}
       <div class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-none">
         <Show when={toasts().length > 0}>
-          {toasts().map((toast) => (
-            <div
-              class={`pointer-events-auto px-4 py-3 rounded-2xl border text-sm font-semibold shadow-2xl flex items-center gap-3 animate-fade-in ${
-                toast.type === 'error'
-                  ? 'bg-red-950/90 border-red-800 text-red-200'
-                  : toast.type === 'info'
-                  ? 'bg-blue-950/90 border-blue-800 text-blue-200'
-                  : 'bg-emerald-950/90 border-emerald-800 text-emerald-200'
-              }`}
-            >
-              <Show
-                when={toast.type === 'error'}
-                fallback={
-                  <Show
-                    when={toast.type === 'info'}
-                    fallback={<CircleCheck class="w-5 h-5 shrink-0 text-emerald-400" />}
-                  >
-                    <Info class="w-5 h-5 shrink-0 text-blue-400" />
-                  </Show>
-                }
+          <For each={toasts()}>
+            {(toast) => (
+              <div
+                class={`pointer-events-auto px-4 py-3 rounded-2xl border text-sm font-semibold shadow-2xl flex items-center gap-3 animate-fade-in ${
+                  toast.type === 'error'
+                    ? 'bg-red-950/90 border-red-800 text-red-200'
+                    : toast.type === 'info'
+                    ? 'bg-blue-950/90 border-blue-800 text-blue-200'
+                    : 'bg-emerald-950/90 border-emerald-800 text-emerald-200'
+                }`}
               >
-                <TriangleAlert class="w-5 h-5 shrink-0 text-red-400" />
-              </Show>
-              <span>{toast.message}</span>
-            </div>
-          ))}
+                <Show
+                  when={toast.type === 'error'}
+                  fallback={
+                    <Show
+                      when={toast.type === 'info'}
+                      fallback={<CircleCheck class="w-5 h-5 shrink-0 text-emerald-400" />}
+                    >
+                      <Info class="w-5 h-5 shrink-0 text-blue-400" />
+                    </Show>
+                  }
+                >
+                  <TriangleAlert class="w-5 h-5 shrink-0 text-red-400" />
+                </Show>
+                <span>{toast.message}</span>
+              </div>
+            )}
+          </For>
         </Show>
       </div>
     </AuthContext.Provider>

@@ -1,4 +1,4 @@
-import { createSignal, onMount, Show, For } from 'solid-js';
+import { createSignal, onMount, createEffect, Show, For } from 'solid-js';
 import { useParams, useNavigate, A } from '@solidjs/router';
 import { Layout } from '../components/Layout';
 import { LeadFormFields } from '../components/LeadFormFields';
@@ -82,13 +82,21 @@ export default function LeadDetail() {
   const [editCity, setEditCity] = createSignal('');
   const [savingEdit, setSavingEdit] = createSignal(false);
 
-  const loadLead = async () => {
+  // Actividades de interés (catálogo central, relación N:M con el prospecto)
+  const [interests, setInterests] = createSignal<LeadInterest[]>([]);
+  const [activityCatalog, setActivityCatalog] = createSignal<Activity[]>([]);
+  const [showActivityPicker, setShowActivityPicker] = createSignal(false);
+  const [activitySearch, setActivitySearch] = createSignal('');
+  const [activityBusy, setActivityBusy] = createSignal(false);
+
+  const loadLead = async (leadId?: string) => {
+    const targetId = leadId || params.id;
+    if (!targetId) return;
     try {
       setLoading(true);
       setNotFound(false);
-      if (!params.id) return;
 
-      const res = await api.getLead(params.id);
+      const res = await api.getLead(targetId);
       setLead(res.lead);
       setActivities(res.activities);
       setInterests(res.interests || []);
@@ -105,7 +113,7 @@ export default function LeadDetail() {
       setEditCity(cityFromMetadata(meta));
 
       // Load WhatsApp messages
-      loadMessages();
+      loadMessages(targetId);
     } catch (err: any) {
       setNotFound(true);
       showToast(err.message || 'Error cargando prospecto', 'error');
@@ -114,10 +122,11 @@ export default function LeadDetail() {
     }
   };
 
-  const loadMessages = async () => {
-    if (!params.id) return;
+  const loadMessages = async (leadId?: string) => {
+    const targetId = leadId || params.id;
+    if (!targetId) return;
     try {
-      const res = await api.getWhatsAppMessages(params.id);
+      const res = await api.getWhatsAppMessages(targetId);
       setMessages(res.messages || []);
     } catch (e) {
       console.warn('Error cargando mensajes de chat:', e);
@@ -130,7 +139,13 @@ export default function LeadDetail() {
       setAgents(a.agents);
       setTemplates(t.templates);
     } catch {}
-    loadLead();
+  });
+
+  createEffect(() => {
+    const id = params.id;
+    if (id) {
+      loadLead(id);
+    }
   });
 
   const handleStatusChange = async (newStatus: string) => {
@@ -393,12 +408,6 @@ export default function LeadDetail() {
   };
 
   // Actividades de interés (catálogo central, relación N:M con el prospecto)
-  const [interests, setInterests] = createSignal<LeadInterest[]>([]);
-  const [activityCatalog, setActivityCatalog] = createSignal<Activity[]>([]);
-  const [showActivityPicker, setShowActivityPicker] = createSignal(false);
-  const [activitySearch, setActivitySearch] = createSignal('');
-  const [activityBusy, setActivityBusy] = createSignal(false);
-
   const loadActivities = async () => {
     try {
       const res = await api.getActivities();

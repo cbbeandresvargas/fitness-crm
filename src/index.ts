@@ -15,14 +15,65 @@ const app = new Hono<{ Bindings: Env; Variables: { user?: SessionData } }>();
 // Router principal
 
 
-// Middleware de CORS para desarrollo local y peticiones seguras con credenciales
+// Middleware de CORS endurecido con validación estricta de origen y credenciales seguras
 app.use('*', cors({
-  origin: (origin) => origin || '*',
+  origin: (origin, c) => {
+    if (!origin) return '';
+    try {
+      const url = new URL(origin);
+      const reqHost = c.req.header('host') || '';
+      // Mismo host
+      if (url.host === reqHost) return origin;
+      // Desarrollo local (Vite, Wrangler)
+      if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') return origin;
+      // Dominios autorizados en Cloudflare Workers o producción
+      if (url.hostname.endsWith('.workers.dev') || url.hostname.endsWith('fitnessclub.fit')) return origin;
+    } catch {
+      // URL inválida
+    }
+    return '';
+  },
   credentials: true,
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Accept', 'Authorization', 'x-hub-signature-256'],
   maxAge: 86400,
 }));
+
+// Endpoint de verificación de salud de la plataforma (D1 y KV)
+app.get('/api/health', async (c) => {
+  let dbOk = false;
+  let kvOk = false;
+  let dbLatencyMs = 0;
+  let kvLatencyMs = 0;
+
+  try {
+    const t0 = Date.now();
+    await c.env.DB.prepare('SELECT 1 as ping').first();
+    dbLatencyMs = Date.now() - t0;
+    dbOk = true;
+  } catch (err) {
+    console.error('[Healthcheck] Error de conectividad D1:', err);
+  }
+
+  try {
+    const t0 = Date.now();
+    await c.env.KV.get('__health_test__');
+    kvLatencyMs = Date.now() - t0;
+    kvOk = true;
+  } catch (err) {
+    console.error('[Healthcheck] Error de conectividad KV:', err);
+  }
+
+  const allOk = dbOk && kvOk;
+  return c.json({
+    status: allOk ? 'healthy' : 'degraded',
+    checks: {
+      d1: { ok: dbOk, latencyMs: dbLatencyMs },
+      kv: { ok: kvOk, latencyMs: kvLatencyMs },
+    },
+    timestamp: new Date().toISOString(),
+  }, allOk ? 200 : 503);
+});
 
 // Middleware de sesión global
 app.use('*', authMiddleware);

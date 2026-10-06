@@ -113,14 +113,13 @@ whatsappRoutes.post('/api/whatsapp/webhook', async (c) => {
   const signature = c.req.header('x-hub-signature-256');
 
   const creds = await getActiveMetaCredentials(c.env);
+  const appSecret = creds?.appSecret || c.env.META_APP_SECRET;
 
-  // Validación de firma HMAC si está configurada
-  if (creds?.appSecret) {
-    const isValid = verifyMetaSignature(rawBody, signature, creds.appSecret);
-    if (!isValid) {
-      console.warn('[Meta Webhook POST] Firma x-hub-signature-256 inválida.');
-      return c.json({ error: 'Invalid signature' }, 401);
-    }
+  // Validación estricta de firma HMAC de Meta (fail-closed)
+  const isValid = verifyMetaSignature(rawBody, signature, appSecret);
+  if (!isValid) {
+    console.warn('[Meta Webhook POST] Firma x-hub-signature-256 inválida o appSecret ausente.');
+    return c.json({ error: 'Invalid signature' }, 401);
   }
 
   let payload: any;
@@ -660,7 +659,35 @@ whatsappRoutes.post('/api/whatsapp/leads/:id/test-ai', async (c) => {
 whatsappRoutes.get('/api/whatsapp/inbox', async (c) => {
   const user = c.get('user');
 
-  let query = `
+  const params: any[] = [];
+  let whereClause = '';
+
+  if (user?.role === 'agent') {
+    whereClause = 'WHERE (l.assigned_to = ? OR l.assigned_to IS NULL)';
+    params.push(user.userId);
+  }
+
+  // Optimización de alto rendimiento para Cloudflare Workers Free (límite de 50ms CPU):
+  // Sustitución de 5 subconsultas correlacionadas por CTE con Window Function ROW_NUMBER()
+  const query = `
+    WITH ranked_messages AS (
+      SELECT 
+        lead_id,
+        content,
+        created_at,
+        sender,
+        status,
+        ROW_NUMBER() OVER (PARTITION BY lead_id ORDER BY created_at DESC) as rn
+      FROM whatsapp_messages
+    ),
+    unread_counts AS (
+      SELECT 
+        lead_id,
+        COUNT(*) as unread_count
+      FROM whatsapp_messages
+      WHERE sender = 'lead' AND status != 'read'
+      GROUP BY lead_id
+    )
     SELECT 
       l.id as leadId,
       l.full_name as leadName,
@@ -672,51 +699,21 @@ whatsappRoutes.get('/api/whatsapp/inbox', async (c) => {
       l.ai_enabled as aiEnabled,
       l.handoff_at as handoffAt,
       l.handoff_reason as handoffReason,
-      (
-        SELECT m.content 
-        FROM whatsapp_messages m 
-        WHERE m.lead_id = l.id 
-        ORDER BY m.created_at DESC 
-        LIMIT 1
-      ) as lastMessageText,
-      (
-        SELECT m.created_at 
-        FROM whatsapp_messages m 
-        WHERE m.lead_id = l.id 
-        ORDER BY m.created_at DESC 
-        LIMIT 1
-      ) as lastMessageTime,
-      (
-        SELECT m.sender 
-        FROM whatsapp_messages m 
-        WHERE m.lead_id = l.id 
-        ORDER BY m.created_at DESC 
-        LIMIT 1
-      ) as lastMessageSender,
-      (
-        SELECT m.status 
-        FROM whatsapp_messages m 
-        WHERE m.lead_id = l.id 
-        ORDER BY m.created_at DESC 
-        LIMIT 1
-      ) as lastMessageStatus,
-      (
-        SELECT COUNT(*) 
-        FROM whatsapp_messages m 
-        WHERE m.lead_id = l.id AND m.sender = 'lead' AND m.status != 'read'
-      ) as unreadCount
+      rm.content as lastMessageText,
+      rm.created_at as lastMessageTime,
+      rm.sender as lastMessageSender,
+      rm.status as lastMessageStatus,
+      COALESCE(uc.unread_count, 0) as unreadCount
     FROM leads l
+    JOIN ranked_messages rm ON rm.lead_id = l.id AND rm.rn = 1
+    LEFT JOIN unread_counts uc ON uc.lead_id = l.id
     LEFT JOIN users u ON u.id = l.assigned_to
-    WHERE EXISTS (SELECT 1 FROM whatsapp_messages wm WHERE wm.lead_id = l.id)
+    ${whereClause}
+    ORDER BY COALESCE(rm.created_at, l.created_at) DESC 
+    LIMIT 50
   `;
 
-  if (user?.role === 'agent') {
-    query += ` AND (l.assigned_to = '${user.userId}' OR l.assigned_to IS NULL)`;
-  }
-
-  query += ` ORDER BY COALESCE(lastMessageTime, l.created_at) DESC LIMIT 50`;
-
-  const rows = await c.env.DB.prepare(query).all<any>();
+  const rows = await c.env.DB.prepare(query).bind(...params).all<any>();
   const conversations: ConversationSummary[] = (rows.results || []).map((r) => ({
     leadId: r.leadId,
     leadName: r.leadName,
