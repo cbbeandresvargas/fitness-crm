@@ -3,6 +3,7 @@ import { Layout } from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
 import { Activity } from '../types';
+import { Activity as ActivityIcon, Plus, Pencil, Check, Trash } from 'lucide-solid';
 
 /**
  * Catálogo de Actividades de interés — fuente de verdad central de nombres.
@@ -99,7 +100,10 @@ export default function ActivityCatalog() {
       <div class="space-y-6 max-w-4xl mx-auto">
         {/* Cabecera */}
         <div class="p-8 rounded-3xl bg-surface border border-edge space-y-3">
-          <h2 class="text-2xl font-black text-body">🏃 Catálogo de Actividades</h2>
+          <h2 class="text-2xl font-black text-body flex items-center gap-2.5">
+            <ActivityIcon class="w-6 h-6 text-accent" />
+            <span>Catálogo de Actividades</span>
+          </h2>
           <p class="text-xs text-muted max-w-2xl leading-relaxed">
             Fuente de verdad de las actividades de interés de los prospectos. Crece orgánicamente:
             también puedes crear actividades directamente desde la Ficha de un prospecto. Renombrar
@@ -123,9 +127,10 @@ export default function ActivityCatalog() {
           <button
             type="submit"
             disabled={!newName().trim() || saving()}
-            class="px-6 py-2.5 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded-2xl transition shadow-accent-glow disabled:opacity-50 cursor-pointer whitespace-nowrap"
+            class="px-6 py-2.5 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded-2xl transition shadow-accent-glow disabled:opacity-50 cursor-pointer whitespace-nowrap flex items-center justify-center gap-1.5"
           >
-            {saving() ? 'Guardando...' : '+ Añadir actividad'}
+            <Plus class="w-4 h-4" />
+            <span>{saving() ? 'Guardando...' : 'Añadir actividad'}</span>
           </button>
         </form>
 
@@ -205,10 +210,10 @@ export default function ActivityCatalog() {
                                   <button
                                     type="button"
                                     onClick={() => handleStartEdit(activity)}
-                                    class="px-3 py-1.5 bg-elevate hover:bg-elevate-strong text-body-soft rounded-xl font-semibold transition cursor-pointer"
+                                    class="p-2 bg-elevate hover:bg-elevate-strong text-body-soft rounded-xl font-semibold transition cursor-pointer flex items-center justify-center"
                                     title="Renombrar"
                                   >
-                                    ✏️
+                                    <Pencil class="w-3.5 h-3.5" />
                                   </button>
                                 }
                               >
@@ -216,9 +221,10 @@ export default function ActivityCatalog() {
                                   type="button"
                                   onClick={() => handleSaveEdit(activity.id)}
                                   disabled={saving() || !editName().trim()}
-                                  class="px-3 py-1.5 bg-accent hover:bg-accent-hover text-white rounded-xl font-bold transition cursor-pointer disabled:opacity-50"
+                                  class="px-3 py-1.5 bg-accent hover:bg-accent-hover text-white rounded-xl font-bold transition cursor-pointer disabled:opacity-50 inline-flex items-center gap-1"
                                 >
-                                  ✓ Guardar
+                                  <Check class="w-3.5 h-3.5" />
+                                  <span>Guardar</span>
                                 </button>
                                 <button
                                   type="button"
@@ -232,14 +238,14 @@ export default function ActivityCatalog() {
                                 <button
                                   type="button"
                                   onClick={() => handleDelete(activity)}
-                                  class="px-3 py-1.5 bg-red-950/40 hover:bg-red-900/60 text-red-400 rounded-xl font-semibold transition cursor-pointer"
+                                  class="p-2 bg-red-950/40 hover:bg-red-900/60 text-red-400 rounded-xl font-semibold transition cursor-pointer flex items-center justify-center"
                                   title={
                                     (activity.prospect_count || 0) > 0
                                       ? `Asociada a ${activity.prospect_count} prospecto(s)`
                                       : 'Eliminar del catálogo'
                                   }
                                 >
-                                  🗑️
+                                  <Trash class="w-3.5 h-3.5" />
                                 </button>
                               </Show>
                             </div>

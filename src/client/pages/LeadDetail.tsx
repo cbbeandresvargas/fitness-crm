@@ -21,6 +21,13 @@ import {
   ExternalLink,
   History,
   Activity as ActivityIcon,
+  ArrowLeft,
+  Pencil,
+  Trash,
+  X,
+  Search,
+  Lightbulb,
+  TriangleAlert,
 } from 'lucide-solid';
 
 export default function LeadDetail() {
@@ -494,9 +501,9 @@ export default function LeadDetail() {
             <button
               type="button"
               onClick={() => setPreviewZoomUrl(null)}
-              class="absolute top-4 right-4 p-2.5 rounded-full bg-surface/80 hover:bg-elevate text-body font-bold"
+              class="absolute top-4 right-4 p-2.5 rounded-full bg-surface/80 hover:bg-elevate text-body font-bold flex items-center justify-center"
             >
-              ✕
+              <X class="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -508,7 +515,7 @@ export default function LeadDetail() {
           <div class="bg-surface border border-edge rounded-3xl p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-6 shadow-2xl">
             <div class="flex items-center justify-between border-b border-edge pb-4">
               <h3 class="text-lg font-bold text-body flex items-center gap-2">
-                <span>✏️</span>
+                <Pencil class="w-4 h-4 text-accent" />
                 <span>Editar Información del Prospecto</span>
               </h3>
               <button
@@ -516,7 +523,7 @@ export default function LeadDetail() {
                 onClick={() => setIsEditModalOpen(false)}
                 class="text-muted hover:text-body p-1"
               >
-                ✕
+                <X class="w-5 h-5" />
               </button>
             </div>
 
@@ -572,16 +579,19 @@ export default function LeadDetail() {
       {/* Not found state */}
       <Show when={!loading() && (notFound() || !lead())}>
         <div class="p-16 rounded-3xl bg-surface border border-edge text-center space-y-4 max-w-lg mx-auto shadow-2xl">
-          <span class="text-4xl block">🔍</span>
+          <div class="w-16 h-16 mx-auto rounded-3xl bg-elevate border border-edge flex items-center justify-center text-muted">
+            <Search class="w-8 h-8" />
+          </div>
           <h2 class="text-xl font-black text-body">Prospecto no encontrado</h2>
           <p class="text-xs text-muted">
             El prospecto no existe o no tienes los permisos suficientes asignados para consultarlo.
           </p>
           <A
             href="/leads"
-            class="inline-block px-5 py-2.5 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded-xl transition shadow-accent-glow"
+            class="inline-flex items-center gap-1.5 px-5 py-2.5 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded-xl transition shadow-accent-glow"
           >
-            ⬅️ Volver a la lista
+            <ArrowLeft class="w-4 h-4" />
+            <span>Volver a la lista</span>
           </A>
         </div>
       </Show>
@@ -594,10 +604,10 @@ export default function LeadDetail() {
             <div class="flex items-center gap-3.5">
               <A
                 href="/leads"
-                class="p-2.5 bg-app border border-edge hover:bg-elevate text-body-soft rounded-2xl transition"
+                class="p-2.5 bg-app border border-edge hover:bg-elevate text-body-soft rounded-2xl transition flex items-center justify-center"
                 title="Volver a la lista"
               >
-                ⬅️
+                <ArrowLeft class="w-4 h-4" />
               </A>
               <div>
                 <div class="flex items-center gap-3 flex-wrap">
@@ -618,18 +628,20 @@ export default function LeadDetail() {
               <button
                 type="button"
                 onClick={() => setIsEditModalOpen(true)}
-                class="px-3 py-2 bg-elevate hover:bg-elevate-strong text-body-soft rounded-xl text-xs font-semibold border border-edge-strong transition cursor-pointer"
+                class="inline-flex items-center gap-1.5 px-3 py-2 bg-elevate hover:bg-elevate-strong text-body-soft rounded-xl text-xs font-semibold border border-edge-strong transition cursor-pointer"
               >
-                ✏️ Editar
+                <Pencil class="w-3.5 h-3.5" />
+                <span>Editar</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleRecalculateSegment}
-                class="px-3 py-2 bg-elevate hover:bg-elevate-strong text-body-soft rounded-xl text-xs font-semibold border border-edge-strong transition cursor-pointer"
+                class="inline-flex items-center gap-1.5 px-3 py-2 bg-elevate hover:bg-elevate-strong text-body-soft rounded-xl text-xs font-semibold border border-edge-strong transition cursor-pointer"
                 title="Recalcular segmento con reglas dinámicas"
               >
-                🔄 Segmento
+                <RefreshCw class="w-3.5 h-3.5" />
+                <span>Segmento</span>
               </button>
 
               <a
@@ -638,17 +650,17 @@ export default function LeadDetail() {
                 rel="noopener noreferrer"
                 class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-lg"
               >
-                <span>💬</span>
+                <MessageSquare class="w-4 h-4" />
                 <span>WhatsApp App</span>
               </a>
 
               <button
                 type="button"
                 onClick={handleDeleteLead}
-                class="p-2 text-muted hover:text-red-400 rounded-xl hover:bg-red-950/40 transition cursor-pointer"
+                class="p-2 text-muted hover:text-red-400 rounded-xl hover:bg-red-950/40 transition cursor-pointer flex items-center justify-center"
                 title="Eliminar prospecto"
               >
-                🗑️
+                <Trash class="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -673,11 +685,11 @@ export default function LeadDetail() {
                       onChange={(e) => handleStatusChange(e.currentTarget.value)}
                       class="w-full bg-app border border-edge rounded-xl px-3 py-2 text-xs text-body focus:outline-none focus:border-accent cursor-pointer"
                     >
-                      <option value="nuevo">🌱 Nuevo</option>
-                      <option value="contactado">💬 Contactado</option>
-                      <option value="negociacion">🤝 Negociación</option>
-                      <option value="ganado">🏆 Ganado / Inscrito</option>
-                      <option value="perdido">🛑 Perdido</option>
+                      <option value="nuevo">Nuevo</option>
+                      <option value="contactado">Contactado</option>
+                      <option value="negociacion">Negociación</option>
+                      <option value="ganado">Ganado / Inscrito</option>
+                      <option value="perdido">Perdido</option>
                     </select>
                   </div>
 
@@ -691,7 +703,7 @@ export default function LeadDetail() {
                       class="w-full bg-app border border-edge rounded-xl px-3 py-2 text-xs text-body focus:outline-none focus:border-accent cursor-pointer"
                     >
                       <option value="">Sin Asignar</option>
-                      <option value="auto">🤖 Balance Automático (Round-Robin)</option>
+                      <option value="auto">Balance Automático (Round-Robin)</option>
                       <For each={agents()}>
                         {(agent) => <option value={agent.id}>{agent.name}</option>}
                       </For>
@@ -742,9 +754,15 @@ export default function LeadDetail() {
                   <button
                     type="button"
                     onClick={handleToggleActivityPicker}
-                    class="px-3 py-1.5 bg-accent hover:bg-accent-hover text-white text-[11px] font-bold rounded-xl transition cursor-pointer"
+                    class="inline-flex items-center gap-1 px-3 py-1.5 bg-accent hover:bg-accent-hover text-white text-[11px] font-bold rounded-xl transition cursor-pointer"
                   >
-                    {showActivityPicker() ? '✕ Cerrar' : '+ Agregar actividad'}
+                    <Show
+                      when={showActivityPicker()}
+                      fallback={<><Plus class="w-3 h-3" /><span>Agregar actividad</span></>}
+                    >
+                      <X class="w-3 h-3" />
+                      <span>Cerrar</span>
+                    </Show>
                   </button>
                 </div>
 
@@ -775,9 +793,9 @@ export default function LeadDetail() {
                               type="button"
                               onClick={() => handleRemoveInterest(interest.id)}
                               disabled={activityBusy()}
-                              class="hover:text-red-400 transition cursor-pointer disabled:opacity-50"
+                              class="hover:text-red-400 transition cursor-pointer disabled:opacity-50 flex items-center"
                             >
-                              ✕
+                              <X class="w-3 h-3" />
                             </button>
                           </Show>
                         </span>
@@ -813,7 +831,7 @@ export default function LeadDetail() {
                             <span class="font-semibold">{act.name}</span>
                             <span class="text-[10px] text-muted">
                               {act.alreadyAssigned
-                                ? '✓ ya asociada'
+                                ? '(ya asociada)'
                                 : `${act.prospect_count || 0} prospectos`}
                             </span>
                           </button>
@@ -851,7 +869,17 @@ export default function LeadDetail() {
                     disabled={generatingTags()}
                     class="text-xs text-accent-text hover:underline font-bold disabled:opacity-50 cursor-pointer"
                   >
-                    {generatingTags() ? 'Analizando...' : '✨ Sugerir con IA'}
+                    <Show
+                      when={generatingTags()}
+                      fallback={
+                        <span class="inline-flex items-center gap-1">
+                          <Sparkles class="w-3.5 h-3.5" />
+                          <span>Sugerir con IA</span>
+                        </span>
+                      }
+                    >
+                      Analizando...
+                    </Show>
                   </button>
                 </div>
 
@@ -863,9 +891,9 @@ export default function LeadDetail() {
                         <button
                           type="button"
                           onClick={() => handleRemoveTag(t)}
-                          class="hover:text-red-400 transition cursor-pointer"
+                          class="hover:text-red-400 transition cursor-pointer flex items-center"
                         >
-                          ✕
+                          <X class="w-3 h-3" />
                         </button>
                       </span>
                     )}
@@ -875,8 +903,9 @@ export default function LeadDetail() {
                 {/* Sugerencias de IA */}
                 <Show when={suggestedTags().length > 0}>
                   <div class="p-3 bg-app rounded-2xl border border-accent/20 space-y-2">
-                    <span class="text-[11px] text-accent-text font-bold block">
-                      💡 Sugerencias de Workers AI:
+                    <span class="text-[11px] text-accent-text font-bold flex items-center gap-1.5">
+                      <Lightbulb class="w-3.5 h-3.5" />
+                      <span>Sugerencias de Workers AI:</span>
                     </span>
                     <div class="flex flex-wrap gap-1.5">
                       <For each={suggestedTags()}>
@@ -932,7 +961,7 @@ export default function LeadDetail() {
                       : 'text-muted hover:text-body'
                   }`}
                 >
-                  <span>💬</span>
+                  <MessageSquare class="w-4 h-4" />
                   <span>Chat WhatsApp ({messages().length})</span>
                 </button>
 
@@ -945,7 +974,7 @@ export default function LeadDetail() {
                       : 'text-muted hover:text-body'
                   }`}
                 >
-                  <span>✨</span>
+                  <Sparkles class="w-4 h-4" />
                   <span>Redactor IA Llama 3</span>
                 </button>
 
@@ -958,7 +987,7 @@ export default function LeadDetail() {
                       : 'text-muted hover:text-body'
                   }`}
                 >
-                  <span>📜</span>
+                  <History class="w-4 h-4" />
                   <span>Bitácora ({activities().length})</span>
                 </button>
               </div>
@@ -970,7 +999,7 @@ export default function LeadDetail() {
                   <div class="p-4 bg-app/80 border-b border-edge flex items-center justify-between">
                     <div class="flex items-center gap-3">
                       <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-bold flex items-center justify-center">
-                        💬
+                        <MessageSquare class="w-5 h-5" />
                       </div>
                       <div>
                         <h4 class="font-bold text-body text-sm flex items-center gap-2">
@@ -1001,7 +1030,7 @@ export default function LeadDetail() {
                             }`}
                             title="Alternar atención automática con IA"
                           >
-                            <span>🤖</span>
+                            <Bot class="w-3.5 h-3.5" />
                             <span>{lead()?.ai_enabled === 1 ? 'IA Ventas Activa' : 'IA Pausada'}</span>
                           </button>
                         }
@@ -1009,9 +1038,10 @@ export default function LeadDetail() {
                         <button
                           type="button"
                           onClick={() => handleToggleLeadAi(true)}
-                          class="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-black text-xs font-black rounded-xl transition cursor-pointer"
+                          class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-black text-xs font-black rounded-xl transition cursor-pointer"
                         >
-                          ⚠️ Reactivar IA (Fin Handoff)
+                          <TriangleAlert class="w-3.5 h-3.5" />
+                          <span>Reactivar IA (Fin Handoff)</span>
                         </button>
                       </Show>
 
@@ -1031,7 +1061,9 @@ export default function LeadDetail() {
                       when={messages().length > 0}
                       fallback={
                         <div class="h-full flex flex-col items-center justify-center text-muted space-y-2 p-8 text-center">
-                          <span class="text-3xl">💬</span>
+                          <div class="w-12 h-12 rounded-2xl bg-surface border border-edge flex items-center justify-center text-muted">
+                            <MessageSquare class="w-6 h-6" />
+                          </div>
                           <p class="text-xs font-semibold">Aún no hay mensajes en esta conversación.</p>
                           <p class="text-[11px] text-muted">
                             Escribe abajo para enviar un mensaje o adjuntar una foto (comprobante, plan nutricional o de entrenamiento).
@@ -1065,12 +1097,17 @@ export default function LeadDetail() {
 
                                 {/* Sender Badge */}
                                 <div class="flex items-center justify-between gap-2 text-[10px] opacity-80 pb-0.5">
-                                  <span class="font-bold">
-                                    {isMe
-                                      ? msg.ai_generated === 1
-                                        ? '🤖 IA Ventas (Workers AI)'
-                                        : msg.user_name || 'Asesor Comercial'
-                                      : lead()?.full_name || 'Prospecto'}
+                                  <span class="font-bold flex items-center gap-1">
+                                    <Show when={isMe && msg.ai_generated === 1}>
+                                      <Bot class="w-3 h-3 inline" />
+                                    </Show>
+                                    <span>
+                                      {isMe
+                                        ? msg.ai_generated === 1
+                                          ? 'IA Ventas (Workers AI)'
+                                          : msg.user_name || 'Asesor Comercial'
+                                        : lead()?.full_name || 'Prospecto'}
+                                    </span>
                                   </span>
                                 </div>
 
@@ -1084,9 +1121,12 @@ export default function LeadDetail() {
                                     })}
                                   </span>
                                   <Show when={isMe}>
-                                    <span>
-                                      {msg.status === 'read' ? '✓✓' : msg.status === 'delivered' ? '✓✓' : '✓'}
-                                    </span>
+                                    <Show
+                                      when={msg.status === 'read' || msg.status === 'delivered'}
+                                      fallback={<Check class="w-3 h-3 text-white/70" />}
+                                    >
+                                      <CheckCheck class="w-3 h-3 text-white/90" />
+                                    </Show>
                                   </Show>
                                 </div>
                               </div>
@@ -1117,9 +1157,10 @@ export default function LeadDetail() {
                           setSelectedImage(null);
                           setImagePreview(null);
                         }}
-                        class="text-muted hover:text-body text-xs font-bold"
+                        class="inline-flex items-center gap-1 text-muted hover:text-body text-xs font-bold"
                       >
-                        ✕ Cancelar
+                        <X class="w-3.5 h-3.5" />
+                        <span>Cancelar</span>
                       </button>
                     </div>
                   </Show>
@@ -1184,7 +1225,7 @@ export default function LeadDetail() {
                 <div class="p-6 rounded-3xl bg-gradient-to-br from-surface via-surface to-accent-deep/20 border border-accent/30 space-y-4 shadow-xl">
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2.5">
-                      <span class="text-xl">🤖</span>
+                      <Bot class="w-6 h-6 text-accent" />
                       <div>
                         <h3 class="text-base font-extrabold text-body">
                           Generador de WhatsApp con IA
@@ -1199,17 +1240,19 @@ export default function LeadDetail() {
                       type="button"
                       onClick={handleGenerateBriefing}
                       disabled={generatingBriefing()}
-                      class="px-3 py-1.5 bg-elevate hover:bg-elevate-strong text-body-soft text-xs font-semibold rounded-xl transition border border-edge-strong disabled:opacity-50 cursor-pointer"
+                      class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-elevate hover:bg-elevate-strong text-body-soft text-xs font-semibold rounded-xl transition border border-edge-strong disabled:opacity-50 cursor-pointer"
                     >
-                      {generatingBriefing() ? 'Generando...' : '📄 Resumen Ejecutivo IA'}
+                      <FileText class="w-3.5 h-3.5" />
+                      <span>{generatingBriefing() ? 'Generando...' : 'Resumen Ejecutivo IA'}</span>
                     </button>
                   </div>
 
                   {/* Briefing expandible */}
                   <Show when={aiBriefing()}>
                     <div class="p-4 rounded-2xl bg-app/80 border border-accent/40 text-xs space-y-1.5 animate-fade-in">
-                      <span class="font-extrabold text-accent-text block">
-                        📌 Resumen Ejecutivo del Prospecto:
+                      <span class="font-extrabold text-accent-text flex items-center gap-1.5">
+                        <FileText class="w-3.5 h-3.5" />
+                        <span>Resumen Ejecutivo del Prospecto:</span>
                       </span>
                       <p class="text-body-soft whitespace-pre-wrap leading-relaxed">
                         {aiBriefing()}
@@ -1221,10 +1264,10 @@ export default function LeadDetail() {
                   <div class="flex flex-wrap items-center gap-2">
                     <span class="text-xs text-muted font-bold">Tono del mensaje:</span>
                     {[
-                      { id: 'bienvenida', label: '👋 Bienvenida & Cortesía' },
-                      { id: 'seguimiento', label: '🏋️ Recordatorio / Cita' },
-                      { id: 'cierre', label: '🔥 Urgencia & Cierre' },
-                      { id: 'reactivacion', label: '⏳ Reactivación Inactivo' },
+                      { id: 'bienvenida', label: 'Bienvenida & Cortesía' },
+                      { id: 'seguimiento', label: 'Recordatorio / Cita' },
+                      { id: 'cierre', label: 'Urgencia & Cierre' },
+                      { id: 'reactivacion', label: 'Reactivación Inactivo' },
                     ].map((t) => (
                       <button
                         type="button"

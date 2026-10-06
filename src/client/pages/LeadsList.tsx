@@ -8,6 +8,15 @@ import { cityFromMetadata } from '../../lib/locations';
 import { FC_SEGMENTS } from '../../lib/segments';
 import { LEAD_STATUS_OPTIONS } from '../../lib/leadStatus';
 import { SegmentBadge } from '../components/SegmentBadge';
+import {
+  Search,
+  X,
+  Table,
+  LayoutGrid,
+  Plus,
+  MessageSquare,
+  Trash,
+} from 'lucide-solid';
 
 export default function LeadsList() {
   const { user, showToast } = useAuth();
@@ -139,7 +148,7 @@ export default function LeadsList() {
             {/* Buscador reactivo */}
             <div class="relative flex-1 max-w-md">
               <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-muted">
-                🔍
+                <Search class="w-4 h-4" />
               </span>
               <input
                 type="text"
@@ -155,7 +164,7 @@ export default function LeadsList() {
                   class="absolute inset-y-0 right-0 pr-3 flex items-center text-muted hover:text-body"
                   title="Limpiar búsqueda"
                 >
-                  ✕
+                  <X class="w-4 h-4" />
                 </button>
               </Show>
             </div>
@@ -166,24 +175,26 @@ export default function LeadsList() {
                 <button
                   type="button"
                   onClick={() => setViewMode('table')}
-                  class={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                  class={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
                     viewMode() === 'table'
                       ? 'bg-accent text-white shadow-sm'
                       : 'text-muted hover:text-body'
                   }`}
                 >
-                  📄 Tabla
+                  <Table class="w-3.5 h-3.5" />
+                  <span>Tabla</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setViewMode('cards')}
-                  class={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                  class={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
                     viewMode() === 'cards'
                       ? 'bg-accent text-white shadow-sm'
                       : 'text-muted hover:text-body'
                   }`}
                 >
-                  🗂️ Tarjetas
+                  <LayoutGrid class="w-3.5 h-3.5" />
+                  <span>Tarjetas</span>
                 </button>
               </div>
 
@@ -191,7 +202,7 @@ export default function LeadsList() {
                 href="/leads/new"
                 class="px-4 py-2 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded-2xl transition shadow-accent-glow flex items-center gap-1.5"
               >
-                <span>➕</span>
+                <Plus class="w-4 h-4" />
                 <span>Nuevo Prospecto</span>
               </A>
             </div>
@@ -205,7 +216,7 @@ export default function LeadsList() {
                 { id: '', label: 'Todos' },
                 ...(['A', 'B', 'C'] as const).map((id) => ({
                   id,
-                  label: `${FC_SEGMENTS[id].icon} ${id} · ${FC_SEGMENTS[id].label}`,
+                  label: `${id} · ${FC_SEGMENTS[id].label}`,
                 })),
               ].map((seg) => (
                 <button
@@ -252,10 +263,11 @@ export default function LeadsList() {
                 <button
                   type="button"
                   onClick={clearFilters}
-                  class="px-2.5 py-1.5 text-xs text-muted hover:text-red-400 transition"
+                  class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs text-muted hover:text-red-400 transition"
                   title="Restablecer todos los filtros"
                 >
-                  ✕ Limpiar
+                  <X class="w-3.5 h-3.5" />
+                  <span>Limpiar</span>
                 </button>
               </Show>
             </div>
@@ -283,7 +295,9 @@ export default function LeadsList() {
             when={leads().length > 0}
             fallback={
               <div class="p-16 rounded-3xl bg-surface border border-edge text-center space-y-4 shadow-xl">
-                <span class="text-4xl block">🔍</span>
+                <div class="w-16 h-16 mx-auto rounded-3xl bg-elevate border border-edge flex items-center justify-center text-muted">
+                  <Search class="w-8 h-8" />
+                </div>
                 <p class="text-base font-bold text-body">No se encontraron prospectos con esos criterios</p>
                 <p class="text-xs text-muted max-w-sm mx-auto">
                   Prueba ajustando los filtros de búsqueda o registra un nuevo prospecto.
@@ -298,9 +312,10 @@ export default function LeadsList() {
                   </button>
                   <A
                     href="/leads/new"
-                    class="px-4 py-2 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded-xl transition shadow-accent-glow"
+                    class="inline-flex items-center gap-1.5 px-4 py-2 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded-xl transition shadow-accent-glow"
                   >
-                    ➕ Anotar Prospecto
+                    <Plus class="w-4 h-4" />
+                    <span>Anotar Prospecto</span>
                   </A>
                 </div>
               </div>
@@ -428,10 +443,10 @@ export default function LeadsList() {
                                   href={`https://wa.me/${lead.phone.replace(/^\+/, '')}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  class="p-2 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 rounded-xl transition"
+                                  class="p-2 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 rounded-xl transition flex items-center justify-center"
                                   title="Abrir WhatsApp directo"
                                 >
-                                  💬
+                                  <MessageSquare class="w-4 h-4" />
                                 </a>
                                 <A
                                   href={`/leads/${lead.id}`}
@@ -442,10 +457,10 @@ export default function LeadsList() {
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteLead(lead.id, lead.full_name)}
-                                  class="p-2 text-muted hover:text-red-400 rounded-xl hover:bg-red-950/40 transition cursor-pointer"
+                                  class="p-2 text-muted hover:text-red-400 rounded-xl hover:bg-red-950/40 transition cursor-pointer flex items-center justify-center"
                                   title="Eliminar prospecto"
                                 >
-                                  🗑️
+                                  <Trash class="w-4 h-4" />
                                 </button>
                               </div>
                             </td>
@@ -569,10 +584,10 @@ export default function LeadsList() {
                             href={`https://wa.me/${lead.phone.replace(/^\+/, '')}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            class="p-2 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 rounded-xl transition"
+                            class="p-2 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 rounded-xl transition flex items-center justify-center"
                             title="WhatsApp"
                           >
-                            💬
+                            <MessageSquare class="w-4 h-4" />
                           </a>
                           <A
                             href={`/leads/${lead.id}`}

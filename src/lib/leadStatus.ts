@@ -8,11 +8,11 @@
  * Es un concepto INDEPENDIENTE del Estado de Membresía y de los Segmentos.
  */
 export const LEAD_STATUS_OPTIONS = [
-  { value: 'nuevo', label: '🌱 Nuevo' },
-  { value: 'contactado', label: '💬 Contactado' },
-  { value: 'negociacion', label: '🤝 Negociación' },
-  { value: 'ganado', label: '🏆 Ganado' },
-  { value: 'perdido', label: '🛑 Perdido' },
+  { value: 'nuevo', label: 'Nuevo' },
+  { value: 'contactado', label: 'Contactado' },
+  { value: 'negociacion', label: 'Negociación' },
+  { value: 'ganado', label: 'Ganado' },
+  { value: 'perdido', label: 'Perdido' },
 ] as const;
 
 export type LeadStatusValue = (typeof LEAD_STATUS_OPTIONS)[number]['value'];

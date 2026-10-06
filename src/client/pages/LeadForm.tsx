@@ -4,6 +4,7 @@ import { Layout } from '../components/Layout';
 import { LeadFormFields } from '../components/LeadFormFields';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
+import { ArrowLeft, TriangleAlert } from 'lucide-solid';
 
 export default function LeadForm() {
   const navigate = useNavigate();
@@ -58,9 +59,10 @@ export default function LeadForm() {
         <div class="flex items-center gap-3">
           <A
             href="/leads"
-            class="p-2.5 bg-surface border border-edge hover:bg-elevate text-body-soft rounded-2xl transition"
+            class="p-2.5 bg-surface border border-edge hover:bg-elevate text-body-soft rounded-2xl transition flex items-center justify-center"
+            title="Volver a la lista"
           >
-            ⬅️
+            <ArrowLeft class="w-4 h-4" />
           </A>
           <div>
             <h2 class="text-2xl font-black text-body">Registro de Nuevo Prospecto</h2>
@@ -72,7 +74,7 @@ export default function LeadForm() {
 
         <Show when={errorMessage()}>
           <div class="p-4 rounded-2xl bg-red-950/80 border border-red-800 text-red-200 text-xs font-semibold flex items-center gap-3">
-            <span class="text-base">⚠️</span>
+            <TriangleAlert class="w-4 h-4 shrink-0 text-red-300" />
             <span>{errorMessage()}</span>
           </div>
         </Show>

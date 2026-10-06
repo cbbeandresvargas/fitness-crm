@@ -2,6 +2,7 @@ import { createSignal, Show, createEffect } from 'solid-js';
 import { useNavigate } from '@solidjs/router';
 import { useAuth } from '../context/AuthContext';
 import { ThemeToggle } from '../context/ThemeContext';
+import { Zap, TriangleAlert } from 'lucide-solid';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -42,8 +43,8 @@ export default function Login() {
       <div class="max-w-md w-full space-y-6">
         {/* Brand */}
         <div class="text-center space-y-2">
-          <div class="inline-flex w-16 h-16 rounded-3xl bg-gradient-to-tr from-accent-deep to-accent items-center justify-center text-white text-3xl shadow-accent-glow mb-2">
-            ⚡
+          <div class="inline-flex w-16 h-16 rounded-3xl bg-gradient-to-tr from-accent-deep to-accent items-center justify-center text-white shadow-accent-glow mb-2">
+            <Zap class="w-8 h-8 text-white" />
           </div>
           <h1 class="text-3xl font-black tracking-tight text-body flex items-center justify-center gap-1.5">
             FITNESS<span class="text-accent-text">CLUB</span>
@@ -62,7 +63,7 @@ export default function Login() {
 
           <Show when={error()}>
             <div class="p-3.5 rounded-2xl bg-red-950/80 border border-red-800 text-red-200 text-xs font-semibold flex items-center gap-2.5 animate-fade-in">
-              <span>⚠️</span>
+              <TriangleAlert class="w-4 h-4 shrink-0 text-red-300" />
               <span>{error()}</span>
             </div>
           </Show>

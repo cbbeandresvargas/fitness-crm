@@ -2,6 +2,21 @@ import { JSX, Show, createSignal } from 'solid-js';
 import { A, useLocation } from '@solidjs/router';
 import { useAuth } from '../context/AuthContext';
 import { ThemeToggle } from '../context/ThemeContext';
+import {
+  Zap,
+  X,
+  LayoutDashboard,
+  Users,
+  MessageSquare,
+  FileText,
+  ArrowUpDown,
+  Activity,
+  Settings,
+  ShieldCheck,
+  LogOut,
+  Menu,
+  Plus,
+} from 'lucide-solid';
 
 export function Layout(props: { children: JSX.Element; title?: string }) {
   const { user, logout } = useAuth();
@@ -35,8 +50,8 @@ export function Layout(props: { children: JSX.Element; title?: string }) {
         {/* Brand / Logo */}
         <div class="p-5 border-b border-edge flex items-center justify-between">
           <A href="/" onClick={closeMobileMenu} class="flex items-center gap-3 group">
-            <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-accent-deep to-accent flex items-center justify-center text-white text-xl shadow-accent-glow group-hover:scale-105 transition-transform">
-              ⚡
+            <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-accent-deep to-accent flex items-center justify-center text-white shadow-accent-glow group-hover:scale-105 transition-transform">
+              <Zap class="w-5 h-5 text-white" />
             </div>
             <div>
               <span class="font-black text-lg tracking-tight text-body flex items-center gap-1">
@@ -55,7 +70,7 @@ export function Layout(props: { children: JSX.Element; title?: string }) {
             class="md:hidden p-2 text-muted hover:text-body rounded-xl hover:bg-elevate transition"
             aria-label="Cerrar menú"
           >
-            ✕
+            <X class="w-5 h-5" />
           </button>
         </div>
 
@@ -70,7 +85,7 @@ export function Layout(props: { children: JSX.Element; title?: string }) {
                 : 'text-muted hover:text-body hover:bg-elevate/60'
             }`}
           >
-            <span class="text-base">📊</span>
+            <LayoutDashboard class="w-4 h-4 shrink-0" />
             <span>Inicio / Dashboard</span>
           </A>
 
@@ -83,7 +98,7 @@ export function Layout(props: { children: JSX.Element; title?: string }) {
                 : 'text-muted hover:text-body hover:bg-elevate/60'
             }`}
           >
-            <span class="text-base">👥</span>
+            <Users class="w-4 h-4 shrink-0" />
             <span>Lista de Prospectos</span>
           </A>
 
@@ -96,7 +111,7 @@ export function Layout(props: { children: JSX.Element; title?: string }) {
                 : 'text-muted hover:text-body hover:bg-elevate/60'
             }`}
           >
-            <span class="text-base">💬</span>
+            <MessageSquare class="w-4 h-4 shrink-0" />
             <div class="flex items-center justify-between flex-1">
               <span>Chat WhatsApp</span>
               <span class="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
@@ -114,7 +129,7 @@ export function Layout(props: { children: JSX.Element; title?: string }) {
                 : 'text-muted hover:text-body hover:bg-elevate/60'
             }`}
           >
-            <span class="text-base">📑</span>
+            <FileText class="w-4 h-4 shrink-0" />
             <span>Plantillas WhatsApp</span>
           </A>
 
@@ -127,7 +142,7 @@ export function Layout(props: { children: JSX.Element; title?: string }) {
                 : 'text-muted hover:text-body hover:bg-elevate/60'
             }`}
           >
-            <span class="text-base">📁</span>
+            <ArrowUpDown class="w-4 h-4 shrink-0" />
             <span>Importar / Exportar</span>
           </A>
 
@@ -140,7 +155,7 @@ export function Layout(props: { children: JSX.Element; title?: string }) {
                 : 'text-muted hover:text-body hover:bg-elevate/60'
             }`}
           >
-            <span class="text-base">🏃</span>
+            <Activity class="w-4 h-4 shrink-0" />
             <span>Catálogo de actividades</span>
           </A>
 
@@ -158,7 +173,7 @@ export function Layout(props: { children: JSX.Element; title?: string }) {
                   : 'text-muted hover:text-body hover:bg-elevate/60'
               }`}
             >
-              <span class="text-base">⚙️</span>
+              <Settings class="w-4 h-4 shrink-0" />
               <span>Ajustes WhatsApp & IA</span>
             </A>
 
@@ -171,7 +186,7 @@ export function Layout(props: { children: JSX.Element; title?: string }) {
                   : 'text-muted hover:text-body hover:bg-elevate/60'
               }`}
             >
-              <span class="text-base">🛡️</span>
+              <ShieldCheck class="w-4 h-4 shrink-0" />
               <span>Equipo & Permisos</span>
             </A>
           </Show>
@@ -220,7 +235,7 @@ export function Layout(props: { children: JSX.Element; title?: string }) {
               class="w-full py-2 px-3 bg-elevate hover:bg-red-950/40 hover:border-red-800 text-muted hover:text-red-300 rounded-xl text-xs font-semibold transition border border-edge flex items-center justify-center gap-2 cursor-pointer"
               title="Cerrar sesión"
             >
-              <span>🚪</span>
+              <LogOut class="w-4 h-4 shrink-0" />
               <span>Cerrar Sesión</span>
             </button>
           </Show>
@@ -239,7 +254,7 @@ export function Layout(props: { children: JSX.Element; title?: string }) {
               class="md:hidden p-2 rounded-xl bg-surface border border-edge text-body-soft hover:text-body"
               aria-label="Abrir menú de navegación"
             >
-              <span class="text-lg">☰</span>
+              <Menu class="w-5 h-5" />
             </button>
 
             <div>
@@ -258,7 +273,7 @@ export function Layout(props: { children: JSX.Element; title?: string }) {
               href="/leads/new"
               class="inline-flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded-xl sm:rounded-2xl transition shadow-accent-glow hover:scale-105 transform"
             >
-              <span>➕</span>
+              <Plus class="w-4 h-4" />
               <span class="hidden sm:inline">Anotar Nuevo Prospecto</span>
               <span class="sm:hidden">Nuevo</span>
             </A>

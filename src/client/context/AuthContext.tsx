@@ -8,6 +8,7 @@ import {
 } from 'solid-js';
 import { SessionData } from '../types';
 import { api } from '../api';
+import { TriangleAlert, Info, CircleCheck } from 'lucide-solid';
 
 export interface Toast {
   id: string;
@@ -105,9 +106,19 @@ export function AuthProvider(props: { children: JSX.Element }) {
                   : 'bg-emerald-950/90 border-emerald-800 text-emerald-200'
               }`}
             >
-              <span class="text-lg">
-                {toast.type === 'error' ? '⚠️' : toast.type === 'info' ? 'ℹ️' : '✅'}
-              </span>
+              <Show
+                when={toast.type === 'error'}
+                fallback={
+                  <Show
+                    when={toast.type === 'info'}
+                    fallback={<CircleCheck class="w-5 h-5 shrink-0 text-emerald-400" />}
+                  >
+                    <Info class="w-5 h-5 shrink-0 text-blue-400" />
+                  </Show>
+                }
+              >
+                <TriangleAlert class="w-5 h-5 shrink-0 text-red-400" />
+              </Show>
               <span>{toast.message}</span>
             </div>
           ))}

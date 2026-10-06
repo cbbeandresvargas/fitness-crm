@@ -1,6 +1,7 @@
 import { JSX, Show, createEffect } from 'solid-js';
 import { useNavigate } from '@solidjs/router';
 import { useAuth } from '../context/AuthContext';
+import { Zap } from 'lucide-solid';
 
 interface ProtectedRouteProps {
   children: JSX.Element;
@@ -28,8 +29,8 @@ export function ProtectedRoute(props: ProtectedRouteProps) {
         <div class="min-h-screen bg-app flex flex-col items-center justify-center p-6 text-center select-none">
           <div class="relative w-16 h-16 mb-4">
             <div class="absolute inset-0 rounded-3xl bg-accent/20 blur-md animate-pulse"></div>
-            <div class="relative w-16 h-16 rounded-3xl bg-gradient-to-tr from-accent-deep to-accent flex items-center justify-center text-white text-2xl shadow-accent-glow">
-              ⚡
+            <div class="relative w-16 h-16 rounded-3xl bg-gradient-to-tr from-accent-deep to-accent flex items-center justify-center text-white shadow-accent-glow">
+              <Zap class="w-8 h-8 text-white" />
             </div>
           </div>
           <div class="flex items-center gap-2 mb-2">

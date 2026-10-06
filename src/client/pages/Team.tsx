@@ -3,6 +3,7 @@ import { Layout } from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
 import { User, AuditLog } from '../types';
+import { ShieldAlert, ShieldCheck, Lock, UserPlus } from 'lucide-solid';
 
 export default function Team() {
   const { user, showToast } = useAuth();
@@ -82,7 +83,9 @@ export default function Team() {
         when={user()?.role === 'admin'}
         fallback={
           <div class="p-16 text-center space-y-3 max-w-md mx-auto">
-            <span class="text-4xl block">🛡️</span>
+            <div class="w-16 h-16 mx-auto rounded-3xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
+              <ShieldAlert class="w-8 h-8" />
+            </div>
             <h2 class="text-xl font-bold text-body">Acceso Restringido</h2>
             <p class="text-xs text-muted">
               Esta sección requiere permisos de Administrador (Director). Usa el botón inferior del menú lateral para cambiar de rol y explorar.
@@ -103,7 +106,7 @@ export default function Team() {
             {/* Formulario Agregar Miembro (1 col) */}
             <div class="p-6 rounded-3xl bg-surface border border-edge space-y-4">
               <h3 class="text-sm font-bold text-body flex items-center gap-2">
-                <span>➕</span>
+                <UserPlus class="w-4 h-4 text-accent" />
                 <span>Registrar Nuevo Asesor / Admin</span>
               </h3>
 
@@ -151,8 +154,8 @@ export default function Team() {
                     onChange={(e) => setRole(e.currentTarget.value as any)}
                     class="w-full px-3.5 py-2.5 bg-app border border-edge rounded-2xl text-xs text-body focus:outline-none focus:border-accent"
                   >
-                    <option value="agent">🏋️ Coach / Asesor de Ventas</option>
-                    <option value="admin">👑 Administrador / Director</option>
+                    <option value="agent">Coach / Asesor de Ventas</option>
+                    <option value="admin">Administrador / Director</option>
                   </select>
                 </div>
 
@@ -237,7 +240,7 @@ export default function Team() {
               {/* Bitácora de Auditoría */}
               <div class="p-6 rounded-3xl bg-surface border border-edge space-y-3 mt-8">
                 <h3 class="text-sm font-bold text-body flex items-center gap-2">
-                  <span>🔒</span>
+                  <ShieldCheck class="w-4 h-4 text-accent" />
                   <span>Bitácora de Auditoría (Audit Logs)</span>
                 </h3>
 

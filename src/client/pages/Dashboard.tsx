@@ -4,6 +4,26 @@ import { Layout } from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
 import { DashboardData } from '../types';
+import {
+  RefreshCw,
+  Plus,
+  Users,
+  Flame,
+  Target,
+  Clock,
+  Layers,
+  UserPlus,
+  MessageCircle,
+  Handshake,
+  Award,
+  CircleX,
+  TriangleAlert,
+  CircleCheck,
+  MessageSquare,
+  Zap,
+  Sparkles,
+  FileText,
+} from 'lucide-solid';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -54,16 +74,16 @@ export default function Dashboard() {
               type="button"
               onClick={loadData}
               disabled={loading()}
-              class="p-3 bg-elevate hover:bg-elevate-strong text-body-soft rounded-2xl text-xs font-bold transition border border-edge-strong cursor-pointer disabled:opacity-50"
+              class="p-3 bg-elevate hover:bg-elevate-strong text-body-soft rounded-2xl text-xs font-bold transition border border-edge-strong cursor-pointer disabled:opacity-50 flex items-center justify-center"
               title="Refrescar métricas"
             >
-              🔄
+              <RefreshCw class="w-4 h-4" />
             </button>
             <A
               href="/leads/new"
               class="px-5 sm:px-6 py-3 bg-accent hover:bg-accent-hover text-white rounded-2xl text-xs sm:text-sm font-bold shadow-accent-glow transition transform hover:scale-105 flex items-center gap-2 cursor-pointer"
             >
-              <span class="text-base">➕</span>
+              <Plus class="w-4 h-4" />
               <span>Anotar Prospecto</span>
             </A>
           </div>
@@ -87,7 +107,7 @@ export default function Dashboard() {
             >
               <div class="flex items-center justify-between">
                 <span class="text-[11px] font-bold uppercase tracking-wider text-muted">Total Prospectos</span>
-                <span class="text-2xl group-hover:scale-110 transition-transform">👥</span>
+                <Users class="w-6 h-6 text-accent group-hover:scale-110 transition-transform" />
               </div>
               <div class="mt-4 flex items-baseline justify-between">
                 <span class="text-4xl font-black text-body">{data()?.totalLeads || 0}</span>
@@ -102,7 +122,7 @@ export default function Dashboard() {
             >
               <div class="flex items-center justify-between">
                 <span class="text-[11px] font-bold uppercase tracking-wider text-accent-text">A · Antiguos pagadores</span>
-                <span class="text-2xl group-hover:scale-110 transition-transform">🔥</span>
+                <Flame class="w-6 h-6 text-accent-text group-hover:scale-110 transition-transform" />
               </div>
               <div class="mt-4 flex items-baseline justify-between">
                 <span class="text-4xl font-black text-accent-text">
@@ -119,7 +139,7 @@ export default function Dashboard() {
             >
               <div class="flex items-center justify-between">
                 <span class="text-[11px] font-bold uppercase tracking-wider text-orange-400">B · Registrados que nunca pagaron</span>
-                <span class="text-2xl group-hover:scale-110 transition-transform">🟠</span>
+                <Target class="w-6 h-6 text-orange-400 group-hover:scale-110 transition-transform" />
               </div>
               <div class="mt-4 flex items-baseline justify-between">
                 <span class="text-4xl font-black text-orange-400">
@@ -136,7 +156,7 @@ export default function Dashboard() {
             >
               <div class="flex items-center justify-between">
                 <span class="text-[11px] font-bold uppercase tracking-wider text-amber-400">C · Usuarios con interés reciente</span>
-                <span class="text-2xl group-hover:scale-110 transition-transform">🟡</span>
+                <Clock class="w-6 h-6 text-amber-400 group-hover:scale-110 transition-transform" />
               </div>
               <div class="mt-4 flex items-baseline justify-between">
                 <span class="text-4xl font-black text-amber-400">
@@ -152,7 +172,7 @@ export default function Dashboard() {
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h3 class="text-base font-extrabold text-body flex items-center gap-2">
-                  <span>🎯</span>
+                  <Layers class="w-4 h-4 text-accent" />
                   <span>Embudo de Conversión Comercial</span>
                 </h3>
                 <p class="text-xs text-muted mt-0.5">Distribución de prospectos por fase en el ciclo de inscripción</p>
@@ -167,17 +187,19 @@ export default function Dashboard() {
             {/* Tarjetas de Fases del Embudo */}
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
               {[
-                { key: 'nuevo', label: 'Nuevo', icon: '🌱', color: 'text-body-soft', border: 'hover:border-edge-strong' },
-                { key: 'contactado', label: 'Contactado', icon: '💬', color: 'text-blue-400', border: 'hover:border-blue-500' },
-                { key: 'negociacion', label: 'Negociación', icon: '🤝', color: 'text-purple-400', border: 'hover:border-purple-500' },
-                { key: 'ganado', label: 'Inscrito', icon: '🏆', color: 'text-emerald-400', border: 'hover:border-emerald-500' },
-                { key: 'perdido', label: 'No Interesado', icon: '🛑', color: 'text-red-400', border: 'hover:border-red-500' },
+                { key: 'nuevo', label: 'Nuevo', Icon: UserPlus, color: 'text-body-soft', border: 'hover:border-edge-strong' },
+                { key: 'contactado', label: 'Contactado', Icon: MessageCircle, color: 'text-blue-400', border: 'hover:border-blue-500' },
+                { key: 'negociacion', label: 'Negociación', Icon: Handshake, color: 'text-purple-400', border: 'hover:border-purple-500' },
+                { key: 'ganado', label: 'Inscrito', Icon: Award, color: 'text-emerald-400', border: 'hover:border-emerald-500' },
+                { key: 'perdido', label: 'No Interesado', Icon: CircleX, color: 'text-red-400', border: 'hover:border-red-500' },
               ].map((stage) => (
                 <A
                   href={`/leads?status=${stage.key}`}
                   class={`p-4 rounded-2xl bg-elevate/40 border border-edge/90 hover:bg-elevate/80 ${stage.border} transition text-center space-y-1 block`}
                 >
-                  <div class="text-xl">{stage.icon}</div>
+                  <div class="flex justify-center pb-1">
+                    <stage.Icon class={`w-5 h-5 ${stage.color}`} />
+                  </div>
                   <div class={`text-2xl font-black ${stage.color}`}>
                     {data()?.statusCount[stage.key] || 0}
                   </div>
@@ -193,7 +215,7 @@ export default function Dashboard() {
             <div class="p-6 rounded-3xl bg-surface border border-edge space-y-4 shadow-xl">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
-                  <span class="text-lg">🚨</span>
+                  <TriangleAlert class="w-4 h-4 text-amber-400" />
                   <h3 class="text-base font-bold text-body">Requieren atención hoy</h3>
                 </div>
                 <A href="/leads?segment=C" class="text-xs text-accent-text hover:underline font-semibold">
@@ -206,7 +228,10 @@ export default function Dashboard() {
                   when={(data()?.leadsNeedingAttention || []).length > 0}
                   fallback={
                     <div class="p-8 text-center text-muted text-xs">
-                      🎉 ¡Todo al día! No hay prospectos descuidados o fríos.
+                      <p class="flex items-center justify-center gap-2">
+                        <CircleCheck class="w-4 h-4 text-emerald-400" />
+                        <span>¡Todo al día! No hay prospectos descuidados o fríos.</span>
+                      </p>
                     </div>
                   }
                 >
@@ -224,7 +249,7 @@ export default function Dashboard() {
                             <span
                               class={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
                                 lead.segment === 'A'
-                                  ? 'bg-emerald-500/20 text-emerald-400'
+                                   ? 'bg-emerald-500/20 text-emerald-400'
                                   : lead.segment === 'B'
                                   ? 'bg-blue-500/20 text-blue-400'
                                   : lead.segment === 'C'
@@ -245,10 +270,10 @@ export default function Dashboard() {
                             href={`https://wa.me/${lead.phone.replace(/^\+/, '')}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            class="p-2.5 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 rounded-xl transition"
+                            class="p-2.5 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 rounded-xl transition flex items-center justify-center"
                             title="Abrir WhatsApp directo"
                           >
-                            💬
+                            <MessageSquare class="w-4 h-4" />
                           </a>
                           <A
                             href={`/leads/${lead.id}`}
@@ -268,7 +293,7 @@ export default function Dashboard() {
             <div class="p-6 rounded-3xl bg-surface border border-edge space-y-4 shadow-xl">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
-                  <span class="text-lg">⚡</span>
+                  <Zap class="w-4 h-4 text-accent" />
                   <h3 class="text-base font-bold text-body">Últimos movimientos del equipo</h3>
                 </div>
               </div>
@@ -286,13 +311,15 @@ export default function Dashboard() {
                     {(act) => (
                       <div class="p-3.5 rounded-2xl bg-elevate/30 border border-edge/60 flex items-start gap-3">
                         <div class="w-8 h-8 rounded-xl bg-accent/10 text-accent-text flex items-center justify-center shrink-0 text-sm mt-0.5">
-                          {act.action_type === 'whatsapp_sent'
-                            ? '💬'
-                            : act.action_type === 'status_change'
-                            ? '🔄'
-                            : act.action_type === 'ai_generated'
-                            ? '✨'
-                            : '📝'}
+                          {act.action_type === 'whatsapp_sent' ? (
+                            <MessageSquare class="w-4 h-4 text-emerald-400" />
+                          ) : act.action_type === 'status_change' ? (
+                            <RefreshCw class="w-4 h-4 text-blue-400" />
+                          ) : act.action_type === 'ai_generated' ? (
+                            <Sparkles class="w-4 h-4 text-amber-400" />
+                          ) : (
+                            <FileText class="w-4 h-4 text-muted" />
+                          )}
                         </div>
                         <div class="flex-1 overflow-hidden min-w-0">
                           <p class="text-xs text-body-soft line-clamp-2">{act.details}</p>

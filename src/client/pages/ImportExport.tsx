@@ -3,6 +3,19 @@ import { Layout } from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import { api, FcImportPreviewResult, FcImportCommitResult } from '../api';
 import { User } from '../types';
+import {
+  FileSpreadsheet,
+  TriangleAlert,
+  UserPlus,
+  RefreshCw,
+  CircleAlert,
+  CircleCheck,
+  Zap,
+  FolderOpen,
+  Database,
+  CloudUpload,
+  Check,
+} from 'lucide-solid';
 
 const LEAD_STATUS_LABELS: Record<string, string> = {
   nuevo: 'Nuevo',
@@ -210,8 +223,9 @@ export default function ImportExport() {
         <div class="p-6 sm:p-8 rounded-3xl bg-surface border-2 border-accent/40 space-y-5">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div class="space-y-1.5">
-              <h3 class="font-extrabold text-body text-base">
-                📥 Importar Excel FC (.xlsx) — Hoja "Clientes"
+              <h3 class="font-extrabold text-body text-base flex items-center gap-2">
+                <FileSpreadsheet class="w-5 h-5 text-accent shrink-0" />
+                <span>Importar Excel FC (.xlsx) — Hoja "Clientes"</span>
               </h3>
               <p class="text-xs text-muted max-w-2xl leading-relaxed">
                 Migra el Excel real del negocio. La columna{' '}
@@ -239,7 +253,7 @@ export default function ImportExport() {
 
           <Show when={fcError()}>
             <div class="p-4 rounded-2xl bg-red-950/80 border border-red-800 text-red-200 text-xs font-semibold flex items-center gap-3">
-              <span class="text-base">⚠️</span>
+              <TriangleAlert class="w-4 h-4 shrink-0 text-red-300" />
               <span>{fcError()}</span>
             </div>
           </Show>
@@ -252,14 +266,17 @@ export default function ImportExport() {
                   <span class="px-3 py-1.5 rounded-full bg-elevate border border-edge-strong text-body-soft text-[11px] font-bold">
                     Total filas: {p().summary.totalRows}
                   </span>
-                  <span class="px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-[11px] font-bold">
-                    🆕 Nuevos: {p().summary.newCount}
+                  <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-[11px] font-bold">
+                    <UserPlus class="w-3.5 h-3.5" />
+                    <span>Nuevos: {p().summary.newCount}</span>
                   </span>
-                  <span class="px-3 py-1.5 rounded-full bg-blue-500/20 border border-blue-500/40 text-blue-400 text-[11px] font-bold">
-                    ♻️ Existentes: {p().summary.existingCount}
+                  <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-500/20 border border-blue-500/40 text-blue-400 text-[11px] font-bold">
+                    <RefreshCw class="w-3.5 h-3.5" />
+                    <span>Existentes: {p().summary.existingCount}</span>
                   </span>
-                  <span class="px-3 py-1.5 rounded-full bg-red-500/20 border border-red-500/40 text-red-400 text-[11px] font-bold">
-                    ⚠️ Inválidos: {p().summary.invalidCount}
+                  <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500/20 border border-red-500/40 text-red-400 text-[11px] font-bold">
+                    <TriangleAlert class="w-3.5 h-3.5" />
+                    <span>Inválidos: {p().summary.invalidCount}</span>
                   </span>
                 </div>
 
@@ -326,13 +343,15 @@ export default function ImportExport() {
                                   <Show
                                     when={row.type === 'existing'}
                                     fallback={
-                                      <span class="text-red-400 font-semibold text-[10px]">
-                                        ⛔ {row.reason}
+                                      <span class="text-red-400 font-semibold text-[10px] inline-flex items-center gap-1">
+                                        <CircleAlert class="w-3 h-3 text-red-400" />
+                                        <span>{row.reason}</span>
                                       </span>
                                     }
                                   >
-                                    <span class="text-blue-400 font-semibold text-[10px]">
-                                      ♻️ Existente ({row.matchedLead?.full_name})
+                                    <span class="text-blue-400 font-semibold text-[10px] inline-flex items-center gap-1">
+                                      <RefreshCw class="w-3 h-3 text-blue-400" />
+                                      <span>Existente ({row.matchedLead?.full_name})</span>
                                     </span>
                                     <Show when={row.syncFields && row.syncFields.length > 0}>
                                       <span class="block text-muted text-[10px] mt-0.5">
@@ -342,8 +361,9 @@ export default function ImportExport() {
                                   </Show>
                                 }
                               >
-                                <span class="text-emerald-400 font-semibold text-[10px]">
-                                  🆕 Nuevo registro
+                                <span class="text-emerald-400 font-semibold text-[10px] inline-flex items-center gap-1">
+                                  <UserPlus class="w-3 h-3 text-emerald-400" />
+                                  <span>Nuevo registro</span>
                                 </span>
                               </Show>
                             </td>
@@ -382,8 +402,9 @@ export default function ImportExport() {
           <Show when={fcPhase() === 'result' && fcResult()}>
             {(r) => (
               <div class="p-6 rounded-3xl bg-emerald-950/40 border border-emerald-800 space-y-3">
-                <h3 class="font-extrabold text-emerald-300 text-sm">
-                  ✅ Importación FC Completada (hoja "{r().sheetName}")
+                <h3 class="font-extrabold text-emerald-300 text-sm flex items-center gap-2">
+                  <CircleCheck class="w-5 h-5 text-emerald-400" />
+                  <span>Importación FC Completada (hoja "{r().sheetName}")</span>
                 </h3>
                 <div class="flex flex-wrap items-center gap-6 text-xs text-emerald-200">
                   <div>
@@ -432,7 +453,7 @@ export default function ImportExport() {
           {/* Opción 1: CSV de prueba */}
           <div class="p-6 rounded-3xl bg-surface border border-edge space-y-4 flex flex-col justify-between">
             <div class="space-y-2">
-              <span class="text-2xl block">⚡</span>
+              <Zap class="w-6 h-6 text-amber-400" />
               <h3 class="font-extrabold text-body text-base">Probar con Datos Demo</h3>
               <p class="text-xs text-muted">
                 Carga un dataset prearmado de 5 prospectos con presupuestos, metas deportivas y datos de ubicación (CDMX, Guadalajara y Monterrey).
@@ -452,7 +473,7 @@ export default function ImportExport() {
           {/* Opción 2: Subir archivo propio */}
           <div class="p-6 rounded-3xl bg-surface border border-edge space-y-4 flex flex-col justify-between">
             <div class="space-y-2">
-              <span class="text-2xl block">📁</span>
+              <FolderOpen class="w-6 h-6 text-accent" />
               <h3 class="font-extrabold text-body text-base">Subir Archivo CSV</h3>
               <p class="text-xs text-muted">
                 Selecciona cualquier archivo exportado de Google Sheets, Meta Ads o tu CRM anterior.
@@ -489,7 +510,7 @@ export default function ImportExport() {
                   onChange={(e) => setAssignedTo(e.currentTarget.value)}
                   class="px-3 py-1.5 bg-app border border-edge rounded-xl text-xs text-body"
                 >
-                  <option value="auto">🤖 Balance Automático (Round-Robin)</option>
+                  <option value="auto">Balance Automático (Round-Robin)</option>
                   <For each={agents()}>
                     {(a) => <option value={a.id}>{a.name}</option>}
                   </For>
@@ -568,7 +589,10 @@ export default function ImportExport() {
         {/* Resultado de la importación */}
         <Show when={importResult()}>
           <div class="p-6 rounded-3xl bg-emerald-950/40 border border-emerald-800 space-y-2">
-            <h3 class="font-extrabold text-emerald-300 text-sm">✅ Importación Completada</h3>
+            <h3 class="font-extrabold text-emerald-300 text-sm flex items-center gap-2">
+              <CircleCheck class="w-4 h-4 text-emerald-400" />
+              <span>Importación Completada</span>
+            </h3>
             <div class="flex items-center gap-6 text-xs text-emerald-200">
               <div>
                 Nuevos agregados: <span class="font-bold">{importResult()?.importedCount}</span>
@@ -599,7 +623,7 @@ export default function ImportExport() {
               href="/api/export/csv"
               class="p-4 rounded-2xl bg-app border border-edge hover:border-accent/50 transition flex items-center justify-center gap-2 text-xs font-bold text-body-soft"
             >
-              <span>📊</span>
+              <FileSpreadsheet class="w-4 h-4" />
               <span>Descargar CSV</span>
             </a>
 
@@ -607,7 +631,7 @@ export default function ImportExport() {
               href="/api/export/json"
               class="p-4 rounded-2xl bg-app border border-edge hover:border-accent/50 transition flex items-center justify-center gap-2 text-xs font-bold text-body-soft"
             >
-              <span>📦</span>
+              <Database class="w-4 h-4" />
               <span>Descargar JSON</span>
             </a>
 
@@ -617,14 +641,15 @@ export default function ImportExport() {
               disabled={backingUp()}
               class="p-4 rounded-2xl bg-app border border-edge hover:border-emerald-500/50 transition flex items-center justify-center gap-2 text-xs font-bold text-emerald-400 cursor-pointer disabled:opacity-50"
             >
-              <span>☁️</span>
+              <CloudUpload class="w-4 h-4" />
               <span>{backingUp() ? 'Guardando en R2...' : 'Generar Copia en R2'}</span>
             </button>
           </div>
 
           <Show when={backupKey()}>
-            <p class="text-xs text-emerald-400/90 pt-2 font-mono">
-              ✓ Respaldo creado en R2: <span class="text-body font-bold">{backupKey()}</span>
+            <p class="text-xs text-emerald-400/90 pt-2 font-mono flex items-center gap-1.5">
+              <Check class="w-3.5 h-3.5" />
+              <span>Respaldo creado en R2: <span class="text-body font-bold">{backupKey()}</span></span>
             </p>
           </Show>
         </div>
