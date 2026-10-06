@@ -62,7 +62,7 @@ export async function callCloudflareWorkersAi(
   env: Env,
   model: string,
   messages: { role: 'system' | 'user' | 'assistant'; content: string }[],
-  maxTokens: number = 600
+  maxTokens: number = 400
 ): Promise<string | null> {
   const modelsToTry = [
     model,
@@ -346,7 +346,14 @@ REGLAS DE ACTUACIÓN, MULTIMEDIA Y CIERRE DE VENTAS:
 
 4. REGLA ESTRICTA DE FORMATO Y ESTILO:
    - Devuelve EXCLUSIVAMENTE el objeto JSON sin texto antes ni después, sin comillas externas ni etiquetas markdown.
-   - NUNCA incluyas emojis en los campos de texto ni en las respuestas al prospecto.`;
+   - NUNCA incluyas emojis en los campos de texto ni en las respuestas al prospecto.
+
+5. REGLA DE LONGITUD ADAPTATIVA (SIEMPRE BREVE Y DIRECTO):
+   - Ajusta la longitud a lo que el cliente necesita: saludos, confirmaciones y preguntas simples = 1 o 2 oraciones cortas.
+   - Si el cliente pide detalle (planes y precios, comparar opciones, cómo funciona, dudas complejas), puedes extenderte lo necesario, pero con un máximo de unas 100 palabras.
+   - Nunca rellenes: sin saludos largos, sin repetir lo que dijo el cliente, sin frases de relleno. Cada oración debe aportar información.
+   - Para varios datos (ej. planes), usa líneas cortas separadas en vez de párrafos largos.
+   - Da primero lo que el cliente preguntó y termina con UNA sola pregunta o llamada a la acción corta.`;
 }
 
 /**
