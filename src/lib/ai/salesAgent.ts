@@ -264,9 +264,35 @@ export function buildSalesAgentPrompt(params: {
         .join('\n\n')
     : '(Sin catálogo específico cargado; usa información general de membresías y pases multideporte en Cochabamba)';
 
-  const metadataStr = Object.entries(lead.metadata || {})
+  let safeMetadata: Record<string, any> = {};
+  if (typeof lead.metadata === 'object' && lead.metadata !== null) {
+    safeMetadata = lead.metadata;
+  } else if (typeof lead.metadata === 'string') {
+    try {
+      safeMetadata = JSON.parse(lead.metadata);
+    } catch {
+      safeMetadata = {};
+    }
+  }
+
+  const metadataStr = Object.entries(safeMetadata)
     .map(([k, v]) => `- ${k}: ${v}`)
     .join('\n');
+
+  let safeTags: string[] = [];
+  const rawTags: unknown = (lead as any).tags;
+  if (Array.isArray(rawTags)) {
+    safeTags = rawTags.map((t) => String(t));
+  } else if (typeof rawTags === 'string') {
+    try {
+      const parsed = JSON.parse(rawTags);
+      if (Array.isArray(parsed)) safeTags = parsed.map((t) => String(t));
+      else if (parsed) safeTags = [String(parsed)];
+    } catch {
+      if (rawTags.trim()) safeTags = [rawTags.trim()];
+    }
+  }
+  const tagsStr = safeTags.length > 0 ? safeTags.join(', ') : 'Sin tags';
 
   return `Eres el asesor y closer de ventas comercial de élite con inteligencia artificial de "Fitness Club Pass", la aplicación de membresías y pases multideporte líder en Cochabamba, Bolivia.
 
@@ -297,7 +323,7 @@ DATOS DEL PROSPECTO:
 - Teléfono: ${lead.phone}
 - Segmento actual: ${lead.segment}
 - Estado del pipeline: ${lead.status}
-- Tags / Intereses: ${lead.tags?.join(', ') || 'Sin tags'}
+- Tags / Intereses: ${tagsStr}
 ${metadataStr ? `Metadatos deportivos:\n${metadataStr}` : ''}
 ${lead.notes_summary ? `Notas previas del asesor: ${lead.notes_summary}` : ''}
 

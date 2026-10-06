@@ -112,9 +112,35 @@ export function buildLeadContextPrompt(options: {
     .map((act) => `- [${act.action_type}] ${act.details}`)
     .join('\n');
 
-  const metadataStr = Object.entries(lead.metadata || {})
+  let safeMetadata: Record<string, any> = {};
+  if (typeof lead.metadata === 'object' && lead.metadata !== null) {
+    safeMetadata = lead.metadata;
+  } else if (typeof lead.metadata === 'string') {
+    try {
+      safeMetadata = JSON.parse(lead.metadata);
+    } catch {
+      safeMetadata = {};
+    }
+  }
+
+  const metadataStr = Object.entries(safeMetadata)
     .map(([k, v]) => `- ${k}: ${v}`)
     .join('\n');
+
+  let safeTags: string[] = [];
+  const rawTags: unknown = (lead as any).tags;
+  if (Array.isArray(rawTags)) {
+    safeTags = rawTags.map((t) => String(t));
+  } else if (typeof rawTags === 'string') {
+    try {
+      const parsed = JSON.parse(rawTags);
+      if (Array.isArray(parsed)) safeTags = parsed.map((t) => String(t));
+      else if (parsed) safeTags = [String(parsed)];
+    } catch {
+      if (rawTags.trim()) safeTags = [rawTags.trim()];
+    }
+  }
+  const tagsStr = safeTags.length > 0 ? safeTags.join(', ') : 'Multideporte';
 
   const systemPrompt = `Eres el asesor y closer comercial de élite de "Fitness Club Pass", la aplicación de pases multideporte en Cochabamba, Bolivia.
 Con una sola membresía en la app, los clientes tienen pases para acceder a múltiples centros deportivos, gimnasios, natación, crossfit y pádel en Cochabamba.
@@ -130,7 +156,7 @@ Reglas:
 - Nombre: ${lead.full_name}
 - Segmento: ${lead.segment}
 - Estado del Pipeline: ${lead.status}
-- Tags / Intereses: ${lead.tags?.join(', ') || 'Multideporte'}
+- Tags / Intereses: ${tagsStr}
 - Agente comercial: ${agentName}
 
 Metadatos fitness:
