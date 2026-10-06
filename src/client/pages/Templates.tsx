@@ -3,6 +3,15 @@ import { Layout } from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
 import { MessageTemplate } from '../types';
+import {
+  FileText,
+  Plus,
+  Trash2,
+  Eye,
+  Sparkles,
+  MessageSquare,
+  RefreshCw,
+} from 'lucide-solid';
 
 export default function Templates() {
   const { showToast } = useAuth();
@@ -66,27 +75,34 @@ export default function Templates() {
 
   const renderSample = (text: string) => {
     return text
-      .replace(/{nombre}/gi, 'Sofía')
-      .replace(/{producto}/gi, 'CrossFit Pro')
-      .replace(/{ciudad}/gi, 'CDMX')
-      .replace(/{agente}/gi, 'Carlos');
+      .replace(/{nombre}/gi, 'Mateo')
+      .replace(/{producto}/gi, 'Fitness Club Pass')
+      .replace(/{ciudad}/gi, 'Cochabamba')
+      .replace(/{agente}/gi, 'Valeria');
   };
 
   return (
     <Layout title="Plantillas de WhatsApp">
       <div class="space-y-8 max-w-6xl mx-auto">
         <div class="p-8 rounded-3xl bg-surface border border-edge space-y-2">
-          <h2 class="text-2xl font-black text-body">Plantillas Rápidas para WhatsApp</h2>
-          <p class="text-xs text-muted max-w-2xl leading-relaxed">
-            Estandariza los mensajes de primer contacto, seguimiento, cierre y reactivación del gimnasio. Puedes usar las variables dinámicas: <code class="px-2 py-0.5 bg-elevate rounded-lg text-accent-text font-bold">{'{nombre}'}</code>, <code class="px-2 py-0.5 bg-elevate rounded-lg text-accent-text font-bold">{'{producto}'}</code>, <code class="px-2 py-0.5 bg-elevate rounded-lg text-accent-text font-bold">{'{ciudad}'}</code> y <code class="px-2 py-0.5 bg-elevate rounded-lg text-accent-text font-bold">{'{agente}'}</code>.
-          </p>
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-accent/10 border border-accent/20 text-accent flex items-center justify-center">
+              <FileText size={20} />
+            </div>
+            <div>
+              <h2 class="text-xl font-black text-body">Plantillas Rápidas para WhatsApp</h2>
+              <p class="text-xs text-muted max-w-2xl leading-relaxed">
+                Estandariza los mensajes de primer contacto, seguimiento, cierre de suscripción y reactivación en Cochabamba. Variables dinámicas disponibles: <code class="px-2 py-0.5 bg-elevate rounded-lg text-accent-text font-bold">{'{nombre}'}</code>, <code class="px-2 py-0.5 bg-elevate rounded-lg text-accent-text font-bold">{'{producto}'}</code>, <code class="px-2 py-0.5 bg-elevate rounded-lg text-accent-text font-bold">{'{ciudad}'}</code> y <code class="px-2 py-0.5 bg-elevate rounded-lg text-accent-text font-bold">{'{agente}'}</code>.
+              </p>
+            </div>
+          </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Formulario Nueva Plantilla (1 col) */}
           <div class="p-6 rounded-3xl bg-surface border border-edge space-y-4">
             <h3 class="text-sm font-bold text-body flex items-center gap-2">
-              <span>➕</span>
+              <Plus size={16} class="text-accent" />
               <span>Crear Nueva Plantilla</span>
             </h3>
 
@@ -100,7 +116,7 @@ export default function Templates() {
                   required
                   value={title()}
                   onInput={(e) => setTitle(e.currentTarget.value)}
-                  placeholder="Ej. Promoción Fin de Mes"
+                  placeholder="Ej. Promo Pase Fit Pro Bs 280"
                   class="w-full px-3.5 py-2.5 bg-app border border-edge rounded-2xl text-xs text-body focus:outline-none focus:border-accent"
                 />
               </div>
@@ -115,8 +131,8 @@ export default function Templates() {
                   class="w-full px-3.5 py-2.5 bg-app border border-edge rounded-2xl text-xs text-body focus:outline-none focus:border-accent"
                 >
                   <option value="primer_contacto">Primer Contacto & Bienvenida</option>
-                  <option value="seguimiento">Seguimiento / Cita</option>
-                  <option value="cierre">Cierre Comercial / Descuento</option>
+                  <option value="seguimiento">Seguimiento / Explicación App</option>
+                  <option value="cierre">Cierre Comercial / QR de Pago</option>
                   <option value="reactivacion">Reactivación Inactivos</option>
                   <option value="general">General</option>
                 </select>
@@ -131,7 +147,7 @@ export default function Templates() {
                   required
                   value={content()}
                   onInput={(e) => setContent(e.currentTarget.value)}
-                  placeholder="¡Hola {nombre}! Te saluda {agente} de Fitness Club..."
+                  placeholder="¡Hola {nombre}! Te saluda {agente} de Fitness Club Pass Cochabamba..."
                   class="w-full p-3.5 bg-app border border-edge rounded-2xl text-xs text-body focus:outline-none focus:border-accent"
                 ></textarea>
               </div>
@@ -139,9 +155,12 @@ export default function Templates() {
               <button
                 type="submit"
                 disabled={saving() || !title().trim() || !content().trim()}
-                class="w-full py-3 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded-2xl transition shadow-accent-glow disabled:opacity-50 cursor-pointer"
+                class="w-full py-3 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded-2xl transition shadow-accent-glow disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
               >
-                {saving() ? 'Guardando...' : 'Guardar Plantilla'}
+                <Show when={saving()} fallback={<Plus size={14} />}>
+                  <RefreshCw size={14} class="animate-spin" />
+                </Show>
+                <span>{saving() ? 'Guardando...' : 'Guardar Plantilla'}</span>
               </button>
             </form>
           </div>
@@ -156,7 +175,7 @@ export default function Templates() {
               when={!loading()}
               fallback={
                 <div class="flex items-center justify-center p-12 text-muted">
-                  <div class="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin"></div>
+                  <RefreshCw size={20} class="animate-spin text-accent" />
                 </div>
               }
             >
@@ -166,7 +185,7 @@ export default function Templates() {
                     <div class="p-6 rounded-3xl bg-surface border border-edge hover:border-edge-strong transition space-y-3">
                       <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2">
-                          <span class="text-lg">💬</span>
+                          <MessageSquare size={16} class="text-accent" />
                           <h4 class="font-extrabold text-body text-sm">{tmpl.title}</h4>
                           <span class="px-2.5 py-0.5 rounded-full bg-elevate text-[10px] font-bold text-muted uppercase">
                             {tmpl.category}
@@ -179,7 +198,7 @@ export default function Templates() {
                           class="p-2 text-muted hover:text-red-400 transition cursor-pointer"
                           title="Eliminar plantilla"
                         >
-                          🗑️
+                          <Trash2 size={15} />
                         </button>
                       </div>
 
@@ -188,8 +207,9 @@ export default function Templates() {
                       </p>
 
                       <div class="p-3 bg-app rounded-2xl border border-edge/80 space-y-1">
-                        <span class="text-[10px] font-bold text-accent-text uppercase tracking-wider block">
-                          👀 Previsualización con variables de ejemplo:
+                        <span class="text-[10px] font-bold text-accent-text uppercase tracking-wider flex items-center gap-1">
+                          <Eye size={12} />
+                          <span>Previsualización con variables de ejemplo:</span>
                         </span>
                         <p class="text-[11px] text-muted italic">
                           "{renderSample(tmpl.content)}"

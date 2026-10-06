@@ -7,6 +7,21 @@ import { cityFromMetadata } from '../../lib/locations';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
 import { Lead, ActivityLog, User, WhatsAppMessage, MessageTemplate, Activity, LeadInterest } from '../types';
+import {
+  Send,
+  Bot,
+  Image as ImageIcon,
+  Sparkles,
+  MessageSquare,
+  Plus,
+  FileText,
+  Check,
+  CheckCheck,
+  RefreshCw,
+  ExternalLink,
+  History,
+  Activity as ActivityIcon,
+} from 'lucide-solid';
 
 export default function LeadDetail() {
   const params = useParams();
@@ -1131,7 +1146,7 @@ export default function LeadDetail() {
                     <form onSubmit={handleSendChatMessage} class="flex items-center gap-2">
                       {/* Image Attachment Button */}
                       <label
-                        class="p-2.5 rounded-xl bg-surface hover:bg-elevate text-muted hover:text-body border border-edge transition cursor-pointer shrink-0"
+                        class="p-2.5 rounded-xl bg-surface hover:bg-elevate text-muted hover:text-body border border-edge transition cursor-pointer shrink-0 flex items-center justify-center"
                         title="Adjuntar imagen (comprobante, plan, etc.)"
                       >
                         <input
@@ -1140,7 +1155,7 @@ export default function LeadDetail() {
                           onChange={handleImageSelect}
                           class="hidden"
                         />
-                        📷
+                        <ImageIcon size={16} />
                       </label>
 
                       <input
@@ -1156,8 +1171,8 @@ export default function LeadDetail() {
                         disabled={sendingMsg() || (!chatInput().trim() && !selectedImage())}
                         class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-extrabold transition shadow-lg disabled:opacity-40 cursor-pointer shrink-0 flex items-center gap-1.5"
                       >
+                        <Send size={13} />
                         <span>{sendingMsg() ? 'Enviando...' : 'Enviar'}</span>
-                        <span>🚀</span>
                       </button>
                     </form>
                   </div>
@@ -1233,7 +1248,7 @@ export default function LeadDetail() {
                       disabled={generatingAi()}
                       class="w-full py-3 bg-gradient-to-r from-accent-deep to-accent hover:from-accent hover:to-accent-hover text-white font-bold text-xs rounded-2xl shadow-accent-glow transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
                     >
-                      <span>✨</span>
+                      <Sparkles size={14} />
                       <span>
                         {generatingAi()
                           ? 'Redactando con Cloudflare Workers AI...'
@@ -1260,9 +1275,10 @@ export default function LeadDetail() {
                           setChatInput(aiMessage());
                         }}
                         disabled={!aiMessage().trim()}
-                        class="flex-1 py-3 bg-elevate hover:bg-elevate-strong text-body font-bold text-xs rounded-xl transition disabled:opacity-50 cursor-pointer"
+                        class="flex-1 py-3 bg-elevate hover:bg-elevate-strong text-body font-bold text-xs rounded-xl transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
                       >
-                        💬 Pegar en Chat en Vivo
+                        <MessageSquare size={13} />
+                        <span>Pegar en Chat en Vivo</span>
                       </button>
                       <button
                         type="button"
@@ -1271,9 +1287,10 @@ export default function LeadDetail() {
                           window.open(deepLink, '_blank');
                         }}
                         disabled={!aiMessage().trim()}
-                        class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-xl shadow-lg transition disabled:opacity-50 cursor-pointer"
+                        class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-xl shadow-lg transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
                       >
-                        🚀 Abrir en WhatsApp App
+                        <ExternalLink size={13} />
+                        <span>Abrir en WhatsApp</span>
                       </button>
                     </div>
                   </div>
@@ -1285,7 +1302,7 @@ export default function LeadDetail() {
                 <div class="p-6 rounded-3xl bg-surface border border-edge space-y-4 shadow-xl">
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
-                      <span class="text-lg">📜</span>
+                      <History size={18} class="text-accent" />
                       <h3 class="text-base font-bold text-body">Historial y Bitácora</h3>
                     </div>
                     <span class="text-xs text-muted">
@@ -1299,16 +1316,17 @@ export default function LeadDetail() {
                       rows={2}
                       value={newNote()}
                       onInput={(e) => setNewNote(e.currentTarget.value)}
-                      placeholder="Escribe una nota rápida (ej: Vino a clase muestra, interesado en membresía anual)..."
+                      placeholder="Escribe una nota rápida (ej: Interesado en pase Fit Pro de Bs 280, entrena natación)..."
                       class="w-full p-3.5 bg-app border border-edge rounded-2xl text-xs text-body placeholder-muted focus:outline-none focus:border-accent transition"
                     ></textarea>
                     <div class="flex justify-end">
                       <button
                         type="submit"
                         disabled={savingNote() || !newNote().trim()}
-                        class="px-5 py-2 bg-accent hover:bg-accent-hover text-white rounded-xl text-xs font-bold transition disabled:opacity-50 cursor-pointer"
+                        class="px-5 py-2 bg-accent hover:bg-accent-hover text-white rounded-xl text-xs font-bold transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
                       >
-                        {savingNote() ? 'Guardando...' : '➕ Anotar en Bitácora'}
+                        <Plus size={13} />
+                        <span>{savingNote() ? 'Guardando...' : 'Anotar en Bitácora'}</span>
                       </button>
                     </div>
                   </form>
@@ -1327,16 +1345,33 @@ export default function LeadDetail() {
                         {(act) => (
                           <div class="p-4 rounded-2xl bg-app/60 border border-edge/80 space-y-1.5">
                             <div class="flex items-center justify-between">
-                              <span class="px-2 py-0.5 rounded-lg bg-elevate text-[10px] font-bold text-body-soft uppercase tracking-wide">
-                                {act.action_type === 'whatsapp_sent'
-                                  ? '💬 WhatsApp'
-                                  : act.action_type === 'status_change'
-                                  ? '🔄 Estado'
-                                  : act.action_type === 'segment_change'
-                                  ? '📊 Segmento'
-                                  : act.action_type === 'ai_generated'
-                                  ? '✨ Asistente IA'
-                                  : '📝 Nota'}
+                              <span class="px-2 py-0.5 rounded-lg bg-elevate text-[10px] font-bold text-body-soft uppercase tracking-wide flex items-center gap-1">
+                                {act.action_type === 'whatsapp_sent' ? (
+                                  <>
+                                    <MessageSquare size={10} />
+                                    <span>WhatsApp</span>
+                                  </>
+                                ) : act.action_type === 'status_change' ? (
+                                  <>
+                                    <RefreshCw size={10} />
+                                    <span>Estado</span>
+                                  </>
+                                ) : act.action_type === 'segment_change' ? (
+                                  <>
+                                    <ActivityIcon size={10} />
+                                    <span>Segmento</span>
+                                  </>
+                                ) : act.action_type === 'ai_generated' ? (
+                                  <>
+                                    <Bot size={10} />
+                                    <span>Asistente IA</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <FileText size={10} />
+                                    <span>Nota</span>
+                                  </>
+                                )}
                               </span>
                               <span class="text-[10px] text-muted">
                                 {new Date(act.created_at).toLocaleString('es-ES', {

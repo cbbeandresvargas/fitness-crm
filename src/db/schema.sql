@@ -1,4 +1,5 @@
 -- Fitness CRM Database Schema for Cloudflare D1 (SQLite)
+-- Plataforma: Fitness Club Pass (Cochabamba, Bolivia)
 
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
@@ -84,16 +85,11 @@ CREATE TABLE IF NOT EXISTS whatsapp_settings (
   phone_number_id TEXT,
   display_phone_number TEXT,
   verified_name TEXT,
-  access_token_cipher TEXT,
-  access_token_iv TEXT,
-  access_token_tag TEXT,
-  access_token_last4 TEXT,
   verify_token TEXT,
-  app_secret TEXT,
   status TEXT NOT NULL DEFAULT 'disconnected' CHECK(status IN ('connected', 'disconnected', 'reconnect_required')),
   ai_enabled INTEGER NOT NULL DEFAULT 1,
   ai_model TEXT NOT NULL DEFAULT '@cf/meta/llama-3.1-8b-instruct',
-  ai_tone TEXT DEFAULT 'motivador, consultivo y enfocado en cierre de ventas',
+  ai_tone TEXT DEFAULT 'enérgico, asesor consultivo, empático y enfocado en cerrar suscripciones de Fitness Club Pass',
   ai_instructions TEXT,
   created_at TEXT NOT NULL DEFAULT (DATETIME('now')),
   updated_at TEXT NOT NULL DEFAULT (DATETIME('now'))
@@ -101,7 +97,7 @@ CREATE TABLE IF NOT EXISTS whatsapp_settings (
 
 CREATE TABLE IF NOT EXISTS knowledge_base (
   id TEXT PRIMARY KEY,
-  category TEXT NOT NULL CHECK(category IN ('plan_precio', 'horario_sede', 'politica', 'objecion_frecuente', 'entrenadores')),
+  category TEXT NOT NULL,
   title TEXT NOT NULL,
   content TEXT NOT NULL,
   is_active INTEGER NOT NULL DEFAULT 1,
@@ -109,10 +105,7 @@ CREATE TABLE IF NOT EXISTS knowledge_base (
   updated_at TEXT NOT NULL DEFAULT (DATETIME('now'))
 );
 
--- Catálogo central de Actividades de interés (fuente de verdad de nombres).
--- name_norm (minúsculas, sin acentos) previene duplicados (Pilates/pilates/PILATES).
--- is_active = borrado lógico (patrón existente de users/knowledge_base):
--- las relaciones de prospectos se preservan (nunca quedan referencias rotas).
+-- Catálogo de Actividades y Disciplinas disponibles
 CREATE TABLE IF NOT EXISTS activities (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -123,9 +116,7 @@ CREATE TABLE IF NOT EXISTS activities (
   updated_at TEXT NOT NULL DEFAULT (DATETIME('now'))
 );
 
--- Relación Prospecto <-> Actividad (N:M). Un prospecto no puede tener la
--- misma actividad dos veces (UNIQUE) y eliminar una actividad o prospecto
--- no deja referencias huérfanas (ON DELETE CASCADE).
+-- Relación Prospecto <-> Actividades de interés (N:M)
 CREATE TABLE IF NOT EXISTS prospect_activities (
   id TEXT PRIMARY KEY,
   lead_id TEXT NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
@@ -134,14 +125,7 @@ CREATE TABLE IF NOT EXISTS prospect_activities (
   created_at TEXT NOT NULL DEFAULT (DATETIME('now'))
 );
 
--- Semilla del catálogo inicial de actividades (idempotente)
-INSERT OR IGNORE INTO activities (id, name, name_norm, is_active) VALUES
-  ('act_gym', 'Gym', 'gym', 1),
-  ('act_crossfit', 'CrossFit', 'crossfit', 1),
-  ('act_natacion', 'Natación', 'natacion', 1),
-  ('act_escalada', 'Escalada', 'escalada', 1),
-  ('act_pilates', 'Pilates', 'pilates', 1);
-
+-- Índices de alto rendimiento
 CREATE INDEX IF NOT EXISTS idx_leads_phone ON leads(phone);
 CREATE INDEX IF NOT EXISTS idx_leads_assigned_to ON leads(assigned_to);
 CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);

@@ -119,9 +119,10 @@ export async function chatJson<T>(
   messages: { role: 'system' | 'user' | 'assistant'; content: string }[],
   env: Env,
   model: string = '@cf/meta/llama-3.1-8b-instruct'
-): Promise<{ ok: true; data: T; raw: string } | { ok: false; error: string; detail: string }> {
+): Promise<{ ok: true; data: T; raw: string } | { ok: false; error: string; detail: string; lastRaw?: string }> {
   const MAX_ATTEMPTS = 3;
   let lastDetail = '';
+  let lastRaw = '';
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     const attemptMessages =
@@ -141,6 +142,7 @@ export async function chatJson<T>(
       lastDetail = 'El proveedor de Workers AI no devolvió respuesta';
       continue;
     }
+    lastRaw = raw;
 
     const extracted = extractJson(raw);
     if (!extracted) {
@@ -157,7 +159,7 @@ export async function chatJson<T>(
     return { ok: true, data: parsed.data, raw };
   }
 
-  return { ok: false, error: 'invalid_output', detail: lastDetail };
+  return { ok: false, error: 'invalid_output', detail: lastDetail, lastRaw };
 }
 
 /**
@@ -170,31 +172,40 @@ export function buildSalesAgentPrompt(params: {
 }): string {
   const { lead, kbEntries, settings } = params;
 
-  const tone = settings?.ai_tone || 'enérgico, motivador, empático y altamente enfocado en cerrar ventas';
+  const tone = settings?.ai_tone || 'enérgico, consultivo, empático y altamente enfocado en cerrar suscripciones de Fitness Club Pass';
   const customInstructions = settings?.ai_instructions || '';
 
   const kbText = kbEntries.length > 0
     ? kbEntries
         .map((entry) => `[${entry.category.toUpperCase()}] ${entry.title}:\n${entry.content}`)
         .join('\n\n')
-    : '(Sin catálogo específico cargado; usa información general de membresías y clases de prueba)';
+    : '(Sin catálogo específico cargado; usa información general de membresías y pases multideporte en Cochabamba)';
 
   const metadataStr = Object.entries(lead.metadata || {})
     .map(([k, v]) => `- ${k}: ${v}`)
     .join('\n');
 
-  return `Eres el asesor y closer de ventas de élite con inteligencia artificial de "Fitness Club", un centro de acondicionamiento y entrenamiento de alto rendimiento.
-Tu misión principal es asesorar con calidez, resolver dudas, manejar objeciones y CERRAR LA VENTA guiando al prospecto a:
-1. Agendar una clase de valoración física gratuita presencial en su sede más cercana.
-2. Elegir y adquirir la membresía que mejor resuelva su meta deportiva (Membresía General, CrossFit Pro, Plan Élite Personal Trainer o Pase Black Anual).
+  return `Eres el asesor y closer de ventas comercial de élite con inteligencia artificial de "Fitness Club Pass", la aplicación de membresías y pases multideporte líder en Cochabamba, Bolivia.
+
+MODELO DE NEGOCIO Y PROPUESTA DE VALOR:
+- Fitness Club Pass NO es un solo gimnasio tradicional. Es una plataforma/app móvil que otorga pases mensuales para acceder a múltiples centros deportivos, gimnasios, crossfit, natación, pádel, calistenia y artes marciales en toda la ciudad de Cochabamba.
+- El cliente adquiere una suscripción mensual en Bolivianos (Bs). Con esa membresía activa su cuenta en la app y recibe pases para entrenar donde y cuando quiera.
+- Los planes, precios y centros aliados se configuran dinámicamente en la base de datos (ver catálogo abajo).
+- MONEDA OFICIAL: Bolivianos (Bs). NUNCA menciones dólares ni otras monedas a menos que el cliente lo pida expresamente.
+
+TU MISIÓN COMERCIAL (CIERRE EN 4 PASOS):
+1. INDAGAR Y CALIFICAR: Pregunta con entusiasmo qué disciplinas le interesan al cliente (gym, crossfit, natación, etc.) o qué zonas de Cochabamba le quedan cómodas. Haz UNA sola pregunta a la vez (no satures).
+2. PRESENTAR LA SOLUCIÓN: Explica cómo la app le da libertad total sin atarse a un solo centro. Presenta el plan ideal en Bs del catálogo oficial.
+3. MANEJAR OBJECIONES: Si duda de precios o sedes, usa los argumentos de la base de conocimiento oficial.
+4. LLAMADA A LA ACCIÓN Y CIERRE: Invita al cliente a activar su primer pase o adquirir su suscripción compartiéndole los datos de pago / QR para habilitar su cuenta en la app de inmediato.
 
 TONO Y PERSONALIDAD:
 ${tone}
 
 INSTRUCCIONES ESPECÍFICAS DEL NEGOCIO:
-${customInstructions || '- Sé directo, entusiasta y usa emojis deportivos con moderación (💪, 🏋️, 🚀, ⏱️).'}
+${customInstructions || '- Sé directo, empático, profesional y usa emojis deportivos con moderación (💪, 🏋️, 📱, ⏱️, 🚀).'}
 
-INFORMACIÓN OFICIAL Y BASE DE CONOCIMIENTO (TU ÚNICA FUENTE DE VERDAD; NO INVENTES PRECIOS NI SERVICIOS QUE NO ESTÉN AQUÍ):
+CATÁLOGO OFICIAL Y BASE DE CONOCIMIENTO (TU ÚNICA FUENTE DE VERDAD; NO INVENTES PRECIOS NI SERVICIOS QUE NO ESTÉN AQUÍ):
 ${kbText}
 
 DATOS DEL PROSPECTO:
@@ -215,13 +226,12 @@ REGLAS DE ACTUACIÓN, MULTIMEDIA Y CIERRE DE VENTAS:
    - {"action":"handoff","reason":"...","farewell":"..."} -> Escalar a un asesor humano cuando el cliente lo pida expresamente o no puedas ayudarlo (farewell opcional para despedirte).
 
 2. MANEJO DE IMÁGENES Y MULTIMEDIA:
-   - Si el cliente te envía una foto (ej. comprobante de pago o consulta), acúsale recibo amablemente, felicítalo y avanza la venta o valoración.
-   - Si el prospecto solicita catálogo, folleto o QR de pago y dispones de una URL de imagen oficial en la base de conocimiento, puedes incluir "image_url" en tu JSON.
+   - Si el cliente te envía una foto (ej. comprobante de pago o consulta), acúsale recibo amablemente, felicítalo y avanza la venta hacia activación de la app.
+   - Si el prospecto solicita folleto, catálogo o QR de pago y dispones de una URL de imagen oficial en la base de conocimiento, puedes incluir "image_url" en tu JSON.
 
 3. TÉCNICAS DE CIERRE DE VENTAS OBLIGATORIAS:
-   - Cuando el prospecto acepte agendar fecha/hora para su valoración física o clase de prueba -> Confirma fecha, hora y sede en la respuesta y utiliza la acción "move_stage" con stage "negociacion".
-   - Cuando el prospecto pida enlace de pago, métodos de pago o confirme intención de compra de membresía -> Utiliza "move_stage" con stage "negociacion" o "ganado".
-   - Si el prospecto dice que "lo va a pensar" o "no tiene tiempo", aplica la técnica de objeciones del catálogo y dale dos opciones concretas de horario.
+   - Cuando el prospecto muestre intención de compra, pida cuenta bancaria o QR de pago -> Utiliza "move_stage" con stage "negociacion" y ofrece enviarle el QR de pago.
+   - Cuando el prospecto confirme el pago o envíe comprobante -> Felicítalo, pídele su correo para activar la app y utiliza "move_stage" con stage "ganado".
    - Si el cliente escribe palabras como "humano", "asesor", "persona", "queja" o "hablar con alguien" -> Ejecuta SIEMPRE "handoff" de inmediato.
 
 4. REGLA ESTRICTA DE FORMATO:
@@ -308,12 +318,22 @@ export async function runSalesAgentTurn(params: {
     // 6. Ejecutar inferencia en Cloudflare Workers AI
     const result = await chatJson(AgentActionSchema, chatMessages, env, aiModel);
 
-    if (!result.ok) {
+    let action: AgentAction;
+    if (result.ok) {
+      action = result.data;
+    } else if (result.lastRaw && result.lastRaw.trim().length > 0) {
+      // Si el modelo respondió en texto plano en vez de JSON, rescatar el texto como respuesta directa
+      const fallbackText = result.lastRaw
+        .replace(/```(?:json)?/gi, '')
+        .replace(/```/g, '')
+        .trim();
+      console.warn('[Sales Agent] Recuperado de fallo de formato JSON; despachando texto directo de IA:', fallbackText.slice(0, 100));
+      action = { action: 'reply', text: fallbackText };
+    } else {
       console.error(`[Sales Agent] Error en inferencia de Workers AI: ${result.detail}`);
       return { executed: false, error: result.detail };
     }
 
-    const action = result.data;
     const now = new Date().toISOString();
 
     // 7. Ejecutar acción resultante

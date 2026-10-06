@@ -5,16 +5,29 @@ import { cityFromMetadata } from './locations';
 /**
  * Reemplaza variables / placeholders como {nombre}, {producto}, {ciudad}, {agente} en una plantilla
  */
+/**
+ * Reemplaza variables / placeholders como {nombre}, {producto}, {ciudad}, {agente} en una plantilla
+ * con valores por defecto seguros para Fitness Club Pass Cochabamba
+ */
 export function renderTemplate(
   templateContent: string,
   variables: Record<string, string>
 ): string {
+  const merged: Record<string, string> = {
+    producto: 'Fitness Club Pass',
+    ciudad: 'Cochabamba',
+    agente: 'tu Asesor',
+    nombre: '',
+    ...variables,
+  };
+
   let result = templateContent;
-  for (const [key, val] of Object.entries(variables)) {
+  for (const [key, val] of Object.entries(merged)) {
     const regex = new RegExp(`\\{${key}\\}`, 'gi');
-    result = result.replace(regex, val || '');
+    result = result.replace(regex, val?.trim() || (key === 'nombre' ? '' : 'Fitness Club Pass'));
   }
-  return result;
+  // Limpieza de espacios dobles si el nombre estaba vacío
+  return result.replace(/\s{2,}/g, ' ').trim();
 }
 
 /**
@@ -92,7 +105,7 @@ export function buildLeadContextPrompt(options: {
   tone?: string;
   goal?: string;
 }): { systemPrompt: string; userPrompt: string } {
-  const { lead, agentName, recentActivities, tone = 'motivador y persuasivo', goal = 'agendar cita o cerrar membresía' } = options;
+  const { lead, agentName, recentActivities, tone = 'motivador, consultivo y enfocado en cierre', goal = 'presentar planes en Bs o activar suscripción' } = options;
 
   const notes = recentActivities
     .slice(0, 5)
@@ -103,20 +116,21 @@ export function buildLeadContextPrompt(options: {
     .map(([k, v]) => `- ${k}: ${v}`)
     .join('\n');
 
-  const systemPrompt = `Eres el asistente de ventas de élite con inteligencia artificial de "Fitness Club", un centro de entrenamiento de alto rendimiento.
-Tu función es generar mensajes de WhatsApp personalizados, altamente persuasivos y empáticos para prospectos deportivos.
+  const systemPrompt = `Eres el asesor y closer comercial de élite de "Fitness Club Pass", la aplicación de pases multideporte en Cochabamba, Bolivia.
+Con una sola membresía en la app, los clientes tienen pases para acceder a múltiples centros deportivos, gimnasios, natación, crossfit y pádel en Cochabamba.
+Todos los precios están en Bolivianos (Bs).
+Tu función es generar mensajes de WhatsApp personalizados, altamente persuasivos y consultivos para que el prospecto adquiera su membresía en la app.
 Reglas:
-1. Sé conciso y directo (máximo 4 párrafos cortos).
-2. Usa emojis fitness con balance (💪, 🏋️, 🚀, ⏱️).
-3. Incluye siempre una llamada a la acción (CTA) fácil de responder.
-4. Habla con cercanía y calidez humana.
-5. Inyecta con precisión el objetivo deportivo, ciudad y notas del prospecto.`;
+1. Sé conciso y directo (máximo 3 párrafos cortos).
+2. Usa emojis deportivos con balance (💪, 🏋️, 📱, ⏱️, 🚀).
+3. Incluye siempre una sola llamada a la acción (CTA) fácil de responder.
+4. Recuerda que no somos un solo gimnasio: somos la app que te da acceso a múltiples centros en Cochabamba.`;
 
   const userPrompt = `Prospecto:
 - Nombre: ${lead.full_name}
 - Segmento: ${lead.segment}
 - Estado del Pipeline: ${lead.status}
-- Tags / Intereses: ${lead.tags?.join(', ') || 'Ninguno'}
+- Tags / Intereses: ${lead.tags?.join(', ') || 'Multideporte'}
 - Agente comercial: ${agentName}
 
 Metadatos fitness:
@@ -162,17 +176,15 @@ export async function generateAiWhatsAppMessage(
 
   // Fallback enriquecido cuando no hay GPU o conexión activa
   const meta = lead.metadata || {};
-  const objetivo = meta.objetivo || 'alcanzar tu mejor nivel físico';
-  const producto = meta.producto || 'nuestros programas de acondicionamiento';
-  const ciudad = cityFromMetadata(meta) || 'nuestro gimnasio';
-  const nombre = lead.full_name.split(' ')[0];
+  const objetivo = meta.objetivo || 'entrenar con total libertad';
+  const nombre = lead.full_name.split(' ')[0] || 'campeón';
 
   if (lead.segment === 'A') {
-    return `¡Hola ${nombre}! 💪 Te escribe ${agentName} de Fitness Club. Estuve revisando tu perfil enfocado en ${objetivo} y aparté una sesión de valoración personalizada con nuestro head coach en ${ciudad}. ¿Te queda bien pasar hoy por la tarde o prefieres agendar para mañana temprano? 🚀`;
+    return `¡Hola ${nombre}! 💪 Te escribe ${agentName} de Fitness Club Pass Cochabamba. Tenemos tu pase listo para acceder a gimnasios, crossfit, natación y pádel con una sola app. 📱 ¿Te gustaría que te activemos tu suscripción con tarifa preferencial hoy? 🚀`;
   } else if (lead.segment === 'C') {
-    return `Hola ${nombre}, ¿cómo estás? Te saluda ${agentName} de Fitness Club. Sé que los horarios a veces se complican, pero no quería que te quedaras sin conocer nuestras opciones para ${objetivo}. Esta semana tenemos un pase de cortesía en ${ciudad}. ¿Aún estás interesado en retomar tu meta este mes? 🏋️`;
+    return `Hola ${nombre}, ¿cómo estás? Te saluda ${agentName} de Fitness Club Pass Cochabamba. Sé que a veces la rutina se complica, pero con nuestra app puedes entrenar cerca de donde estés en la ciudad desde solo Bs 180 al mes. 🏋️ ¿Aún estás con ganas de entrenar?`;
   } else {
-    return `¡Hola ${nombre}! Te saluda ${agentName} de Fitness Club. Vi que tienes interés en ${producto}. Me encantaría mostrarte las instalaciones en ${ciudad} y armarte un plan a tu medida para ${objetivo}. ¿Qué horario te queda más cómodo para platicar un par de minutos?`;
+    return `¡Hola ${nombre}! Te saluda ${agentName} de Fitness Club Pass Cochabamba. Con una sola membresía en Bs tienes acceso a múltiples gimnasios y disciplinas en la ciudad. ¿Qué centros o disciplinas te gustaría probar primero?`;
   }
 }
 

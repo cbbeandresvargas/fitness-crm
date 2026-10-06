@@ -2,6 +2,24 @@ import { createSignal, onMount, For, Show } from 'solid-js';
 import { Layout } from '../components/Layout';
 import { api } from '../api';
 import { WhatsAppSettings as SettingsType, WebhookInfo, KnowledgeBaseEntry } from '../types';
+import {
+  Settings,
+  Bot,
+  Database,
+  ShieldCheck,
+  CheckCircle2,
+  AlertCircle,
+  Copy,
+  Plus,
+  Pencil,
+  Trash2,
+  RefreshCw,
+  Phone,
+  BookOpen,
+  Sparkles,
+  X,
+  SlidersHorizontal,
+} from 'lucide-solid';
 
 export default function WhatsAppSettings() {
   const [activeTab, setActiveTab] = createSignal<'connection' | 'ai' | 'kb'>('connection');
@@ -86,7 +104,7 @@ export default function WhatsAppSettings() {
       if (res.success) {
         setTestResult({
           success: true,
-          message: `¡Conexión Exitosa con Meta Graph API v25.0! Número verificado: ${res.details?.display_phone_number || settings()?.phone_number_id} (${res.details?.verified_name || 'Fitness Club'})`,
+          message: `Conexión Exitosa con Meta Graph API v25.0: Número verificado ${res.details?.display_phone_number || settings()?.phone_number_id} (${res.details?.verified_name || 'Fitness Club Pass'})`,
         });
       } else {
         setTestResult({
@@ -156,24 +174,46 @@ export default function WhatsAppSettings() {
     }
   };
 
+  const formatCategoryLabel = (cat: string) => {
+    switch (cat) {
+      case 'plan_precio':
+        return 'Planes & Precios (Bs)';
+      case 'como_funciona_app':
+        return 'Cómo funciona la App';
+      case 'centros_aliados':
+        return 'Centros & Sedes';
+      case 'objecion_frecuente':
+        return 'Objeción & Cierre';
+      case 'politica':
+        return 'Políticas';
+      default:
+        return cat.replace('_', ' ');
+    }
+  };
+
   return (
     <Layout title="Configuración WhatsApp & IA">
       <div class="max-w-5xl mx-auto space-y-6">
         {/* Header Title */}
         <div class="flex items-center justify-between">
-          <div>
-            <h1 class="text-xl font-black text-body flex items-center gap-2">
-              <span>⚙️</span>
-              <span>Integración Meta WhatsApp Cloud API (v25.0) & IA</span>
-            </h1>
-            <p class="text-xs text-muted">
-              Credenciales gestionadas mediante variables de entorno del servidor para máxima seguridad y aislamiento.
-            </p>
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-accent/10 border border-accent/20 text-accent flex items-center justify-center">
+              <Settings size={20} />
+            </div>
+            <div>
+              <h1 class="text-xl font-black text-body flex items-center gap-2">
+                <span>Integración WhatsApp Cloud API (v25.0) & IA Comercial</span>
+              </h1>
+              <p class="text-xs text-muted">
+                Credenciales seguras por variables de entorno y base de conocimiento para Fitness Club Pass Cochabamba.
+              </p>
+            </div>
           </div>
 
           <Show when={savedSuccess()}>
-            <span class="px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-xs font-bold animate-fade-in">
-              ✓ Cambios guardados
+            <span class="px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-xs font-bold flex items-center gap-1.5 animate-fade-in">
+              <CheckCircle2 size={13} />
+              <span>Cambios guardados</span>
             </span>
           </Show>
         </div>
@@ -183,37 +223,40 @@ export default function WhatsAppSettings() {
           <button
             type="button"
             onClick={() => setActiveTab('connection')}
-            class={`px-4 py-2 rounded-xl transition cursor-pointer ${
+            class={`px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
               activeTab() === 'connection'
                 ? 'bg-accent text-white shadow-md'
                 : 'text-muted hover:text-body hover:bg-elevate'
             }`}
           >
-            📱 Conexión Meta WhatsApp (v25.0)
+            <Phone size={14} />
+            <span>Conexión Meta WhatsApp</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('ai')}
-            class={`px-4 py-2 rounded-xl transition cursor-pointer ${
+            class={`px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
               activeTab() === 'ai'
                 ? 'bg-accent text-white shadow-md'
                 : 'text-muted hover:text-body hover:bg-elevate'
             }`}
           >
-            🤖 Agente Comercial Workers AI
+            <Bot size={14} />
+            <span>Agente Comercial IA</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('kb')}
-            class={`px-4 py-2 rounded-xl transition cursor-pointer ${
+            class={`px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
               activeTab() === 'kb'
                 ? 'bg-accent text-white shadow-md'
                 : 'text-muted hover:text-body hover:bg-elevate'
             }`}
           >
-            📚 Catálogo & Precios (Knowledge Base)
+            <Database size={14} />
+            <span>Catálogo & Precios en Bs</span>
           </button>
         </div>
 
@@ -223,13 +266,13 @@ export default function WhatsAppSettings() {
             <div class="space-y-6">
               {/* Security Shield Banner */}
               <div class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-3 text-xs">
-                <span class="text-xl">🛡️</span>
+                <ShieldCheck size={20} class="text-emerald-400 shrink-0 mt-0.5" />
                 <div class="space-y-1">
                   <p class="font-extrabold text-emerald-400">
                     Modo de Alta Seguridad Activo (Single Number Environment Variables)
                   </p>
                   <p class="text-body-soft leading-relaxed text-[11px]">
-                    Las credenciales de WhatsApp se leen directamente desde el entorno seguro de Cloudflare Workers (<code class="font-mono text-emerald-300">.env</code> / <code class="font-mono text-emerald-300">.dev.vars</code>). No se almacenan en base de datos ni se exponen a través del navegador.
+                    Las credenciales de WhatsApp se leen directamente desde el entorno seguro de Cloudflare Workers (<code class="font-mono text-emerald-300">.env</code> / <code class="font-mono text-emerald-300">.dev.vars</code>). No se exponen en base de datos ni a través del navegador.
                   </p>
                 </div>
               </div>
@@ -250,151 +293,122 @@ export default function WhatsAppSettings() {
                           : 'Pendiente: Configura tus Variables de Entorno'}
                       </h3>
                       <p class="text-[11px] text-muted">
-                        {settings()?.env_configured
-                          ? `Phone Number ID: ${settings()?.phone_number_id} • Token: ••••••••••••••••${settings()?.tokenLast4}`
-                          : 'Añade META_WA_PHONE_NUMBER_ID y META_WA_ACCESS_TOKEN a tu archivo .env o panel Cloudflare'}
+                        {settings()?.display_phone_number || settings()?.phone_number_id || 'Sin número registrado'}
+                        {settings()?.verified_name ? ` (${settings()?.verified_name})` : ''}
                       </p>
                     </div>
                   </div>
 
-                  <span class="px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-app border border-edge text-emerald-400">
-                    Graph API v25.0
-                  </span>
-                </div>
-
-                <Show when={testResult()}>
-                  <div class={`p-3 rounded-xl text-xs font-bold border ${
-                    testResult()?.success
-                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                      : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-                  }`}>
-                    {testResult()?.message}
-                  </div>
-                </Show>
-
-                <div class="flex items-center justify-between pt-2 border-t border-edge/60">
                   <button
                     type="button"
                     onClick={handleTestConnection}
                     disabled={testing() || !settings()?.env_configured}
-                    class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition disabled:opacity-50 cursor-pointer shadow-md flex items-center gap-1.5"
+                    class="px-4 py-2 bg-elevate hover:bg-elevate-strong text-body text-xs font-bold rounded-xl transition border border-edge disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
                   >
-                    <span>{testing() ? 'Verificando con Meta...' : '🔌 Probar Conexión con Meta v25.0'}</span>
+                    <RefreshCw size={13} class={testing() ? 'animate-spin' : ''} />
+                    <span>{testing() ? 'Probando...' : 'Probar Conexión con Meta'}</span>
                   </button>
-
-                  <span class="text-[11px] text-muted">
-                    Prueba el token y número configurados en el entorno en tiempo real.
-                  </span>
                 </div>
+
+                <Show when={testResult()}>
+                  <div class={`p-3 rounded-xl text-xs flex items-center gap-2 ${
+                    testResult()?.success
+                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-red-500/10 text-red-400 border border-red-500/30'
+                  }`}>
+                    <Show when={testResult()?.success} fallback={<AlertCircle size={14} class="shrink-0" />}>
+                      <CheckCircle2 size={14} class="shrink-0" />
+                    </Show>
+                    <span>{testResult()?.message}</span>
+                  </div>
+                </Show>
               </div>
 
-              {/* Webhook Configuration Card for Meta Developer Portal */}
-              <div class="p-5 rounded-2xl bg-gradient-to-br from-surface to-elevate border border-accent/30 space-y-3">
-                <div class="flex items-center gap-2">
-                  <span class="text-lg">🔗</span>
-                  <h3 class="text-xs font-black text-body">Datos para configurar en Meta for Developers</h3>
-                </div>
-                <p class="text-[11px] text-muted leading-relaxed">
-                  Copia estos dos campos en la sección <strong>WhatsApp → Configuración → Webhook</strong> de tu aplicación en developers.facebook.com:
-                </p>
+              {/* Webhook Info for Meta Developer Portal */}
+              <div class="p-5 rounded-2xl bg-surface border border-edge space-y-4">
+                <h3 class="text-xs font-bold text-body flex items-center gap-1.5">
+                  <Sparkles size={14} class="text-accent" />
+                  <span>Configuración del Webhook en Meta Developer Portal</span>
+                </h3>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                  <div class="space-y-1">
-                    <span class="text-[10px] font-bold text-muted uppercase">URL de devolución de llamada (Webhook URL):</span>
+                <div class="space-y-3 text-xs">
+                  <div>
+                    <label class="block text-muted font-bold mb-1">Callback URL (URL de Webhook):</label>
                     <div class="flex items-center gap-2">
                       <input
                         type="text"
                         readonly
-                        value={webhook()?.url || 'https://tu-dominio.com/api/whatsapp/webhook'}
-                        class="flex-1 px-3 py-2 bg-app border border-edge rounded-xl text-xs font-mono text-body select-all"
+                        value={webhook()?.url || ''}
+                        class="w-full px-3 py-2 bg-app border border-edge rounded-xl font-mono text-[11px] text-body focus:outline-none"
                       />
                       <button
                         type="button"
                         onClick={() => copyToClipboard(webhook()?.url || '', 'URL del Webhook')}
-                        class="px-3 py-2 bg-accent hover:bg-accent-hover text-white rounded-xl text-xs font-bold transition shrink-0 cursor-pointer"
+                        class="p-2 bg-elevate hover:bg-elevate-strong rounded-xl border border-edge text-muted hover:text-body cursor-pointer shrink-0"
+                        title="Copiar URL"
                       >
-                        Copiar
+                        <Copy size={14} />
                       </button>
                     </div>
                   </div>
 
-                  <div class="space-y-1">
-                    <span class="text-[10px] font-bold text-muted uppercase">Identificador de verificación (Verify Token):</span>
+                  <div>
+                    <label class="block text-muted font-bold mb-1">Verify Token (Token de Verificación):</label>
                     <div class="flex items-center gap-2">
                       <input
                         type="text"
                         readonly
-                        value={settings()?.verify_token || 'fitnessclub_secure_verify_token_2026'}
-                        class="flex-1 px-3 py-2 bg-app border border-edge rounded-xl text-xs font-mono text-body select-all"
+                        value={webhook()?.verify_token || ''}
+                        class="w-full px-3 py-2 bg-app border border-edge rounded-xl font-mono text-[11px] text-body focus:outline-none"
                       />
                       <button
                         type="button"
-                        onClick={() => copyToClipboard(settings()?.verify_token || '', 'Verify Token')}
-                        class="px-3 py-2 bg-accent hover:bg-accent-hover text-white rounded-xl text-xs font-bold transition shrink-0 cursor-pointer"
+                        onClick={() => copyToClipboard(webhook()?.verify_token || '', 'Verify Token')}
+                        class="p-2 bg-elevate hover:bg-elevate-strong rounded-xl border border-edge text-muted hover:text-body cursor-pointer shrink-0"
+                        title="Copiar Token"
                       >
-                        Copiar
+                        <Copy size={14} />
                       </button>
                     </div>
                   </div>
                 </div>
-
-                <div class="p-3 rounded-xl bg-app border border-edge text-[11px] text-muted space-y-1">
-                  <p class="font-bold text-body">Campos de suscripción requeridos en Meta:</p>
-                  <p>En el portal de Meta for Developers, suscríbete a los eventos <code class="text-accent-text font-bold">messages</code> y <code class="text-accent-text font-bold">message_template_status_update</code>.</p>
-                </div>
-              </div>
-
-              {/* Environment Variables Reference Card */}
-              <div class="p-5 rounded-2xl bg-surface border border-edge space-y-3">
-                <h3 class="text-xs font-black text-body">Guía de Variables en tu archivo .env</h3>
-                <pre class="p-4 rounded-xl bg-app border border-edge text-[11px] font-mono text-emerald-400 overflow-x-auto leading-relaxed">
-{`# Meta WhatsApp Cloud API (v25.0)
-META_GRAPH_API_VERSION=v25.0
-META_GRAPH_BASE_URL=https://graph.facebook.com
-META_WA_PHONE_NUMBER_ID=109283746591029
-META_WA_ACCESS_TOKEN=EAAB...tu_token_permanente...
-META_WA_WABA_ID=109283746591029
-META_WA_VERIFY_TOKEN=fitnessclub_secure_verify_token_2026
-META_APP_SECRET=opcional_para_firma_hmac`}
-                </pre>
               </div>
             </div>
           </Show>
 
-          {/* TAB 2: AGENTE COMERCIAL CON CLOUDFLARE WORKERS AI */}
+          {/* TAB 2: AGENTE COMERCIAL WORKERS AI */}
           <Show when={activeTab() === 'ai'}>
-            <form onSubmit={handleSaveAiSettings} class="p-6 rounded-2xl bg-surface border border-edge space-y-5 text-xs">
-              <div class="flex items-center justify-between pb-3 border-b border-edge">
-                <div>
-                  <h3 class="text-sm font-extrabold text-body">
-                    Motor de Cierre de Ventas con Cloudflare Workers AI
-                  </h3>
-                  <p class="text-[11px] text-muted">
-                    Ejecuta inferencia directa con bindings nativos de Cloudflare en el Edge sin depender de APIs de terceros.
-                  </p>
+            <form onSubmit={handleSaveAiSettings} class="p-5 rounded-2xl bg-surface border border-edge space-y-4 text-xs">
+              <div class="flex items-center justify-between border-b border-edge pb-3">
+                <div class="flex items-center gap-2">
+                  <Bot size={18} class="text-accent" />
+                  <div>
+                    <h3 class="font-bold text-body">Motor del Asesor Comercial con IA</h3>
+                    <p class="text-[11px] text-muted">Cloudflare Workers AI (Llama 3.1 Instruct)</p>
+                  </div>
                 </div>
 
-                <label class="flex items-center gap-2 cursor-pointer font-bold select-none">
-                  <span>{aiEnabled() ? '🤖 IA Activa' : '🛑 IA Apagada'}</span>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <span class="text-xs font-bold text-muted">Activar IA Global:</span>
                   <input
                     type="checkbox"
                     checked={aiEnabled()}
                     onChange={(e) => setAiEnabled(e.currentTarget.checked)}
-                    class="w-4 h-4 rounded text-accent focus:ring-accent"
+                    class="w-4 h-4 accent-accent rounded"
                   />
                 </label>
               </div>
 
-              {/* Selector de Modelo */}
+              {/* Modelo */}
               <div class="space-y-1">
-                <label class="font-bold text-muted">Modelo de Cloudflare Workers AI:</label>
+                <label class="font-bold text-muted">Modelo de Inteligencia Artificial:</label>
                 <select
                   value={aiModel()}
                   onChange={(e) => setAiModel(e.currentTarget.value)}
-                  class="w-full px-3 py-2 bg-app border border-edge rounded-xl text-xs text-body focus:outline-none focus:border-accent cursor-pointer"
+                  class="w-full px-3 py-2 bg-app border border-edge rounded-xl text-xs text-body focus:outline-none focus:border-accent"
                 >
                   <option value="@cf/meta/llama-3.1-8b-instruct">
-                    @cf/meta/llama-3.1-8b-instruct (Ultra rápido, latencia mínima ideal para chat)
+                    @cf/meta/llama-3.1-8b-instruct (Rápido, ultra económico y conversacional)
                   </option>
                   <option value="@cf/meta/llama-3.3-70b-instruct">
                     @cf/meta/llama-3.3-70b-instruct (Razonamiento profundo para ventas y objeciones complejas)
@@ -409,7 +423,7 @@ META_APP_SECRET=opcional_para_firma_hmac`}
                   type="text"
                   value={aiTone()}
                   onInput={(e) => setAiTone(e.currentTarget.value)}
-                  placeholder="Ej: enérgico, motivador, empático y altamente enfocado en cerrar ventas"
+                  placeholder="Ej: enérgico, asesor consultivo, empático y altamente enfocado en cerrar suscripciones"
                   class="w-full px-3 py-2 bg-app border border-edge rounded-xl text-xs text-body focus:outline-none focus:border-accent"
                 />
               </div>
@@ -423,7 +437,7 @@ META_APP_SECRET=opcional_para_firma_hmac`}
                   rows={6}
                   value={aiInstructions()}
                   onInput={(e) => setAiInstructions(e.currentTarget.value)}
-                  placeholder="Ej: Siempre busca descubrir la meta deportiva principal (pérdida de grasa, hipertrofia o salud). Ofrece una clase de valoración diagnóstica sin costo en su sede más cercana y propón dos horarios alternativos..."
+                  placeholder="Fitness Club Pass es la plataforma de pases multideporte en Cochabamba, Bolivia. Con una sola membresía en la app, el usuario accede a múltiples centros deportivos, gimnasios, natación, crossfit y pádel..."
                   class="w-full px-3 py-2 bg-app border border-edge rounded-xl text-xs text-body focus:outline-none focus:border-accent leading-relaxed"
                 />
               </div>
@@ -432,9 +446,12 @@ META_APP_SECRET=opcional_para_firma_hmac`}
                 <button
                   type="submit"
                   disabled={saving()}
-                  class="px-6 py-2.5 bg-accent hover:bg-accent-hover text-white text-xs font-extrabold rounded-xl transition shadow-md disabled:opacity-50 cursor-pointer"
+                  class="px-6 py-2.5 bg-accent hover:bg-accent-hover text-white text-xs font-extrabold rounded-xl transition shadow-md disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
                 >
-                  {saving() ? 'Guardando...' : 'Guardar Ajustes de IA'}
+                  <Show when={saving()} fallback={<Bot size={14} />}>
+                    <RefreshCw size={14} class="animate-spin" />
+                  </Show>
+                  <span>{saving() ? 'Guardando...' : 'Guardar Ajustes de IA'}</span>
                 </button>
               </div>
             </form>
@@ -449,7 +466,7 @@ META_APP_SECRET=opcional_para_firma_hmac`}
                     Catálogo Oficial y Respuestas a Objeciones (Knowledge Base)
                   </h3>
                   <p class="text-[11px] text-muted">
-                    Esta información es la única fuente de verdad inyectada a la IA para evitar alucinaciones en precios y promociones.
+                    Esta información es la única fuente de verdad inyectada a la IA para evitar alucinaciones en precios en Bolivianos (Bs) y centros aliados.
                   </p>
                 </div>
 
@@ -458,7 +475,7 @@ META_APP_SECRET=opcional_para_firma_hmac`}
                   onClick={openNewKbModal}
                   class="px-3.5 py-1.5 bg-accent hover:bg-accent-hover text-white text-xs font-extrabold rounded-xl transition shadow-sm cursor-pointer flex items-center gap-1.5"
                 >
-                  <span>+</span>
+                  <Plus size={14} />
                   <span>Nueva Entrada</span>
                 </button>
               </div>
@@ -470,24 +487,24 @@ META_APP_SECRET=opcional_para_firma_hmac`}
                     <div class="p-4 rounded-2xl bg-surface border border-edge space-y-2 relative group hover:border-accent/40 transition">
                       <div class="flex items-center justify-between">
                         <span class="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-app border border-edge text-accent-text">
-                          {entry.category.replace('_', ' ')}
+                          {formatCategoryLabel(entry.category)}
                         </span>
                         <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
                           <button
                             type="button"
                             onClick={() => openEditKbModal(entry)}
-                            class="p-1 hover:bg-elevate rounded text-xs text-muted hover:text-body cursor-pointer"
+                            class="p-1.5 hover:bg-elevate rounded text-muted hover:text-body cursor-pointer"
                             title="Editar"
                           >
-                            ✏️
+                            <Pencil size={13} />
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDeleteKb(entry.id)}
-                            class="p-1 hover:bg-elevate rounded text-xs text-rose-400 cursor-pointer"
+                            class="p-1.5 hover:bg-elevate rounded text-rose-400 cursor-pointer"
                             title="Eliminar"
                           >
-                            🗑️
+                            <Trash2 size={13} />
                           </button>
                         </div>
                       </div>
@@ -509,15 +526,16 @@ META_APP_SECRET=opcional_para_firma_hmac`}
           <div class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div class="w-full max-w-lg bg-surface border border-edge rounded-3xl p-6 space-y-4 shadow-2xl animate-fade-in">
               <div class="flex items-center justify-between border-b border-edge pb-3">
-                <h3 class="text-sm font-black text-body">
-                  {editingKbId() ? 'Editar Entrada de Catálogo' : 'Nueva Entrada de Conocimiento'}
+                <h3 class="text-sm font-black text-body flex items-center gap-2">
+                  <BookOpen size={16} class="text-accent" />
+                  <span>{editingKbId() ? 'Editar Entrada de Catálogo' : 'Nueva Entrada de Conocimiento'}</span>
                 </h3>
                 <button
                   type="button"
                   onClick={() => setShowKbModal(false)}
-                  class="text-muted hover:text-body text-sm font-bold cursor-pointer"
+                  class="text-muted hover:text-body p-1 cursor-pointer"
                 >
-                  ✕
+                  <X size={16} />
                 </button>
               </div>
 
@@ -529,34 +547,34 @@ META_APP_SECRET=opcional_para_firma_hmac`}
                     onChange={(e) => setKbCategory(e.currentTarget.value)}
                     class="w-full px-3 py-2 bg-app border border-edge rounded-xl text-xs text-body focus:outline-none focus:border-accent cursor-pointer"
                   >
-                    <option value="plan_precio">Planes y Precios</option>
-                    <option value="horario_sede">Sedes y Horarios</option>
-                    <option value="objecion_frecuente">Manejo de Objeción Frecuente</option>
-                    <option value="politica">Políticas y Garantías</option>
-                    <option value="entrenadores">Coaches y Especialidades</option>
+                    <option value="plan_precio">Planes y Precios (en Bs)</option>
+                    <option value="como_funciona_app">Cómo funciona la App & Pases</option>
+                    <option value="centros_aliados">Centros, Gimnasios y Sedes en Cochabamba</option>
+                    <option value="objecion_frecuente">Manejo de Objeción & Cierre</option>
+                    <option value="politica">Políticas de Activación y Garantías</option>
                   </select>
                 </div>
 
                 <div class="space-y-1">
-                  <label class="font-bold text-muted">Título / Servicio:</label>
+                  <label class="font-bold text-muted">Título / Plan / Tema:</label>
                   <input
                     type="text"
                     required
                     value={kbTitle()}
                     onInput={(e) => setKbTitle(e.currentTarget.value)}
-                    placeholder="Ej: Membresía CrossFit Pro"
+                    placeholder="Ej: Pase Fit Pro (Bs 280 / mes)"
                     class="w-full px-3 py-2 bg-app border border-edge rounded-xl text-xs text-body focus:outline-none focus:border-accent"
                   />
                 </div>
 
                 <div class="space-y-1">
-                  <label class="font-bold text-muted">Contenido / Precios / Argumentos:</label>
+                  <label class="font-bold text-muted">Contenido / Precios en Bs / Argumentos:</label>
                   <textarea
                     rows={4}
                     required
                     value={kbContent()}
                     onInput={(e) => setKbContent(e.currentTarget.value)}
-                    placeholder="Detalla precios, qué incluye y beneficios que la IA debe comunicar..."
+                    placeholder="Detalla precios en Bolivianos (Bs), qué disciplinas o pases incluye y beneficios..."
                     class="w-full px-3 py-2 bg-app border border-edge rounded-xl text-xs text-body focus:outline-none focus:border-accent leading-relaxed"
                   />
                 </div>
