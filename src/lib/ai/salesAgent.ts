@@ -677,7 +677,7 @@ export async function deliverOutboundMessage(params: {
   if (waMessageId) {
     await env.DB.prepare(`
       INSERT INTO activity_logs (id, lead_id, action_type, details, created_at)
-      VALUES (?, ?, 'ai_generated', ?, ?)
+      VALUES (?, ?, 'whatsapp_sent', ?, ?)
     `)
       .bind(
         `act_${crypto.randomUUID().slice(0, 8)}`,
@@ -688,10 +688,10 @@ export async function deliverOutboundMessage(params: {
         now
       )
       .run();
-  } else if (metaError) {
+  } else if (metaError && credentials) {
     await env.DB.prepare(`
       INSERT INTO activity_logs (id, lead_id, action_type, details, created_at)
-      VALUES (?, ?, 'error', ?, ?)
+      VALUES (?, ?, 'note', ?, ?)
     `)
       .bind(
         `act_${crypto.randomUUID().slice(0, 8)}`,
