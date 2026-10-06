@@ -98,6 +98,8 @@ export async function requireAuth(
     path.startsWith('/auth') ||
     path.startsWith('/api/auth') ||
     path.startsWith('/api/whatsapp/webhook') ||
+    path.startsWith('/api/media/') ||
+    path.startsWith('/api/whatsapp/media/') ||
     path.startsWith('/assets') ||
     path.includes('.')
   ) {

@@ -8,14 +8,15 @@ import {
   getMetaPhoneNumberDetails,
   MetaApiError,
   normalizeRecipient,
+  graphRequest,
 } from '../lib/meta/client';
 import { runSalesAgentTurn } from '../lib/ai/salesAgent';
 
 export const whatsappRoutes = new Hono<{ Bindings: Env; Variables: { user?: SessionData } }>();
 
-// Excluir webhook público de Meta, proteger todas las demás rutas de WhatsApp
+// Excluir webhook público de Meta y proxy de media, proteger todas las demás rutas de WhatsApp
 whatsappRoutes.use('/api/whatsapp/*', async (c, next) => {
-  if (c.req.path === '/api/whatsapp/webhook') {
+  if (c.req.path === '/api/whatsapp/webhook' || c.req.path.startsWith('/api/whatsapp/media/')) {
     return next();
   }
   return requireAuth(c, next);
@@ -145,8 +146,8 @@ whatsappRoutes.post('/api/whatsapp/webhook', async (c) => {
             const contactProfile = value.contacts?.find((ct: any) => ct.wa_id === msg.from);
             const profileName = contactProfile?.profile?.name || null;
             const msgType = msg.type || 'text';
-            const content = msg.text?.body || (msgType === 'image' ? 'Imagen recibida' : 'Archivo multimedia');
-            const mediaUrl = msg.image?.id || null;
+            const content = msg.text?.body || (msgType === 'image' ? (msg.image?.caption ? `📷 ${msg.image.caption}` : '📷 Imagen recibida') : 'Archivo multimedia');
+            const mediaUrl = msgType === 'image' && msg.image?.id ? `/api/whatsapp/media/${msg.image.id}` : null;
 
             // 1. Idempotencia: Verificar si el mensaje ya fue procesado
             const existing = await c.env.DB.prepare(
@@ -245,10 +246,16 @@ whatsappRoutes.post('/api/whatsapp/webhook', async (c) => {
             // 4. Disparar turno del Agente de Ventas con Cloudflare Workers AI
             if (lead.ai_enabled === 1 && !lead.handoff_at) {
               console.log(`[Sales Agent] Disparando turno de IA para lead ${lead.id} (${lead.full_name})...`);
+              const aiIncomingText = msgType === 'image'
+                ? (msg.image?.caption
+                    ? `[El prospecto envió una foto/imagen con el texto: "${msg.image.caption}"]`
+                    : `[El prospecto envió una foto/imagen (ej. comprobante de pago o consulta de entrenamiento)]`)
+                : content;
+
               const aiPromise = runSalesAgentTurn({
                 env: c.env,
                 leadId: lead.id,
-                incomingText: content,
+                incomingText: aiIncomingText,
                 credentials: creds,
               }).catch((aiErr) => {
                 console.error('[Sales Agent] Error ejecutando turno de IA:', aiErr);
@@ -270,6 +277,84 @@ whatsappRoutes.post('/api/whatsapp/webhook', async (c) => {
 
   // Responde 200 inmediatamente a Meta tras persistir en DB
   return c.json({ success: true }, 200);
+});
+
+/**
+ * 2.1 PROXY Y CACHÉ DE MEDIA ENTRANTE DE WHATSAPP (R2 + META GRAPH API v25.0)
+ * Descarga el binario de Meta usando el token del servidor y lo almacena permanentemente en Cloudflare R2
+ */
+whatsappRoutes.get('/api/whatsapp/media/:mediaId', async (c) => {
+  const mediaId = c.req.param('mediaId');
+  if (!mediaId || !/^[\w.-]{1,64}$/.test(mediaId)) {
+    return c.text('Media ID inválido', 400);
+  }
+
+  const r2Key = `wa-inbound-media/${mediaId}`;
+
+  // 1. Intentar servir desde la caché durable de Cloudflare R2
+  if (c.env.STORAGE && typeof c.env.STORAGE.get === 'function') {
+    try {
+      const cached = await c.env.STORAGE.get(r2Key);
+      if (cached) {
+        const headers = new Headers();
+        headers.set('Content-Type', cached.httpMetadata?.contentType || 'image/jpeg');
+        headers.set('Cache-Control', 'public, max-age=604800, immutable');
+        return new Response(cached.body, { headers });
+      }
+    } catch (cacheErr) {
+      console.warn('[Media Proxy] Error leyendo de R2:', cacheErr);
+    }
+  }
+
+  // 2. Obtener credenciales activas de Meta
+  const creds = await getActiveMetaCredentials(c.env);
+  if (!creds?.token) {
+    return c.text('Credenciales de Meta no configuradas', 503);
+  }
+
+  try {
+    // 3. Consultar metadata del media a Meta Graph API v25.0
+    const metaRes = await graphRequest<{ url?: string; mime_type?: string }>(
+      mediaId,
+      { method: 'GET', token: creds.token },
+      c.env
+    );
+
+    if (!metaRes?.url) {
+      return c.text('Meta no devolvió la URL de descarga del adjunto', 404);
+    }
+
+    // 4. Descargar el binario desde Meta Lookaside con Bearer token
+    const dlRes = await fetch(metaRes.url, {
+      headers: { Authorization: `Bearer ${creds.token}` },
+    });
+
+    if (!dlRes.ok) {
+      return c.text(`Fallo al descargar adjunto desde Meta (${dlRes.status})`, 502);
+    }
+
+    const mimeType = metaRes.mime_type || dlRes.headers.get('content-type') || 'image/jpeg';
+    const arrayBuffer = await dlRes.arrayBuffer();
+
+    // 5. Guardar en R2 para que quede permanente (Meta expira los enlaces tras ~30 días)
+    if (c.env.STORAGE && typeof c.env.STORAGE.put === 'function') {
+      try {
+        await c.env.STORAGE.put(r2Key, arrayBuffer, {
+          httpMetadata: { contentType: mimeType },
+        });
+      } catch (putErr) {
+        console.warn('[Media Proxy] Error guardando en R2:', putErr);
+      }
+    }
+
+    const headers = new Headers();
+    headers.set('Content-Type', mimeType);
+    headers.set('Cache-Control', 'public, max-age=604800, immutable');
+    return new Response(arrayBuffer, { headers });
+  } catch (err: any) {
+    console.error('[Media Proxy] Error procesando descarga de media:', err);
+    return c.text(err.message || 'Error descargando archivo de Meta', 500);
+  }
 });
 
 /**

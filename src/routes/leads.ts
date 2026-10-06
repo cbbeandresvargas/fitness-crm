@@ -1140,7 +1140,7 @@ leadsRoutes.post('/api/leads/:id/messages', async (c) => {
 });
 
 /**
- * Subir imagen o comprobante para WhatsApp (R2 o KV fallback)
+ * Subir imagen o comprobante para WhatsApp (R2 con URL pública HTTPS para Meta)
  */
 leadsRoutes.post('/api/upload/image', async (c) => {
   try {
@@ -1166,14 +1166,13 @@ leadsRoutes.post('/api/upload/image', async (c) => {
       }
     }
 
-    const base64 = btoa(
-      new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-    );
-    const dataUrl = `data:${typedFile.type || 'image/jpeg'};base64,${base64}`;
+    const host = c.req.header('host') || 'fitness-crm.andresvm10.workers.dev';
+    const proto = c.req.header('x-forwarded-proto') || 'https';
+    const publicUrl = `${proto}://${host}/api/media/${key}`;
 
     return c.json({
       success: true,
-      media_url: dataUrl,
+      media_url: publicUrl,
       key,
       file_name: typedFile.name,
     });
@@ -1181,4 +1180,24 @@ leadsRoutes.post('/api/upload/image', async (c) => {
     console.error('Error subiendo imagen:', err);
     return c.json({ error: err.message || 'Error al procesar archivo' }, 500);
   }
+});
+
+/**
+ * Servir archivos multimedia almacenados en Cloudflare R2 (imágenes para Meta WhatsApp y clientes)
+ */
+leadsRoutes.get('/api/media/*', async (c) => {
+  const key = c.req.path.replace(/^\/api\/media\//, '');
+  if (!key) return c.text('Not found', 404);
+
+  if (c.env.STORAGE && typeof c.env.STORAGE.get === 'function') {
+    const obj = await c.env.STORAGE.get(key);
+    if (obj) {
+      const headers = new Headers();
+      headers.set('Content-Type', obj.httpMetadata?.contentType || 'image/jpeg');
+      headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+      return new Response(obj.body, { headers });
+    }
+  }
+
+  return c.text('Media not found', 404);
 });

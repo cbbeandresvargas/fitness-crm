@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { Env, Lead, WhatsAppMessage, KnowledgeBaseEntry, WhatsAppSettings } from '../types';
-import { sendMetaTextMessage } from '../meta/client';
+import { sendMetaTextMessage, sendMetaImageMessage } from '../meta/client';
 
 export const AgentActionSchema = z.discriminatedUnion('action', [
   z.object({
@@ -9,16 +9,19 @@ export const AgentActionSchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('reply'),
     text: z.string().min(1),
+    image_url: z.string().url().optional(),
   }),
   z.object({
     action: z.literal('update_lead'),
     note: z.string().min(1),
     reply: z.string().optional(),
+    image_url: z.string().url().optional(),
   }),
   z.object({
     action: z.literal('move_stage'),
     stage: z.enum(['nuevo', 'contactado', 'negociacion', 'ganado', 'perdido']),
     reply: z.string().optional(),
+    image_url: z.string().url().optional(),
   }),
   z.object({
     action: z.literal('handoff'),
@@ -203,21 +206,25 @@ DATOS DEL PROSPECTO:
 ${metadataStr ? `Metadatos deportivos:\n${metadataStr}` : ''}
 ${lead.notes_summary ? `Notas previas del asesor: ${lead.notes_summary}` : ''}
 
-REGLAS DE ACTUACIÓN Y CIERRE DE VENTAS:
+REGLAS DE ACTUACIÓN, MULTIMEDIA Y CIERRE DE VENTAS:
 1. En cada turno respondes ÚNICAMENTE un objeto JSON válido con exactamente UNA acción de las siguientes:
    - {"action":"none"} -> No responder (ej. el mensaje no amerita respuesta).
-   - {"action":"reply","text":"..."} -> Enviar mensaje de respuesta al prospecto.
-   - {"action":"update_lead","note":"...","reply":"..."} -> Guardar una nota/preferencia detectada del lead (reply opcional).
-   - {"action":"move_stage","stage":"nuevo"|"contactado"|"negociacion"|"ganado"|"perdido","reply":"..."} -> Mover al prospecto en el pipeline comercial (reply opcional).
+   - {"action":"reply","text":"...","image_url":"https://..."} -> Enviar mensaje de respuesta (image_url opcional).
+   - {"action":"update_lead","note":"...","reply":"...","image_url":"https://..."} -> Guardar una nota del lead (reply e image_url opcionales).
+   - {"action":"move_stage","stage":"nuevo"|"contactado"|"negociacion"|"ganado"|"perdido","reply":"...","image_url":"https://..."} -> Mover al prospecto en el pipeline comercial (reply e image_url opcionales).
    - {"action":"handoff","reason":"...","farewell":"..."} -> Escalar a un asesor humano cuando el cliente lo pida expresamente o no puedas ayudarlo (farewell opcional para despedirte).
 
-2. TÉCNICAS DE CIERRE DE VENTAS OBLIGATORIAS:
+2. MANEJO DE IMÁGENES Y MULTIMEDIA:
+   - Si el cliente te envía una foto (ej. comprobante de pago o consulta), acúsale recibo amablemente, felicítalo y avanza la venta o valoración.
+   - Si el prospecto solicita catálogo, folleto o QR de pago y dispones de una URL de imagen oficial en la base de conocimiento, puedes incluir "image_url" en tu JSON.
+
+3. TÉCNICAS DE CIERRE DE VENTAS OBLIGATORIAS:
    - Cuando el prospecto acepte agendar fecha/hora para su valoración física o clase de prueba -> Confirma fecha, hora y sede en la respuesta y utiliza la acción "move_stage" con stage "negociacion".
    - Cuando el prospecto pida enlace de pago, métodos de pago o confirme intención de compra de membresía -> Utiliza "move_stage" con stage "negociacion" o "ganado".
    - Si el prospecto dice que "lo va a pensar" o "no tiene tiempo", aplica la técnica de objeciones del catálogo y dale dos opciones concretas de horario.
    - Si el cliente escribe palabras como "humano", "asesor", "persona", "queja" o "hablar con alguien" -> Ejecuta SIEMPRE "handoff" de inmediato.
 
-3. REGLA ESTRICTA DE FORMATO:
+4. REGLA ESTRICTA DE FORMATO:
    Devuelve EXCLUSIVAMENTE el objeto JSON sin texto antes ni después, sin comillas externas ni etiquetas markdown.`;
 }
 
@@ -340,6 +347,7 @@ export async function runSalesAgentTurn(params: {
             env,
             lead,
             text: action.reply,
+            imageUrl: action.image_url,
             credentials,
             now,
           });
@@ -376,6 +384,7 @@ export async function runSalesAgentTurn(params: {
             env,
             lead,
             text: action.reply,
+            imageUrl: action.image_url,
             credentials,
             now,
           });
@@ -421,6 +430,7 @@ export async function runSalesAgentTurn(params: {
           env,
           lead,
           text: action.text,
+          imageUrl: action.image_url,
           credentials,
           now,
         });
@@ -440,23 +450,36 @@ async function deliverOutboundMessage(params: {
   env: Env;
   lead: Lead;
   text: string;
+  imageUrl?: string;
   credentials?: { phoneNumberId: string; token: string } | null;
   now: string;
 }): Promise<void> {
-  const { env, lead, text, credentials, now } = params;
+  const { env, lead, text, imageUrl, credentials, now } = params;
   let waMessageId: string | null = null;
 
   // Si hay credenciales activas, enviar a través de Meta Graph API v25.0
   if (credentials && credentials.phoneNumberId && credentials.token) {
     try {
-      const res = await sendMetaTextMessage({
-        phoneNumberId: credentials.phoneNumberId,
-        token: credentials.token,
-        to: lead.phone,
-        text,
-        env,
-      });
-      waMessageId = res.messageId;
+      if (imageUrl) {
+        const res = await sendMetaImageMessage({
+          phoneNumberId: credentials.phoneNumberId,
+          token: credentials.token,
+          to: lead.phone,
+          imageUrl,
+          caption: text,
+          env,
+        });
+        waMessageId = res.messageId;
+      } else {
+        const res = await sendMetaTextMessage({
+          phoneNumberId: credentials.phoneNumberId,
+          token: credentials.token,
+          to: lead.phone,
+          text,
+          env,
+        });
+        waMessageId = res.messageId;
+      }
     } catch (sendErr) {
       console.error('[deliverOutboundMessage] Error enviando a Meta Graph API v25.0:', sendErr);
     }
@@ -467,13 +490,15 @@ async function deliverOutboundMessage(params: {
   // Guardar en la base de datos D1
   await env.DB.prepare(`
     INSERT INTO whatsapp_messages (
-      id, lead_id, user_id, sender, message_type, content, status, whatsapp_message_id, ai_generated, created_at
-    ) VALUES (?, ?, NULL, 'agent', 'text', ?, ?, ?, 1, ?)
+      id, lead_id, user_id, sender, message_type, content, media_url, status, whatsapp_message_id, ai_generated, created_at
+    ) VALUES (?, ?, NULL, 'agent', ?, ?, ?, ?, ?, 1, ?)
   `)
     .bind(
       msgId,
       lead.id,
+      imageUrl ? 'image' : 'text',
       text,
+      imageUrl || null,
       waMessageId ? 'delivered' : 'sent',
       waMessageId,
       now
@@ -495,7 +520,9 @@ async function deliverOutboundMessage(params: {
     .bind(
       `act_${crypto.randomUUID().slice(0, 8)}`,
       lead.id,
-      `Respuesta automática de IA enviada por WhatsApp: "${text.slice(0, 80)}..."`,
+      imageUrl
+        ? `Respuesta de IA con imagen enviada por WhatsApp: "${text.slice(0, 80)}..."`
+        : `Respuesta automática de IA enviada por WhatsApp: "${text.slice(0, 80)}..."`,
       now
     )
     .run();

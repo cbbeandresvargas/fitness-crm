@@ -21,8 +21,29 @@ export default function WhatsAppInbox() {
   const [togglingAi, setTogglingAi] = createSignal(false);
   const [templates, setTemplates] = createSignal<MessageTemplate[]>([]);
 
+  const [selectedImage, setSelectedImage] = createSignal<File | null>(null);
+  const [imagePreview, setImagePreview] = createSignal<string | null>(null);
+  let fileInputRef: HTMLInputElement | undefined;
+
   let chatContainerRef: HTMLDivElement | undefined;
   let pollingTimer: any = null;
+
+  const handleFileSelect = (e: Event) => {
+    const target = e.target as HTMLInputElement;
+    if (target.files && target.files[0]) {
+      const file = target.files[0];
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onload = (re) => setImagePreview(re.target?.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+    if (fileInputRef) fileInputRef.value = '';
+  };
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -90,13 +111,21 @@ export default function WhatsAppInbox() {
     if (e) e.preventDefault();
     const text = chatInput().trim();
     const leadId = selectedLeadId();
-    if (!text || !leadId || sending()) return;
+    const imageFile = selectedImage();
+    if ((!text && !imageFile) || !leadId || sending()) return;
 
     setSending(true);
     try {
-      const res = await api.sendWhatsAppDirect(leadId, text);
+      let mediaUrl: string | undefined = undefined;
+      if (imageFile) {
+        const uploadRes = await api.uploadImage(imageFile);
+        mediaUrl = uploadRes.media_url;
+      }
+
+      const res = await api.sendWhatsAppDirect(leadId, text, mediaUrl);
       if (res.success) {
         setChatInput('');
+        handleRemoveImage();
         await loadChat(leadId, false);
         await loadInboxList();
       }
@@ -522,19 +551,55 @@ export default function WhatsAppInbox() {
                   </For>
                 </div>
 
+                {/* Image Preview if selected */}
+                <Show when={imagePreview()}>
+                  <div class="relative inline-block border border-edge rounded-xl overflow-hidden bg-app/80 p-1">
+                    <img
+                      src={imagePreview()!}
+                      alt="Vista previa adjunto"
+                      class="h-20 w-auto rounded-lg object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
+                      class="absolute top-1.5 right-1.5 bg-red-600/90 hover:bg-red-500 text-white w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center shadow cursor-pointer"
+                      title="Quitar imagen"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </Show>
+
                 {/* Form Input */}
                 <form onSubmit={handleSendMessage} class="flex items-center gap-2">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*"
+                    onChange={handleFileSelect}
+                    class="hidden"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef?.click()}
+                    class="p-2.5 bg-elevate hover:bg-elevate-strong text-body-soft rounded-xl border border-edge transition cursor-pointer flex items-center justify-center shrink-0"
+                    title="Adjuntar imagen o comprobante"
+                  >
+                    <span>📷</span>
+                  </button>
+
                   <input
                     type="text"
                     value={chatInput()}
                     onInput={(e) => setChatInput(e.currentTarget.value)}
-                    placeholder="Escribe un mensaje por WhatsApp Cloud API v25.0..."
+                    placeholder="Escribe un mensaje o envía una foto..."
                     class="flex-1 px-4 py-2.5 bg-app border border-edge rounded-xl text-xs text-body placeholder-muted focus:outline-none focus:border-emerald-500 transition"
                   />
 
                   <button
                     type="submit"
-                    disabled={sending() || !chatInput().trim()}
+                    disabled={sending() || (!chatInput().trim() && !selectedImage())}
                     class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black transition shadow-md disabled:opacity-40 cursor-pointer shrink-0 flex items-center gap-1.5"
                   >
                     <span>{sending() ? 'Enviando...' : 'Enviar'}</span>
