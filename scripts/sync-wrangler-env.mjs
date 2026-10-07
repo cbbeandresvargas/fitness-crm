@@ -20,6 +20,8 @@ function parseEnvFile(filePath) {
     if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
       val = val.slice(1, -1);
     }
+    // Los placeholders de .env.example (tu_xxx_aqui) no son valores reales
+    if (/^tu_.*_aqui$/.test(val)) continue;
     env[key] = val;
   }
   return env;
