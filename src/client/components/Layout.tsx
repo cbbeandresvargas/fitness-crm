@@ -67,10 +67,10 @@ export function Layout(props: { children: JSX.Element; title?: string }) {
           <button
             type="button"
             onClick={closeMobileMenu}
-            class="md:hidden p-1.5 text-muted hover:text-body rounded-lg hover:bg-elevate transition"
+            class="md:hidden min-h-[44px] min-w-[44px] p-2 text-muted hover:text-body rounded-lg hover:bg-elevate transition flex items-center justify-center cursor-pointer"
             aria-label="Cerrar menú"
           >
-            <X class="w-4 h-4" />
+            <X class="w-5 h-5" />
           </button>
         </div>
 
@@ -246,10 +246,10 @@ export function Layout(props: { children: JSX.Element; title?: string }) {
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
-              class="md:hidden p-1.5 rounded-lg bg-surface border border-edge text-body-soft hover:text-body"
+              class="md:hidden min-h-[44px] min-w-[44px] p-2 rounded-lg bg-surface border border-edge text-body-soft hover:text-body flex items-center justify-center cursor-pointer"
               aria-label="Abrir menú de navegación"
             >
-              <Menu class="w-4 h-4" />
+              <Menu class="w-5 h-5" />
             </button>
 
             <div>
@@ -262,11 +262,11 @@ export function Layout(props: { children: JSX.Element; title?: string }) {
             </div>
           </div>
 
-          <div class="flex items-center gap-2.5">
-            <ThemeToggle class="p-2 rounded-lg bg-surface border border-edge text-body-soft hover:text-body hover:border-edge-strong transition cursor-pointer flex items-center justify-center" />
+          <div class="flex items-center gap-2 sm:gap-2.5">
+            <ThemeToggle class="min-h-[44px] min-w-[44px] p-2 rounded-lg bg-surface border border-edge text-body-soft hover:text-body hover:border-edge-strong transition cursor-pointer flex items-center justify-center" />
             <A
               href="/leads/new"
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-accent hover:bg-accent-hover text-white text-xs font-semibold rounded-lg transition"
+              class="inline-flex items-center justify-center min-h-[44px] gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-accent hover:bg-accent-hover text-white text-xs font-semibold rounded-lg transition shadow-xs"
             >
               <Plus class="w-3.5 h-3.5" />
               <span class="hidden sm:inline">Nuevo Prospecto</span>
@@ -276,7 +276,7 @@ export function Layout(props: { children: JSX.Element; title?: string }) {
         </header>
 
         {/* Page Content */}
-        <main class="flex-1 p-4 sm:p-6">{props.children}</main>
+        <main class="flex-1 p-3.5 sm:p-6 overflow-x-hidden min-w-0">{props.children}</main>
       </div>
     </div>
   );

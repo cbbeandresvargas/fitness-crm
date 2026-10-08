@@ -211,19 +211,6 @@ importExportRoutes.post('/api/import/process', async (c) => {
       )
       .run();
 
-    await c.env.DB.prepare(`
-      INSERT INTO activity_logs (id, lead_id, user_id, action_type, details, created_at)
-      VALUES (?, ?, ?, 'creation', ?, ?)
-    `)
-      .bind(
-        `act_${crypto.randomUUID().slice(0, 8)}`,
-        leadId,
-        user.userId,
-        `Lead importado desde archivo CSV (${fileKey}).`,
-        now
-      )
-      .run();
-
     importedCount++;
   }
 
@@ -378,23 +365,6 @@ importExportRoutes.post('/api/import/fc/commit', async (c) => {
         )
         .run();
 
-      const detailParts = [`Importado desde Excel FC (hoja "Clientes", fila ${row.rowNumber}).`];
-      if (row.data.membershipStatus) detailParts.push(`Estado de Membresía: "${row.data.membershipStatus}".`);
-      if (row.data.membershipCount !== undefined) detailParts.push(`Cantidad de Membresías: ${row.data.membershipCount}.`);
-
-      await c.env.DB.prepare(`
-        INSERT INTO activity_logs (id, lead_id, user_id, action_type, details, created_at)
-        VALUES (?, ?, ?, 'creation', ?, ?)
-      `)
-        .bind(
-          `act_${crypto.randomUUID().slice(0, 8)}`,
-          leadId,
-          user.userId,
-          detailParts.join(' '),
-          now
-        )
-        .run();
-
       created++;
       continue;
     }
@@ -441,19 +411,6 @@ importExportRoutes.post('/api/import/fc/commit', async (c) => {
 
     await c.env.DB.prepare(`UPDATE leads SET ${sets.join(', ')} WHERE id = ?`)
       .bind(...params)
-      .run();
-
-    await c.env.DB.prepare(`
-      INSERT INTO activity_logs (id, lead_id, user_id, action_type, details, created_at)
-      VALUES (?, ?, ?, 'update', ?, ?)
-    `)
-      .bind(
-        `act_${crypto.randomUUID().slice(0, 8)}`,
-        lead.id,
-        user.userId,
-        `Sincronizado desde Excel FC (fila ${row.rowNumber}, coincidencia por ${row.matchedBy}): se completaron campos vacíos (${fills.join(', ')}).`,
-        now
-      )
       .run();
 
     updated++;

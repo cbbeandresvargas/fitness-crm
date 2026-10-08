@@ -11,6 +11,7 @@ import {
   graphRequest,
 } from '../lib/meta/client';
 import { runSalesAgentTurn } from '../lib/ai/salesAgent';
+import { autoAssignAgent } from '../lib/rules';
 
 export const whatsappRoutes = new Hono<{ Bindings: Env; Variables: { user?: SessionData } }>();
 
@@ -205,13 +206,6 @@ whatsappRoutes.post('/api/whatsapp/webhook', async (c) => {
                 .bind(newLeadId, leadName, senderPhone, now, now, now, now)
                 .run();
 
-              await c.env.DB.prepare(`
-                INSERT INTO activity_logs (id, lead_id, action_type, details, created_at)
-                VALUES (?, ?, 'creation', 'Prospecto creado automáticamente desde mensaje entrante de WhatsApp.', ?)
-              `)
-                .bind(`act_${crypto.randomUUID().slice(0, 8)}`, newLeadId, now)
-                .run();
-
               lead = await c.env.DB.prepare('SELECT * FROM leads WHERE id = ?')
                 .bind(newLeadId)
                 .first<Lead>();
@@ -243,18 +237,6 @@ whatsappRoutes.post('/api/whatsapp/webhook', async (c) => {
                 mediaUrl,
                 waMessageId,
                 JSON.stringify(msg),
-                now
-              )
-              .run();
-
-            await c.env.DB.prepare(`
-              INSERT INTO activity_logs (id, lead_id, action_type, details, created_at)
-              VALUES (?, ?, 'whatsapp_sent', ?, ?)
-            `)
-              .bind(
-                `act_${crypto.randomUUID().slice(0, 8)}`,
-                lead.id,
-                `WhatsApp recibido de ${lead.full_name}: "${content.slice(0, 80)}"`,
                 now
               )
               .run();
@@ -410,6 +392,7 @@ whatsappRoutes.get('/api/whatsapp/config', async (c) => {
       ai_model: settings?.ai_model || '@cf/meta/llama-3.2-3b-instruct',
       ai_tone: settings?.ai_tone || 'enérgico, motivador, empático y altamente enfocado en cerrar ventas',
       ai_instructions: settings?.ai_instructions || '',
+      business_context: settings?.business_context || '',
       env_configured: isEnvConfigured,
     },
     webhook: {
@@ -431,20 +414,28 @@ whatsappRoutes.post('/api/whatsapp/config', async (c) => {
   }
 
   const body = await c.req.json();
-  const { ai_enabled, ai_model, ai_tone, ai_instructions } = body;
+  const { ai_enabled, ai_model, ai_tone, ai_instructions, business_context } = body;
 
   const id = 'ws_default';
   const now = new Date().toISOString();
 
+  // Asegurar compatibilidad progresiva en SQLite D1 si la columna business_context no existiese
+  try {
+    await c.env.DB.prepare('ALTER TABLE whatsapp_settings ADD COLUMN business_context TEXT').run();
+  } catch {
+    // Columna ya existe
+  }
+
   await c.env.DB.prepare(`
     INSERT INTO whatsapp_settings (
-      id, ai_enabled, ai_model, ai_tone, ai_instructions, status, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, 'connected', ?, ?)
+      id, ai_enabled, ai_model, ai_tone, ai_instructions, business_context, status, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, 'connected', ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       ai_enabled = excluded.ai_enabled,
       ai_model = excluded.ai_model,
       ai_tone = excluded.ai_tone,
       ai_instructions = excluded.ai_instructions,
+      business_context = excluded.business_context,
       updated_at = excluded.updated_at
   `)
     .bind(
@@ -453,6 +444,7 @@ whatsappRoutes.post('/api/whatsapp/config', async (c) => {
       ai_model || '@cf/meta/llama-3.2-3b-instruct',
       ai_tone || 'enérgico, motivador, empático y altamente enfocado en cerrar ventas',
       ai_instructions || null,
+      business_context || null,
       now,
       now
     )
@@ -871,19 +863,6 @@ whatsappRoutes.post('/api/whatsapp/leads/:id/send', async (c) => {
     .bind(now, user?.userId || null, now, leadId)
     .run();
 
-  await c.env.DB.prepare(`
-    INSERT INTO activity_logs (id, lead_id, user_id, action_type, details, created_at)
-    VALUES (?, ?, ?, 'whatsapp_sent', ?, ?)
-  `)
-    .bind(
-      `act_${crypto.randomUUID().slice(0, 8)}`,
-      leadId,
-      user?.userId || null,
-      `WhatsApp enviado por ${user?.name || 'Asesor'}: "${(text || 'Imagen').slice(0, 80)}"`,
-      now
-    )
-    .run();
-
   return c.json({
     success: true,
     messageId: msgId,
@@ -901,7 +880,7 @@ whatsappRoutes.post('/api/whatsapp/leads/:id/toggle-ai', async (c) => {
   const body = await c.req.json();
   const { enabled, resumeHandoff } = body;
 
-  const lead = await c.env.DB.prepare('SELECT id, full_name, ai_enabled, handoff_at FROM leads WHERE id = ?')
+  const lead = await c.env.DB.prepare('SELECT id, full_name, ai_enabled, handoff_at, assigned_to FROM leads WHERE id = ?')
     .bind(leadId)
     .first<Lead>();
   if (!lead) return c.json({ error: 'Lead no encontrado' }, 404);
@@ -918,54 +897,37 @@ whatsappRoutes.post('/api/whatsapp/leads/:id/toggle-ai', async (c) => {
       .bind(now, leadId)
       .run();
 
-    await c.env.DB.prepare(`
-      INSERT INTO activity_logs (id, lead_id, user_id, action_type, details, created_at)
-      VALUES (?, ?, ?, 'ai_generated', ?, ?)
-    `)
-      .bind(
-        `act_${crypto.randomUUID().slice(0, 8)}`,
-        leadId,
-        user?.userId || null,
-        `${user?.name || 'Asesor'} reactivó la atención automática de IA para este prospecto.`,
-        now
-      )
-      .run();
-
     return c.json({ success: true, ai_enabled: true, is_handoff: false });
   }
 
   // Pausar o activar IA
   const newAiState = enabled !== undefined ? (enabled ? 1 : 0) : (lead.ai_enabled ? 0 : 1);
-  const handoffAt = newAiState === 0 ? now : null;
-  const handoffReason = newAiState === 0 ? 'manual' : null;
+  const isHandoff = newAiState === 0;
+  const handoffAt = isHandoff ? now : null;
+  const handoffReason = isHandoff ? 'manual' : null;
+
+  let assignedAgentId = lead.assigned_to;
+  if (isHandoff && !assignedAgentId) {
+    try {
+      assignedAgentId = await autoAssignAgent(c.env.DB);
+    } catch (assignErr) {
+      console.warn('[Handoff] Error ejecutando autoAssignAgent:', assignErr);
+    }
+  }
 
   await c.env.DB.prepare(`
     UPDATE leads 
-    SET ai_enabled = ?, handoff_at = ?, handoff_reason = ?, updated_at = ? 
+    SET ai_enabled = ?, handoff_at = ?, handoff_reason = ?, assigned_to = COALESCE(?, assigned_to), updated_at = ? 
     WHERE id = ?
   `)
-    .bind(newAiState, handoffAt, handoffReason, now, leadId)
-    .run();
-
-  await c.env.DB.prepare(`
-    INSERT INTO activity_logs (id, lead_id, user_id, action_type, details, created_at)
-    VALUES (?, ?, ?, 'ai_generated', ?, ?)
-  `)
-    .bind(
-      `act_${crypto.randomUUID().slice(0, 8)}`,
-      leadId,
-      user?.userId || null,
-      newAiState === 1
-        ? `${user?.name || 'Asesor'} activó la IA de ventas para este chat.`
-        : `${user?.name || 'Asesor'} tomó control manual del chat (IA en pausa).`,
-      now
-    )
+    .bind(newAiState, handoffAt, handoffReason, assignedAgentId || null, now, leadId)
     .run();
 
   return c.json({
     success: true,
     ai_enabled: newAiState === 1,
-    is_handoff: newAiState === 0,
+    is_handoff: isHandoff,
+    assigned_to: assignedAgentId,
   });
 });
 

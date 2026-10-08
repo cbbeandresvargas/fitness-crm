@@ -455,6 +455,7 @@ export const api = {
     ai_model?: string;
     ai_tone?: string;
     ai_instructions?: string;
+    business_context?: string;
   }): Promise<{ success: boolean; status: string; verified_name?: string; display_phone_number?: string }> {
     return fetchJson('/api/whatsapp/config', {
       method: 'POST',

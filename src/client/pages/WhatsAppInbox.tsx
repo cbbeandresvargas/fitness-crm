@@ -286,9 +286,11 @@ export default function WhatsAppInbox() {
 
   return (
     <Layout title="Bandeja de Entrada WhatsApp">
-      <div class="h-[calc(100vh-5rem)] flex flex-col -m-4 md:-m-8 bg-app overflow-hidden">
+      <div class="h-[calc(100dvh-4rem)] md:h-[calc(100vh-5rem)] flex flex-col -m-4 md:-m-8 bg-app overflow-hidden">
         {/* Top Header */}
-        <div class="px-4 py-2.5 bg-surface border-b border-edge flex items-center justify-between shrink-0">
+        <div class={`px-4 py-2.5 bg-surface border-b border-edge flex items-center justify-between shrink-0 ${
+          selectedLeadId() ? 'hidden md:flex' : 'flex'
+        }`}>
           <div class="flex items-center gap-2.5">
             <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
               <MessageSquare size={16} />
@@ -507,11 +509,12 @@ export default function WhatsAppInbox() {
                   <button
                     type="button"
                     onClick={handleBackToList}
-                    class="md:hidden p-1.5 rounded-lg bg-app border border-edge text-body-soft hover:text-body transition cursor-pointer flex items-center justify-center shrink-0"
+                    class="md:hidden min-h-[44px] px-2.5 py-1.5 rounded-lg bg-elevate hover:bg-elevate-strong text-body text-xs font-semibold border border-edge transition cursor-pointer flex items-center gap-1.5 shrink-0"
                     title="Volver a la lista de conversaciones"
                     aria-label="Volver a la lista de conversaciones"
                   >
-                    <ArrowLeft size={14} />
+                    <ArrowLeft size={16} />
+                    <span>Volver</span>
                   </button>
 
                   <div class="w-8 h-8 rounded-lg bg-accent text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
@@ -683,7 +686,16 @@ export default function WhatsAppInbox() {
                                 <img
                                   src={msg.media_url!}
                                   alt="Imagen de chat"
-                                  class="w-full max-h-48 object-cover rounded-lg border border-white/10"
+                                  class="w-full max-h-48 sm:max-h-64 object-cover rounded-lg border border-white/10"
+                                />
+                              </Show>
+
+                              {/* Media if audio */}
+                              <Show when={msg.message_type === 'audio' && msg.media_url}>
+                                <audio
+                                  controls
+                                  src={msg.media_url!}
+                                  class="w-full max-w-[260px] sm:max-w-xs my-1"
                                 />
                               </Show>
 
@@ -768,7 +780,7 @@ export default function WhatsAppInbox() {
                 </Show>
 
                 {/* Form Input */}
-                <form onSubmit={handleSendMessage} class="flex items-center gap-2">
+                <form onSubmit={handleSendMessage} class="flex items-center gap-1.5 sm:gap-2">
                   <input
                     type="file"
                     ref={fileInputRef}
@@ -780,10 +792,10 @@ export default function WhatsAppInbox() {
                   <button
                     type="button"
                     onClick={() => fileInputRef?.click()}
-                    class="p-2 bg-elevate hover:bg-elevate-strong text-body-soft rounded-lg border border-edge transition cursor-pointer flex items-center justify-center shrink-0"
+                    class="min-h-[44px] min-w-[44px] p-2 bg-elevate hover:bg-elevate-strong text-body-soft rounded-lg border border-edge transition cursor-pointer flex items-center justify-center shrink-0"
                     title="Adjuntar imagen o comprobante"
                   >
-                    <Image size={14} />
+                    <Image size={16} />
                   </button>
 
                   <input
@@ -791,16 +803,16 @@ export default function WhatsAppInbox() {
                     value={chatInput()}
                     onInput={(e) => setChatInput(e.currentTarget.value)}
                     placeholder="Escribe un mensaje o envía una foto..."
-                    class="flex-1 px-3 py-2 bg-app border border-edge rounded-lg text-xs text-body placeholder-muted focus:outline-none focus:border-emerald-500 transition"
+                    class="flex-1 min-h-[44px] px-3 py-2 bg-app border border-edge rounded-lg text-xs sm:text-sm text-body placeholder-muted focus:outline-none focus:border-emerald-500 transition"
                   />
 
                   <button
                     type="submit"
                     disabled={sending() || (!chatInput().trim() && !selectedImage())}
-                    class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition disabled:opacity-40 cursor-pointer shrink-0 flex items-center gap-1.5"
+                    class="min-h-[44px] px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition disabled:opacity-40 cursor-pointer shrink-0 flex items-center justify-center gap-1.5"
                   >
-                    <Send size={12} />
-                    <span>{sending() ? 'Enviando...' : 'Enviar'}</span>
+                    <Send size={14} />
+                    <span class="hidden sm:inline">{sending() ? 'Enviando...' : 'Enviar'}</span>
                   </button>
                 </form>
               </div>

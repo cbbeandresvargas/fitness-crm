@@ -35,15 +35,6 @@ CREATE TABLE IF NOT EXISTS leads (
   updated_at TEXT NOT NULL DEFAULT (DATETIME('now'))
 );
 
-CREATE TABLE IF NOT EXISTS activity_logs (
-  id TEXT PRIMARY KEY,
-  lead_id TEXT NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
-  user_id TEXT REFERENCES users(id),
-  action_type TEXT NOT NULL CHECK(action_type IN ('note', 'status_change', 'segment_change', 'assignment', 'whatsapp_sent', 'ai_generated', 'creation', 'update')),
-  details TEXT NOT NULL,
-  created_at TEXT NOT NULL DEFAULT (DATETIME('now'))
-);
-
 CREATE TABLE IF NOT EXISTS message_templates (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
@@ -81,16 +72,14 @@ CREATE TABLE IF NOT EXISTS whatsapp_messages (
 
 CREATE TABLE IF NOT EXISTS whatsapp_settings (
   id TEXT PRIMARY KEY,
-  waba_id TEXT,
-  phone_number_id TEXT,
   display_phone_number TEXT,
   verified_name TEXT,
-  verify_token TEXT,
   status TEXT NOT NULL DEFAULT 'disconnected' CHECK(status IN ('connected', 'disconnected', 'reconnect_required')),
   ai_enabled INTEGER NOT NULL DEFAULT 1,
   ai_model TEXT NOT NULL DEFAULT '@cf/meta/llama-3.2-3b-instruct',
   ai_tone TEXT DEFAULT 'directo, ágil, empático y comercial, enfocado en respuestas breves y agendar visitas',
   ai_instructions TEXT,
+  business_context TEXT,
   created_at TEXT NOT NULL DEFAULT (DATETIME('now')),
   updated_at TEXT NOT NULL DEFAULT (DATETIME('now'))
 );
@@ -126,12 +115,12 @@ CREATE TABLE IF NOT EXISTS prospect_activities (
 );
 
 -- Índices de alto rendimiento y optimización para Cloudflare D1
--- (Se eliminaron índices redundantes en columnas con restricción UNIQUE: leads.phone, whatsapp_messages.whatsapp_message_id, activities.name_norm)
 CREATE INDEX IF NOT EXISTS idx_leads_created_at ON leads(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_leads_assigned_created ON leads(assigned_to, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
+CREATE INDEX IF NOT EXISTS idx_leads_status_assigned ON leads(status, assigned_to);
 CREATE INDEX IF NOT EXISTS idx_leads_segment ON leads(segment);
-CREATE INDEX IF NOT EXISTS idx_activity_logs_lead_created ON activity_logs(lead_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_users_role_active ON users(role, is_active);
 CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_whatsapp_lead_created ON whatsapp_messages(lead_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_whatsapp_created ON whatsapp_messages(created_at DESC);

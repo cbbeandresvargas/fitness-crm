@@ -44,6 +44,9 @@ export interface Lead {
   updated_at: string;
 }
 
+/**
+ * @deprecated ActivityActionType se mantiene transitoriamente. La tabla activity_logs ha sido eliminada del esquema D1.
+ */
 export type ActivityActionType =
   | 'note'
   | 'status_change'
@@ -56,6 +59,10 @@ export type ActivityActionType =
   | 'creation'
   | 'update';
 
+/**
+ * @deprecated ActivityLog ha sido retirado de la base de datos D1 para reducir writes/reads innecesarios.
+ * Se conserva la interfaz exclusivamente para compatibilidad transitoria en interfaces de usuario y rutas.
+ */
 export interface ActivityLog {
   id: string;
   lead_id: string;
@@ -110,23 +117,25 @@ export interface WhatsAppMessage {
 
 export interface WhatsAppSettings {
   id: string;
-  waba_id?: string | null;
-  phone_number_id?: string | null;
   display_phone_number?: string | null;
   verified_name?: string | null;
-  access_token_cipher?: string | null;
-  access_token_iv?: string | null;
-  access_token_tag?: string | null;
-  access_token_last4?: string | null;
-  verify_token?: string | null;
-  app_secret?: string | null;
   status: 'connected' | 'disconnected' | 'reconnect_required';
   ai_enabled: number;
   ai_model: string;
   ai_tone?: string | null;
   ai_instructions?: string | null;
+  business_context?: string | null;
   created_at: string;
   updated_at: string;
+  // Campos deprecados de credenciales (ahora gestionados vía variables de entorno en Cloudflare Workers)
+  waba_id?: string | null;
+  phone_number_id?: string | null;
+  verify_token?: string | null;
+  access_token_cipher?: string | null;
+  access_token_iv?: string | null;
+  access_token_tag?: string | null;
+  access_token_last4?: string | null;
+  app_secret?: string | null;
 }
 
 export interface KnowledgeBaseEntry {

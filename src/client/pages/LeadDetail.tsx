@@ -56,6 +56,8 @@ export default function LeadDetail() {
   // Note form
   const [newNote, setNewNote] = createSignal('');
   const [savingNote, setSavingNote] = createSignal(false);
+  const [editingNotesSummary, setEditingNotesSummary] = createSignal(false);
+  const [notesSummaryDraft, setNotesSummaryDraft] = createSignal('');
 
   // AI WhatsApp generator
   const [aiTone, setAiTone] = createSignal('bienvenida');
@@ -98,8 +100,9 @@ export default function LeadDetail() {
 
       const res = await api.getLead(targetId);
       setLead(res.lead);
-      setActivities(res.activities);
+      setActivities(res.activities || []);
       setInterests(res.interests || []);
+      setNotesSummaryDraft(res.lead.notes_summary || '');
 
       // Populate edit fields (mismos campos que el formulario de nuevo prospecto)
       const meta = res.lead.metadata || {};
@@ -189,12 +192,52 @@ export default function LeadDetail() {
     if (!newNote().trim() || !lead()) return;
     try {
       setSavingNote(true);
-      await api.addNote(lead()!.id, newNote().trim());
-      showToast('Nota registrada en la bitácora', 'success');
+      const timestamp = new Date().toLocaleString('es-ES', {
+        dateStyle: 'short',
+        timeStyle: 'short',
+      });
+      const author = user()?.name ? user()!.name.split(' ')[0] : 'Coach';
+      const noteLine = `[${timestamp} · ${author}]: ${newNote().trim()}`;
+      const prevNotes = lead()?.notes_summary?.trim() || '';
+      const updatedNotes = prevNotes ? `${prevNotes}\n${noteLine}` : noteLine;
+
+      await api.updateLead(lead()!.id, {
+        notes_summary: updatedNotes,
+      });
+
+      setLead((prev) => (prev ? { ...prev, notes_summary: updatedNotes } : null));
+      setNotesSummaryDraft(updatedNotes);
+      showToast('Nota registrada y añadida a la bitácora', 'success');
       setNewNote('');
-      loadLead();
     } catch (err: any) {
-      showToast(err.message || 'Error al guardar nota', 'error');
+      // Fallback a api.addNote
+      try {
+        await api.addNote(lead()!.id, newNote().trim());
+        showToast('Nota registrada en la bitácora', 'success');
+        setNewNote('');
+        loadLead();
+      } catch (fallbackErr: any) {
+        showToast(err.message || 'Error al guardar la nota', 'error');
+      }
+    } finally {
+      setSavingNote(false);
+    }
+  };
+
+  const handleSaveNotesSummary = async (e?: Event) => {
+    if (e) e.preventDefault();
+    if (!lead()) return;
+    try {
+      setSavingNote(true);
+      const updated = notesSummaryDraft().trim();
+      await api.updateLead(lead()!.id, {
+        notes_summary: updated,
+      });
+      setLead((prev) => (prev ? { ...prev, notes_summary: updated } : null));
+      setEditingNotesSummary(false);
+      showToast('Resumen de notas actualizado con éxito', 'success');
+    } catch (err: any) {
+      showToast(err.message || 'Error al actualizar notas acumuladas', 'error');
     } finally {
       setSavingNote(false);
     }
@@ -608,23 +651,23 @@ export default function LeadDetail() {
       <Show when={!loading() && lead()}>
         <div class="space-y-4 max-w-6xl mx-auto">
           {/* Header Bar */}
-          <div class="p-3.5 sm:p-4 rounded-xl bg-surface border border-edge flex flex-col md:flex-row md:items-center justify-between gap-3">
-            <div class="flex items-center gap-3">
+          <div class="p-3.5 sm:p-4 rounded-xl bg-surface border border-edge flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs">
+            <div class="flex items-center gap-3 min-w-0">
               <A
                 href="/leads"
-                class="p-2 bg-app border border-edge hover:bg-elevate text-body-soft rounded-lg transition flex items-center justify-center"
+                class="min-h-[44px] min-w-[44px] p-2 bg-app border border-edge hover:bg-elevate text-body-soft rounded-lg transition flex items-center justify-center shrink-0 cursor-pointer"
                 title="Volver a la lista"
               >
                 <ArrowLeft class="w-4 h-4" />
               </A>
-              <div>
-                <div class="flex items-center gap-2.5 flex-wrap">
-                  <h2 class="text-lg font-bold text-body tracking-tight">
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h2 class="text-base sm:text-lg font-bold text-body tracking-tight truncate">
                     {lead()?.full_name}
                   </h2>
                   <SegmentBadge segment={lead()?.segment} />
                 </div>
-                <p class="text-[11px] text-muted mt-0.5">
+                <p class="text-[11px] text-muted mt-0.5 truncate">
                   Tel: <strong class="text-body font-medium">{lead()?.phone}</strong> • Registrado el{' '}
                   {new Date(lead()?.created_at || '').toLocaleDateString('es-ES')}
                 </p>
@@ -632,23 +675,23 @@ export default function LeadDetail() {
             </div>
 
             {/* Quick Actions */}
-            <div class="flex flex-wrap items-center gap-1.5">
+            <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
               <button
                 type="button"
                 onClick={() => setIsEditModalOpen(true)}
-                class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-elevate hover:bg-elevate-strong text-body-soft rounded-lg text-xs font-medium border border-edge-strong transition cursor-pointer"
+                class="min-h-[44px] flex-1 md:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-elevate hover:bg-elevate-strong text-body-soft rounded-lg text-xs font-medium border border-edge-strong transition cursor-pointer"
               >
-                <Pencil class="w-3 h-3" />
+                <Pencil class="w-3.5 h-3.5" />
                 <span>Editar</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleRecalculateSegment}
-                class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-elevate hover:bg-elevate-strong text-body-soft rounded-lg text-xs font-medium border border-edge-strong transition cursor-pointer"
+                class="min-h-[44px] flex-1 md:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-elevate hover:bg-elevate-strong text-body-soft rounded-lg text-xs font-medium border border-edge-strong transition cursor-pointer"
                 title="Recalcular segmento con reglas dinámicas"
               >
-                <RefreshCw class="w-3 h-3" />
+                <RefreshCw class="w-3.5 h-3.5" />
                 <span>Segmento</span>
               </button>
 
@@ -656,7 +699,7 @@ export default function LeadDetail() {
                 href={`https://wa.me/${lead()?.phone.replace(/^\+/, '')}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition flex items-center gap-1.5"
+                class="min-h-[44px] flex-1 md:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition cursor-pointer shadow-xs"
               >
                 <MessageSquare class="w-3.5 h-3.5" />
                 <span>WhatsApp</span>
@@ -665,7 +708,7 @@ export default function LeadDetail() {
               <button
                 type="button"
                 onClick={handleDeleteLead}
-                class="p-1.5 text-muted hover:text-red-400 rounded-lg hover:bg-red-950/40 transition cursor-pointer flex items-center justify-center"
+                class="min-h-[44px] min-w-[44px] p-2 text-muted hover:text-red-400 rounded-lg hover:bg-red-950/40 transition cursor-pointer flex items-center justify-center shrink-0 border border-transparent hover:border-red-500/20"
                 title="Eliminar prospecto"
               >
                 <Trash class="w-3.5 h-3.5" />
@@ -691,7 +734,7 @@ export default function LeadDetail() {
                     <select
                       value={lead()?.status}
                       onChange={(e) => handleStatusChange(e.currentTarget.value)}
-                      class="w-full bg-app border border-edge rounded-lg px-2.5 py-1.5 text-xs text-body focus:outline-none focus:border-accent cursor-pointer"
+                      class="w-full min-h-[44px] bg-app border border-edge rounded-lg px-3 py-2.5 text-xs text-body focus:outline-none focus:border-accent cursor-pointer"
                     >
                       <option value="nuevo">Nuevo</option>
                       <option value="contactado">Contactado</option>
@@ -708,7 +751,7 @@ export default function LeadDetail() {
                     <select
                       value={lead()?.assigned_to || ''}
                       onChange={(e) => handleAssignAgent(e.currentTarget.value)}
-                      class="w-full bg-app border border-edge rounded-lg px-2.5 py-1.5 text-xs text-body focus:outline-none focus:border-accent cursor-pointer"
+                      class="w-full min-h-[44px] bg-app border border-edge rounded-lg px-3 py-2.5 text-xs text-body focus:outline-none focus:border-accent cursor-pointer"
                     >
                       <option value="">Sin Asignar</option>
                       <option value="auto">Balance Automático (Round-Robin)</option>
@@ -959,11 +1002,11 @@ export default function LeadDetail() {
             {/* Columna Derecha: Pestañas de Chat WhatsApp, IA y Bitácora (2 cols) */}
             <div class="lg:col-span-2 space-y-4">
               {/* Tab Selector */}
-              <div class="p-1 bg-surface border border-edge rounded-xl flex items-center gap-1.5">
+              <div class="p-1.5 bg-surface border border-edge rounded-xl flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => setActiveTab('chat')}
-                  class={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                  class={`flex-1 min-h-[44px] py-2 sm:py-1.5 px-3 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer ${
                     activeTab() === 'chat'
                       ? 'bg-emerald-600 text-white shadow-xs'
                       : 'text-muted hover:text-body'
@@ -976,7 +1019,7 @@ export default function LeadDetail() {
                 <button
                   type="button"
                   onClick={() => setActiveTab('ai')}
-                  class={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                  class={`flex-1 min-h-[44px] py-2 sm:py-1.5 px-3 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer ${
                     activeTab() === 'ai'
                       ? 'bg-accent text-white shadow-xs'
                       : 'text-muted hover:text-body'
@@ -989,14 +1032,14 @@ export default function LeadDetail() {
                 <button
                   type="button"
                   onClick={() => setActiveTab('history')}
-                  class={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                  class={`flex-1 min-h-[44px] py-2 sm:py-1.5 px-3 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer ${
                     activeTab() === 'history'
                       ? 'bg-elevate text-body shadow-xs'
                       : 'text-muted hover:text-body'
                   }`}
                 >
                   <History class="w-3.5 h-3.5" />
-                  <span>Bitácora ({activities().length})</span>
+                  <span>Bitácora y Notas</span>
                 </button>
               </div>
 
@@ -1195,7 +1238,7 @@ export default function LeadDetail() {
                     <form onSubmit={handleSendChatMessage} class="flex items-center gap-2">
                       {/* Image Attachment Button */}
                       <label
-                        class="p-2 rounded-lg bg-surface hover:bg-elevate text-muted hover:text-body border border-edge transition cursor-pointer shrink-0 flex items-center justify-center"
+                        class="p-2 min-h-[44px] min-w-[44px] rounded-lg bg-surface hover:bg-elevate text-muted hover:text-body border border-edge transition cursor-pointer shrink-0 flex items-center justify-center"
                         title="Adjuntar imagen (comprobante, plan, etc.)"
                       >
                         <input
@@ -1204,7 +1247,7 @@ export default function LeadDetail() {
                           onChange={handleImageSelect}
                           class="hidden"
                         />
-                        <ImageIcon size={15} />
+                        <ImageIcon size={16} />
                       </label>
 
                       <input
@@ -1212,15 +1255,15 @@ export default function LeadDetail() {
                         value={chatInput()}
                         onInput={(e) => setChatInput(e.currentTarget.value)}
                         placeholder="Escribe un mensaje de WhatsApp..."
-                        class="flex-1 px-3 py-2 bg-surface border border-edge rounded-lg text-xs text-body placeholder-muted focus:outline-none focus:border-emerald-500 transition"
+                        class="flex-1 min-h-[44px] px-3 py-2 bg-surface border border-edge rounded-lg text-xs text-body placeholder-muted focus:outline-none focus:border-emerald-500 transition"
                       />
 
                       <button
                         type="submit"
                         disabled={sendingMsg() || (!chatInput().trim() && !selectedImage())}
-                        class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition disabled:opacity-40 cursor-pointer shrink-0 flex items-center gap-1.5"
+                        class="min-h-[44px] px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition disabled:opacity-40 cursor-pointer shrink-0 flex items-center justify-center gap-1.5"
                       >
-                        <Send size={12} />
+                        <Send size={14} />
                         <span>{sendingMsg() ? 'Enviando...' : 'Enviar'}</span>
                       </button>
                     </form>
@@ -1375,95 +1418,171 @@ export default function LeadDetail() {
 
               {/* TAB 3: BITÁCORA Y HISTORIAL */}
               <Show when={activeTab() === 'history'}>
-                <div class="p-3.5 sm:p-4 rounded-xl bg-surface border border-edge space-y-3.5">
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                      <History size={15} class="text-accent" />
-                      <h3 class="text-sm font-bold text-body">Historial y Bitácora</h3>
-                    </div>
-                    <span class="text-xs text-muted">
-                      {activities().length} registros
-                    </span>
-                  </div>
-
-                  {/* Formulario Nota */}
-                  <form onSubmit={handleAddNote} class="space-y-2">
-                    <textarea
-                      rows={2}
-                      value={newNote()}
-                      onInput={(e) => setNewNote(e.currentTarget.value)}
-                      placeholder="Escribe una nota rápida (ej: Interesado en pase Fit Pro de Bs 280, entrena natación)..."
-                      class="w-full p-2.5 bg-app border border-edge rounded-lg text-xs text-body placeholder-muted focus:outline-none focus:border-accent transition"
-                    ></textarea>
-                    <div class="flex justify-end">
+                <div class="space-y-4">
+                  {/* Tarjeta de Notas Acumuladas */}
+                  <div class="p-3.5 sm:p-4 rounded-xl bg-surface border border-edge space-y-3.5 shadow-xs">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-2">
+                        <FileText size={16} class="text-accent" />
+                        <div>
+                          <h3 class="text-xs sm:text-sm font-bold text-body">Notas Acumuladas del Prospecto</h3>
+                          <p class="text-[11px] text-muted">Observaciones y bitácora de seguimiento de coaches</p>
+                        </div>
+                      </div>
                       <button
-                        type="submit"
-                        disabled={savingNote() || !newNote().trim()}
-                        class="px-3.5 py-1.5 bg-accent hover:bg-accent-hover text-white rounded-lg text-xs font-semibold transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                        type="button"
+                        onClick={() => {
+                          setNotesSummaryDraft(lead()?.notes_summary || '');
+                          setEditingNotesSummary(!editingNotesSummary());
+                        }}
+                        class="min-h-[44px] sm:min-h-0 px-3 py-1.5 rounded-lg bg-elevate hover:bg-elevate-strong text-body-soft text-xs font-medium border border-edge transition cursor-pointer flex items-center gap-1.5"
                       >
-                        <Plus size={13} />
-                        <span>{savingNote() ? 'Guardando...' : 'Anotar en Bitácora'}</span>
+                        <Pencil size={12} />
+                        <span>{editingNotesSummary() ? 'Cancelar' : 'Editar Resumen'}</span>
                       </button>
                     </div>
-                  </form>
 
-                  {/* Feed */}
-                  <div class="space-y-2 pt-3 border-t border-edge max-h-96 overflow-y-auto">
                     <Show
-                      when={activities().length > 0}
+                      when={editingNotesSummary()}
                       fallback={
-                        <div class="p-6 text-center text-muted text-xs">
-                          No hay actividades previas registradas.
+                        <div class="p-3 bg-app/60 rounded-xl border border-edge">
+                          <Show
+                            when={lead()?.notes_summary?.trim()}
+                            fallback={
+                              <p class="text-xs text-muted italic">
+                                Sin notas acumuladas registradas aún para este prospecto. Usa el formulario inferior para agregar una observación.
+                              </p>
+                            }
+                          >
+                            <p class="text-xs text-body whitespace-pre-wrap leading-relaxed">
+                              {lead()?.notes_summary}
+                            </p>
+                          </Show>
                         </div>
                       }
                     >
-                      <For each={activities()}>
-                        {(act) => (
-                          <div class="p-3 rounded-lg bg-app/60 border border-edge space-y-1">
-                            <div class="flex items-center justify-between">
-                              <span class="px-1.5 py-0.5 rounded bg-elevate text-[10px] font-medium text-body-soft uppercase tracking-wide flex items-center gap-1">
-                                {act.action_type === 'whatsapp_sent' ? (
-                                  <>
-                                    <MessageSquare size={10} />
-                                    <span>WhatsApp</span>
-                                  </>
-                                ) : act.action_type === 'status_change' ? (
-                                  <>
-                                    <RefreshCw size={10} />
-                                    <span>Estado</span>
-                                  </>
-                                ) : act.action_type === 'segment_change' ? (
-                                  <>
-                                    <ActivityIcon size={10} />
-                                    <span>Segmento</span>
-                                  </>
-                                ) : act.action_type === 'ai_generated' ? (
-                                  <>
-                                    <Bot size={10} />
-                                    <span>Asistente IA</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <FileText size={10} />
-                                    <span>Nota</span>
-                                  </>
-                                )}
-                              </span>
-                              <span class="text-[10px] text-muted">
-                                {new Date(act.created_at).toLocaleString('es-ES', {
-                                  dateStyle: 'short',
-                                  timeStyle: 'short',
-                                })}
-                              </span>
-                            </div>
-                            <p class="text-xs text-body-soft whitespace-pre-wrap">{act.details}</p>
-                            <div class="text-[10px] text-muted font-medium">
-                              Por: {act.user_name || 'Sistema'}
-                            </div>
-                          </div>
-                        )}
-                      </For>
+                      <form onSubmit={handleSaveNotesSummary} class="space-y-2.5">
+                        <textarea
+                          rows={4}
+                          value={notesSummaryDraft()}
+                          onInput={(e) => setNotesSummaryDraft(e.currentTarget.value)}
+                          placeholder="Escribe o edita el resumen de notas acumuladas..."
+                          class="w-full p-2.5 bg-app border border-edge rounded-lg text-xs text-body placeholder-muted focus:outline-none focus:border-accent transition leading-relaxed"
+                        />
+                        <div class="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setEditingNotesSummary(false)}
+                            class="min-h-[44px] sm:min-h-0 px-3 py-1.5 bg-elevate hover:bg-elevate-strong text-body-soft rounded-lg text-xs font-medium transition cursor-pointer"
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={savingNote()}
+                            class="min-h-[44px] sm:min-h-0 px-3.5 py-1.5 bg-accent hover:bg-accent-hover text-white rounded-lg text-xs font-semibold transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                          >
+                            <Check size={13} />
+                            <span>{savingNote() ? 'Guardando...' : 'Guardar Resumen'}</span>
+                          </button>
+                        </div>
+                      </form>
                     </Show>
+
+                    {/* Formulario Agregar Nota Rápida */}
+                    <form onSubmit={handleAddNote} class="space-y-2 pt-2 border-t border-edge/80">
+                      <label class="block text-[11px] font-semibold text-muted">
+                        Agregar nueva nota rápida:
+                      </label>
+                      <div class="flex flex-col sm:flex-row gap-2">
+                        <input
+                          type="text"
+                          value={newNote()}
+                          onInput={(e) => setNewNote(e.currentTarget.value)}
+                          placeholder="Ej: Interesado en pase Fit Pro de Bs 280, entrena en Cala Cala por las mañanas..."
+                          class="flex-1 min-h-[44px] px-3 py-2 bg-app border border-edge rounded-lg text-xs text-body placeholder-muted focus:outline-none focus:border-accent transition"
+                        />
+                        <button
+                          type="submit"
+                          disabled={savingNote() || !newNote().trim()}
+                          class="min-h-[44px] px-4 py-2 bg-accent hover:bg-accent-hover text-white rounded-lg text-xs font-semibold transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+                        >
+                          <Plus size={14} />
+                          <span>{savingNote() ? 'Guardando...' : 'Anotar en Bitácora'}</span>
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+
+                  {/* Tarjeta de Historial de WhatsApp y Comunicaciones */}
+                  <div class="p-3.5 sm:p-4 rounded-xl bg-surface border border-edge space-y-3 shadow-xs">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-2">
+                        <History size={16} class="text-emerald-500" />
+                        <h3 class="text-xs sm:text-sm font-bold text-body">
+                          Historial de Interacciones por WhatsApp
+                        </h3>
+                      </div>
+                      <span class="text-xs text-muted">
+                        {messages().length} mensajes
+                      </span>
+                    </div>
+
+                    <div class="space-y-2 pt-1 max-h-96 overflow-y-auto">
+                      <Show
+                        when={messages().length > 0}
+                        fallback={
+                          <div class="p-6 text-center text-muted text-xs bg-app/40 rounded-xl border border-edge">
+                            No hay mensajes registrados aún en WhatsApp. Puedes iniciar la conversación desde la pestaña de Chat WhatsApp.
+                          </div>
+                        }
+                      >
+                        <For each={[...messages()].reverse()}>
+                          {(msg) => (
+                            <div class="p-3 rounded-lg bg-app/60 border border-edge space-y-1">
+                              <div class="flex items-center justify-between">
+                                <span class={`px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide flex items-center gap-1 ${
+                                  msg.sender === 'agent'
+                                    ? msg.ai_generated === 1
+                                      ? 'bg-accent/15 text-accent-text border border-accent/30'
+                                      : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                                    : 'bg-sky-500/15 text-sky-400 border border-sky-500/30'
+                                }`}>
+                                  <Show
+                                    when={msg.sender === 'agent'}
+                                    fallback={<><MessageSquare size={10} /><span>Prospecto</span></>}
+                                  >
+                                    <Show
+                                      when={msg.ai_generated === 1}
+                                      fallback={<><MessageSquare size={10} /><span>Asesor ({msg.user_name || 'Coach'})</span></>}
+                                    >
+                                      <Bot size={10} />
+                                      <span>Asistente IA</span>
+                                    </Show>
+                                  </Show>
+                                </span>
+                                <span class="text-[10px] text-muted">
+                                  {new Date(msg.created_at).toLocaleString('es-ES', {
+                                    dateStyle: 'short',
+                                    timeStyle: 'short',
+                                  })}
+                                </span>
+                              </div>
+                              <p class="text-xs text-body-soft whitespace-pre-wrap">{msg.content}</p>
+                              <Show when={msg.media_url}>
+                                <div class="pt-1">
+                                  <img
+                                    src={msg.media_url!}
+                                    alt="Adjunto"
+                                    class="max-h-32 rounded-lg border border-edge object-cover"
+                                  />
+                                </div>
+                              </Show>
+                            </div>
+                          )}
+                        </For>
+                      </Show>
+                    </div>
                   </div>
                 </div>
               </Show>

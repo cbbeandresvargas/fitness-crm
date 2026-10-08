@@ -6,9 +6,8 @@ BEGIN TRANSACTION;
 -- 1. Eliminar relaciones dependientes N:M
 DELETE FROM prospect_activities;
 
--- 2. Eliminar mensajes y bitácoras asociadas a prospectos
+-- 2. Eliminar mensajes asociados a prospectos
 DELETE FROM whatsapp_messages;
-DELETE FROM activity_logs;
 
 -- 3. Eliminar prospectos
 DELETE FROM leads;

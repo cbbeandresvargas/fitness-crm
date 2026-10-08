@@ -160,6 +160,7 @@ export interface WhatsAppSettings {
   ai_model: string;
   ai_tone?: string | null;
   ai_instructions?: string | null;
+  business_context?: string | null;
 }
 
 export interface WebhookInfo {

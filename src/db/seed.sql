@@ -5,16 +5,19 @@
 INSERT OR IGNORE INTO users (id, name, email, password_hash, role, avatar_url, is_active) VALUES
 ('usr_admin_1', 'Administrador', 'admin@fitnessclub.fit', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'admin', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80', 1);
 
--- 2. Configuración predeterminada de WhatsApp y de IA
+-- 2. Configuración predeterminada de WhatsApp y Agente de Ventas IA
 INSERT OR IGNORE INTO whatsapp_settings (
-  id, waba_id, phone_number_id, display_phone_number, verified_name,
-  verify_token, status, ai_enabled, ai_model, ai_tone, ai_instructions
+  id, display_phone_number, verified_name, status, ai_enabled, ai_model, ai_tone, ai_instructions, business_context
 ) VALUES (
-  'ws_default', '', '', '+591 60750474', 'Fitness Club Pass',
-  'fitnessclub_secure_verify_token_2026', 'connected', 1,
+  'ws_default',
+  '+591 60750474',
+  'Fitness Club Pass',
+  'connected',
+  1,
   '@cf/meta/llama-3.2-3b-instruct',
   'directo, ágil, empático y comercial, enfocado en respuestas breves y agendar visitas',
-  'Fitness Club Pass es la plataforma de pases multideporte en Cochabamba, Bolivia. Con una sola membresía en la app, el usuario accede a múltiples centros deportivos, gimnasios, natación, crossfit, pádel y canchas de toda la ciudad. Todos los precios están en Bolivianos (Bs). La moneda oficial es Bs. El objetivo del asesor es indagar qué disciplinas le interesan al prospecto, explicar cómo la app le da pases flexibles y guiarlo a comprar su suscripción para activar su cuenta en la app.'
+  'Fitness Club Pass es la plataforma de pases multideporte en Cochabamba, Bolivia. Con una sola membresía en la app, el usuario accede a múltiples centros deportivos, gimnasios, natación, crossfit, pádel y canchas de toda la ciudad. Todos los precios están en Bolivianos (Bs). La moneda oficial es Bs. El objetivo del asesor es indagar qué disciplinas le interesan al prospecto, explicar cómo la app le da pases flexibles y guiarlo a comprar su suscripción para activar su cuenta en la app.',
+  'Empresa: Fitness Club Pass Cochabamba. Servicio: Membresía y suscripción digital multideporte mediante aplicación móvil. Permite entrenar en una amplia red de gimnasios de musculación, boxes de crossfit, centros de natación, canchas de pádel, estudios de pilates y centros funcionales de Cochabamba (Zonas Norte, Cala Cala, América, Recoleta, Sarco y Centro). Precios oficiales en Bolivianos (Bs): Pase Fit Básico Bs 180/mes (8 pases), Pase Fit Pro Bs 280/mes (16 pases, el más popular), Pase Total Black VIP Bs 380/mes (pases ilimitados), Plan Trimestral Ahorro Bs 750 (Bs 250/mes). Medios de pago: Transferencia bancaria y código QR simple habilitado en Bolivia.'
 );
 
 -- 3. Base de Conocimiento Inicial en Bolivianos (Bs) - Totalmente editable desde el CRM

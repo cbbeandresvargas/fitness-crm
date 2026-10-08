@@ -82,23 +82,33 @@ leadsRoutes.get('/api/dashboard', async (c) => {
     statusCount[row.status] = row.count;
   }
 
-  // Recent activities with lead name
+  // Actividades recientes derivadas de los últimos mensajes de WhatsApp
   const activitiesQuery = isAgent
-    ? `SELECT a.*, l.full_name as lead_name, u.name as user_name 
-       FROM activity_logs a 
-       JOIN leads l ON l.id = a.lead_id
-       LEFT JOIN users u ON u.id = a.user_id
+    ? `SELECT m.id, m.lead_id, m.content as details, m.created_at, l.full_name as lead_name,
+       CASE WHEN m.sender = 'agent' THEN 'whatsapp_sent' ELSE 'whatsapp_received' END as action_type,
+       CASE WHEN m.sender = 'agent' THEN COALESCE(u.name, 'Asesor') ELSE 'Prospecto' END as user_name
+       FROM whatsapp_messages m
+       JOIN leads l ON l.id = m.lead_id
+       LEFT JOIN users u ON u.id = m.user_id
        WHERE l.assigned_to = ?
-       ORDER BY a.created_at DESC LIMIT 10`
-    : `SELECT a.*, l.full_name as lead_name, u.name as user_name 
-       FROM activity_logs a 
-       JOIN leads l ON l.id = a.lead_id
-       LEFT JOIN users u ON u.id = a.user_id
-       ORDER BY a.created_at DESC LIMIT 10`;
+       ORDER BY m.created_at DESC LIMIT 10`
+    : `SELECT m.id, m.lead_id, m.content as details, m.created_at, l.full_name as lead_name,
+       CASE WHEN m.sender = 'agent' THEN 'whatsapp_sent' ELSE 'whatsapp_received' END as action_type,
+       CASE WHEN m.sender = 'agent' THEN COALESCE(u.name, 'Asesor') ELSE 'Prospecto' END as user_name
+       FROM whatsapp_messages m
+       JOIN leads l ON l.id = m.lead_id
+       LEFT JOIN users u ON u.id = m.user_id
+       ORDER BY m.created_at DESC LIMIT 10`;
 
-  const recentActivitiesRes = await c.env.DB.prepare(activitiesQuery)
-    .bind(...leadParams)
-    .all<ActivityLog & { lead_name: string }>();
+  let recentActivities: (ActivityLog & { lead_name: string })[] = [];
+  try {
+    const recentActivitiesRes = await c.env.DB.prepare(activitiesQuery)
+      .bind(...leadParams)
+      .all<ActivityLog & { lead_name: string }>();
+    recentActivities = recentActivitiesRes.results || [];
+  } catch {
+    recentActivities = [];
+  }
 
   // Leads needing attention (segmento C derivado o status 'nuevo'):
   // se traen los más recientes y se filtra con la segmentación derivada
@@ -131,7 +141,7 @@ leadsRoutes.get('/api/dashboard', async (c) => {
     totalLeads,
     segmentsCount,
     statusCount,
-    recentActivities: recentActivitiesRes.results || [],
+    recentActivities,
     leadsNeedingAttention: parsedAttention,
   });
 });
@@ -265,16 +275,25 @@ leadsRoutes.get('/api/leads/:id', async (c) => {
     segment: computeFcSegment(lead).segment,
   };
 
-  // Actividades
-  const activitiesRes = await c.env.DB.prepare(`
-    SELECT a.*, u.name as user_name 
-    FROM activity_logs a 
-    LEFT JOIN users u ON u.id = a.user_id 
-    WHERE a.lead_id = ? 
-    ORDER BY a.created_at DESC
-  `)
-    .bind(leadId)
-    .all<ActivityLog>();
+  // Actividades derivadas de los mensajes de WhatsApp
+  let activities: ActivityLog[] = [];
+  try {
+    const messagesRes = await c.env.DB.prepare(`
+      SELECT m.id, m.lead_id, m.content as details, m.created_at,
+             CASE WHEN m.sender = 'agent' THEN 'whatsapp_sent' ELSE 'whatsapp_received' END as action_type,
+             CASE WHEN m.sender = 'agent' THEN COALESCE(u.name, 'Asesor') ELSE 'Prospecto' END as user_name
+      FROM whatsapp_messages m
+      LEFT JOIN users u ON u.id = m.user_id
+      WHERE m.lead_id = ?
+      ORDER BY m.created_at DESC
+      LIMIT 50
+    `)
+      .bind(leadId)
+      .all<ActivityLog>();
+    activities = messagesRes.results || [];
+  } catch {
+    activities = [];
+  }
 
   // Actividades de interés del prospecto (catálogo central, relación N:M)
   const interestsRes = await c.env.DB.prepare(`
@@ -289,7 +308,7 @@ leadsRoutes.get('/api/leads/:id', async (c) => {
 
   return c.json({
     lead: parsedLead,
-    activities: activitiesRes.results || [],
+    activities,
     interests: interestsRes.results || [],
   });
 });
@@ -426,35 +445,6 @@ leadsRoutes.post('/api/leads', async (c) => {
     )
     .run();
 
-  // Log creación
-  await c.env.DB.prepare(`
-    INSERT INTO activity_logs (id, lead_id, user_id, action_type, details, created_at)
-    VALUES (?, ?, ?, 'creation', ?, ?)
-  `)
-    .bind(
-      `act_${crypto.randomUUID().slice(0, 8)}`,
-      leadId,
-      user.userId,
-      `Lead creado con segmento ${dynamicSeg.segment} (${dynamicSeg.reason}).`,
-      now
-    )
-    .run();
-
-  if (notes) {
-    await c.env.DB.prepare(`
-      INSERT INTO activity_logs (id, lead_id, user_id, action_type, details, created_at)
-      VALUES (?, ?, ?, 'note', ?, ?)
-    `)
-      .bind(
-        `act_${crypto.randomUUID().slice(0, 8)}`,
-        leadId,
-        user.userId,
-        `Nota inicial: ${notes}`,
-        now
-      )
-      .run();
-  }
-
   return c.json({
     success: true,
     lead: {
@@ -514,19 +504,6 @@ leadsRoutes.post('/api/leads/:id/status', async (c) => {
     .bind(newStatus, dynamicSeg.segment, now, user.userId, now, leadId)
     .run();
 
-  await c.env.DB.prepare(`
-    INSERT INTO activity_logs (id, lead_id, user_id, action_type, details, created_at)
-    VALUES (?, ?, ?, 'status_change', ?, ?)
-  `)
-    .bind(
-      `act_${crypto.randomUUID().slice(0, 8)}`,
-      leadId,
-      user.userId,
-      `Estado actualizado de '${currentLead.status}' a '${newStatus}'. Segmento: ${dynamicSeg.segment} (${dynamicSeg.reason})`,
-      now
-    )
-    .run();
-
   return c.json({ success: true, status: newStatus, segment: dynamicSeg.segment });
 });
 
@@ -556,19 +533,6 @@ leadsRoutes.post('/api/leads/:id/assign', async (c) => {
     .bind(newAgentId, user.userId, now, leadId)
     .run();
 
-  await c.env.DB.prepare(`
-    INSERT INTO activity_logs (id, lead_id, user_id, action_type, details, created_at)
-    VALUES (?, ?, ?, 'assignment', ?, ?)
-  `)
-    .bind(
-      `act_${crypto.randomUUID().slice(0, 8)}`,
-      leadId,
-      user.userId,
-      `Reasignado al asesor ${targetAgent?.name || newAgentId}`,
-      now
-    )
-    .run();
-
   return c.json({ success: true, assigned_to: newAgentId, assigned_name: targetAgent?.name });
 });
 
@@ -587,19 +551,19 @@ leadsRoutes.post('/api/leads/:id/notes', async (c) => {
 
   const now = new Date().toISOString();
 
-  // Guardar en bitácora
-  await c.env.DB.prepare(`
-    INSERT INTO activity_logs (id, lead_id, user_id, action_type, details, created_at)
-    VALUES (?, ?, ?, 'note', ?, ?)
-  `)
-    .bind(`act_${crypto.randomUUID().slice(0, 8)}`, leadId, user.userId, note, now)
-    .run();
+  // Actualizar resumen en lead acumulando notas
+  const currentLead = await c.env.DB.prepare('SELECT notes_summary FROM leads WHERE id = ?')
+    .bind(leadId)
+    .first<{ notes_summary: string | null }>();
 
-  // Actualizar resumen en lead
+  const updatedSummary = currentLead?.notes_summary
+    ? `${currentLead.notes_summary}\n[${user.name} ${now.slice(0, 10)}]: ${note}`
+    : `[${user.name} ${now.slice(0, 10)}]: ${note}`;
+
   await c.env.DB.prepare(`
     UPDATE leads SET notes_summary = ?, last_contacted_at = ?, updated_by = ?, updated_at = ? WHERE id = ?
   `)
-    .bind(note, now, user.userId, now, leadId)
+    .bind(updatedSummary, now, user.userId, now, leadId)
     .run();
 
   return c.json({ success: true, note });
@@ -620,11 +584,22 @@ leadsRoutes.post('/api/leads/:id/ai-message', async (c) => {
   const lead = await c.env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(leadId).first<Lead>();
   if (!lead) return c.json({ error: 'Lead no encontrado' }, 404);
 
-  const activities = await c.env.DB.prepare(
-    'SELECT * FROM activity_logs WHERE lead_id = ? ORDER BY created_at DESC LIMIT 5'
-  )
-    .bind(leadId)
-    .all<ActivityLog>();
+  let recentActivities: ActivityLog[] = [];
+  try {
+    const activitiesRes = await c.env.DB.prepare(`
+      SELECT m.id, m.lead_id, m.content as details, m.created_at,
+             CASE WHEN m.sender = 'agent' THEN 'whatsapp_sent' ELSE 'whatsapp_received' END as action_type,
+             CASE WHEN m.sender = 'agent' THEN 'Asesor' ELSE 'Prospecto' END as user_name
+      FROM whatsapp_messages m
+      WHERE m.lead_id = ?
+      ORDER BY m.created_at DESC LIMIT 5
+    `)
+      .bind(leadId)
+      .all<ActivityLog>();
+    recentActivities = activitiesRes.results || [];
+  } catch {
+    recentActivities = [];
+  }
 
   const parsedLead: Lead = {
     ...lead,
@@ -635,7 +610,7 @@ leadsRoutes.post('/api/leads/:id/ai-message', async (c) => {
   const promptData = buildLeadContextPrompt({
     lead: parsedLead,
     agentName: user.name,
-    recentActivities: activities.results || [],
+    recentActivities,
     tone,
   });
 
@@ -647,20 +622,6 @@ leadsRoutes.post('/api/leads/:id/ai-message', async (c) => {
   );
 
   const deepLink = createWhatsAppDeepLink(lead.phone, message);
-
-  // Registrar actividad
-  await c.env.DB.prepare(`
-    INSERT INTO activity_logs (id, lead_id, user_id, action_type, details, created_at)
-    VALUES (?, ?, ?, 'ai_generated', ?, ?)
-  `)
-    .bind(
-      `act_${crypto.randomUUID().slice(0, 8)}`,
-      leadId,
-      user.userId,
-      `Mensaje sugerido con IA (Tono: ${tone}): "${message.slice(0, 80)}..."`,
-      new Date().toISOString()
-    )
-    .run();
 
   return c.json({ success: true, message, deepLink });
 });
@@ -675,11 +636,22 @@ leadsRoutes.post('/api/leads/:id/ai-briefing', async (c) => {
   const lead = await c.env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(leadId).first<Lead>();
   if (!lead) return c.json({ error: 'Lead no encontrado' }, 404);
 
-  const activities = await c.env.DB.prepare(
-    'SELECT * FROM activity_logs WHERE lead_id = ? ORDER BY created_at DESC LIMIT 6'
-  )
-    .bind(leadId)
-    .all<ActivityLog>();
+  let recentActivities: ActivityLog[] = [];
+  try {
+    const activitiesRes = await c.env.DB.prepare(`
+      SELECT m.id, m.lead_id, m.content as details, m.created_at,
+             CASE WHEN m.sender = 'agent' THEN 'whatsapp_sent' ELSE 'whatsapp_received' END as action_type,
+             CASE WHEN m.sender = 'agent' THEN 'Asesor' ELSE 'Prospecto' END as user_name
+      FROM whatsapp_messages m
+      WHERE m.lead_id = ?
+      ORDER BY m.created_at DESC LIMIT 6
+    `)
+      .bind(leadId)
+      .all<ActivityLog>();
+    recentActivities = activitiesRes.results || [];
+  } catch {
+    recentActivities = [];
+  }
 
   const briefing = await generateAiLeadBriefing(
     c.env,
@@ -688,7 +660,7 @@ leadsRoutes.post('/api/leads/:id/ai-briefing', async (c) => {
       tags: typeof lead.tags === 'string' ? JSON.parse(lead.tags || '[]') : lead.tags,
       metadata: typeof lead.metadata === 'string' ? JSON.parse(lead.metadata || '{}') : lead.metadata,
     },
-    activities.results || []
+    recentActivities
   );
 
   return c.json({ success: true, briefing });
@@ -730,19 +702,6 @@ leadsRoutes.post('/api/leads/:id/send-whatsapp', async (c) => {
   const now = new Date().toISOString();
 
   await c.env.DB.prepare(`
-    INSERT INTO activity_logs (id, lead_id, user_id, action_type, details, created_at)
-    VALUES (?, ?, ?, 'whatsapp_sent', ?, ?)
-  `)
-    .bind(
-      `act_${crypto.randomUUID().slice(0, 8)}`,
-      leadId,
-      user.userId,
-      `WhatsApp enviado: "${messageText.slice(0, 100)}"`,
-      now
-    )
-    .run();
-
-  await c.env.DB.prepare(`
     UPDATE leads SET last_contacted_at = ?, updated_by = ?, updated_at = ? WHERE id = ?
   `)
     .bind(now, user.userId, now, leadId)
@@ -766,19 +725,6 @@ leadsRoutes.post('/api/leads/:id/recalculate-segment', async (c) => {
 
   await c.env.DB.prepare('UPDATE leads SET segment = ?, updated_by = ?, updated_at = ? WHERE id = ?')
     .bind(calc.segment, user.userId, now, leadId)
-    .run();
-
-  await c.env.DB.prepare(`
-    INSERT INTO activity_logs (id, lead_id, user_id, action_type, details, created_at)
-    VALUES (?, ?, ?, 'segment_change', ?, ?)
-  `)
-    .bind(
-      `act_${crypto.randomUUID().slice(0, 8)}`,
-      leadId,
-      user.userId,
-      `Segmento recalculado a '${calc.segment}': ${calc.reason}`,
-      now
-    )
     .run();
 
   return c.json({ success: true, segment: calc.segment, reason: calc.reason });
@@ -950,19 +896,6 @@ const handleUpdateLead = async (c: Context<{ Bindings: Env; Variables: { user: S
     )
     .run();
 
-  await c.env.DB.prepare(`
-    INSERT INTO activity_logs (id, lead_id, user_id, action_type, details, created_at)
-    VALUES (?, ?, ?, 'update', ?, ?)
-  `)
-    .bind(
-      `act_${crypto.randomUUID().slice(0, 8)}`,
-      leadId,
-      user.userId,
-      `Datos del prospecto actualizados por ${user.name}.`,
-      now
-    )
-    .run();
-
   return c.json({
     success: true,
     lead: {
@@ -998,7 +931,6 @@ leadsRoutes.delete('/api/leads/:id', async (c) => {
 
   await c.env.DB.batch([
     c.env.DB.prepare('DELETE FROM prospect_activities WHERE lead_id = ?').bind(leadId),
-    c.env.DB.prepare('DELETE FROM activity_logs WHERE lead_id = ?').bind(leadId),
     c.env.DB.prepare('DELETE FROM whatsapp_messages WHERE lead_id = ?').bind(leadId),
     c.env.DB.prepare('DELETE FROM leads WHERE id = ?').bind(leadId),
     c.env.DB.prepare(`
@@ -1096,28 +1028,11 @@ leadsRoutes.post('/api/leads/:id/messages', async (c) => {
     )
     .run();
 
-  // Actualizar último contacto en lead y registrar en bitácora
+  // Actualizar último contacto en lead
   await c.env.DB.prepare(`
     UPDATE leads SET last_contacted_at = ?, updated_by = ?, updated_at = ? WHERE id = ?
   `)
     .bind(now, user.userId, now, leadId)
-    .run();
-
-  const activityDetail = messageType === 'image'
-    ? `Imagen enviada por WhatsApp: "${content || 'Archivo multimedia'}"`
-    : `WhatsApp ${sender === 'lead' ? 'recibido de' : 'enviado a'} ${lead.full_name}: "${content.slice(0, 80)}"`;
-
-  await c.env.DB.prepare(`
-    INSERT INTO activity_logs (id, lead_id, user_id, action_type, details, created_at)
-    VALUES (?, ?, ?, 'whatsapp_sent', ?, ?)
-  `)
-    .bind(
-      `act_${crypto.randomUUID().slice(0, 8)}`,
-      leadId,
-      user.userId,
-      activityDetail,
-      now
-    )
     .run();
 
   const deepLink = createWhatsAppDeepLink(lead.phone, content || 'Hola');
@@ -1167,8 +1082,10 @@ leadsRoutes.post('/api/upload/image', async (c) => {
       }
     }
 
-    const host = c.req.header('host') || 'fitness-crm.andresvm10.workers.dev';
-    const proto = c.req.header('x-forwarded-proto') || 'https';
+    const urlObj = new URL(c.req.url);
+    const forwardedProto = c.req.header('x-forwarded-proto');
+    const proto = forwardedProto || urlObj.protocol.replace(':', '');
+    const host = c.req.header('host') || urlObj.host;
     const publicUrl = `${proto}://${host}/api/media/${key}`;
 
     return c.json({

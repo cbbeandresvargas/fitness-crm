@@ -42,25 +42,8 @@ interface LeadInterestRow {
   assigned_at: string;
 }
 
-async function logLeadActivity(
-  c: Context<{ Bindings: Env; Variables: { user: SessionData } }>,
-  leadId: string,
-  details: string
-) {
-  const user = c.get('user');
-  await c.env.DB.prepare(`
-    INSERT INTO activity_logs (id, lead_id, user_id, action_type, details, created_at)
-    VALUES (?, ?, ?, 'update', ?, ?)
-  `)
-    .bind(
-      `act_${crypto.randomUUID().slice(0, 8)}`,
-      leadId,
-      user.userId,
-      details,
-      new Date().toISOString()
-    )
-    .run();
-}
+// Registro histórico en activity_logs retirado: tabla eliminada del esquema D1
+
 
 /**
  * Listar el catálogo de actividades activas con conteo de prospectos interesados
@@ -334,12 +317,6 @@ activitiesRoutes.post('/api/leads/:id/activities', async (c) => {
     .bind(`pa_${crypto.randomUUID().slice(0, 8)}`, leadId, activityId, user.userId, now)
     .run();
 
-  await logLeadActivity(
-    c,
-    leadId,
-    `Actividad de interés ${createdNew ? 'creada y ' : ''}añadida: ${activityName}${createdNew ? ' (nueva en el catálogo)' : ''}.`
-  );
-
   return c.json(
     { success: true, interest: { id: activityId, name: activityName, is_active: 1 }, createdNew },
     201
@@ -370,12 +347,6 @@ activitiesRoutes.delete('/api/leads/:id/activities/:activityId', async (c) => {
   if (!res.success || res.meta.changes === 0) {
     return c.json({ error: 'Esa actividad no está asociada a este prospecto.' }, 404);
   }
-
-  const activity = await c.env.DB.prepare('SELECT name FROM activities WHERE id = ?')
-    .bind(activityId)
-    .first<{ name: string }>();
-
-  await logLeadActivity(c, leadId, `Actividad de interés retirada: ${activity?.name || activityId}.`);
 
   return c.json({ success: true, removedActivityId: activityId });
 });

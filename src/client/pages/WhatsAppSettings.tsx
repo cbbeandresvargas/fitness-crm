@@ -48,6 +48,7 @@ export default function WhatsAppSettings() {
   const [aiModel, setAiModel] = createSignal('@cf/meta/llama-3.2-3b-instruct');
   const [aiTone, setAiTone] = createSignal('');
   const [aiInstructions, setAiInstructions] = createSignal('');
+  const [businessContext, setBusinessContext] = createSignal('');
 
   // Knowledge Base State
   const [kbEntries, setKbEntries] = createSignal<KnowledgeBaseEntry[]>([]);
@@ -66,6 +67,7 @@ export default function WhatsAppSettings() {
         setAiModel(res.settings.ai_model || '@cf/meta/llama-3.2-3b-instruct');
         setAiTone(res.settings.ai_tone || '');
         setAiInstructions(res.settings.ai_instructions || '');
+        setBusinessContext(res.settings.business_context || '');
       }
       if (res.webhook) {
         setWebhook(res.webhook);
@@ -92,6 +94,7 @@ export default function WhatsAppSettings() {
         ai_model: aiModel(),
         ai_tone: aiTone(),
         ai_instructions: aiInstructions(),
+        business_context: businessContext(),
       });
 
       if (res.success) {
@@ -495,13 +498,33 @@ export default function WhatsAppSettings() {
                 />
               </div>
 
+              {/* Contexto del Negocio */}
+              <div class="space-y-1">
+                <div class="flex items-center justify-between">
+                  <label class="font-medium text-muted">
+                    Contexto del Negocio y Propuesta de Valor:
+                  </label>
+                  <span class="text-[10px] text-accent-text font-medium">Fitness Club Pass Cochabamba</span>
+                </div>
+                <textarea
+                  rows={4}
+                  value={businessContext()}
+                  onInput={(e) => setBusinessContext(e.currentTarget.value)}
+                  placeholder="Define el contexto y propuesta de valor de Fitness Club Pass Cochabamba (zonas de cobertura como Zona Norte, Cala Cala, Centro, sedes aliadas, pases multideporte y propuesta de valor única)..."
+                  class="w-full p-2.5 bg-app border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent leading-relaxed"
+                />
+                <p class="text-[10px] text-muted">
+                  Información de contexto que la IA utilizará para asesorar a los prospectos sobre zonas, sedes y la propuesta de valor en Cochabamba.
+                </p>
+              </div>
+
               {/* Instrucciones de Ventas */}
               <div class="space-y-1">
                 <label class="font-medium text-muted">
                   Estrategia y Reglas de Negocio para el Cierre de Ventas:
                 </label>
                 <textarea
-                  rows={5}
+                  rows={4}
                   value={aiInstructions()}
                   onInput={(e) => setAiInstructions(e.currentTarget.value)}
                   placeholder="Fitness Club Pass es la plataforma de pases multideporte en Cochabamba, Bolivia..."
