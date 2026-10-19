@@ -250,17 +250,24 @@ export function buildSalesAgentPrompt(params: {
   const businessContext =
     settings?.business_context?.trim() || DEFAULT_BUSINESS_CONTEXT;
 
-  const kbText =
-    kbEntries.length > 0
-      ? kbEntries
-          .map((entry) => `[${entry.category.toUpperCase()}] ${entry.title}:\n${entry.content}`)
-          .join('\n\n')
-      : `[PLANES BASE EN BS]
-- Fit Básico: Bs 180 / mes (8 pases para salas de pesas y cardio)
-- Fit Pro: Bs 280 / mes (16 pases, incluye crossfit, pilates y clases funcionales)
-- Black VIP: Bs 380 / mes (pases ilimitados con piscinas de natación, crossfit, pádel y gimnasios premium)
-[SEDES EN COCHABAMBA]
-Zona Norte, Cala Cala, América, Zona Central, Recoleta y Sarco.`;
+ const kbText =
+  kbEntries.length > 0
+    ? kbEntries
+        .map(
+          (entry) =>
+            `[${entry.category.toUpperCase()}] ${entry.title}:\n${entry.content}`,
+        )
+        .join('\n\n')
+    : `[BASE DE CONOCIMIENTO NO DISPONIBLE]
+No se recibieron entradas de la base de conocimientos para esta conversación.
+
+No inventes ni deduzcas precios, nombres de membresías, beneficios,
+límites de check-ins, actividades incluidas, sedes, horarios ni condiciones
+comerciales que no estén documentados en otra fuente autorizada y confiable.
+
+Si el prospecto pregunta por información comercial que no puedes confirmar
+con los datos disponibles, indícale brevemente que necesitas verificarla
+con el equipo de Fitness Club Pass antes de darle una respuesta precisa.`;
 
   let safeMetadata: Record<string, any> = {};
   if (typeof lead.metadata === 'object' && lead.metadata !== null) {
