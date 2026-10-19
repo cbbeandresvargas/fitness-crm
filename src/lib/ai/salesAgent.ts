@@ -380,7 +380,9 @@ export function generateSmartSalesFallback(params: {
       detected_name: detectedName,
       detected_disciplines: detectedDisciplines,
       suggested_tags: ['consulta_precios'],
-      reply_text: `${clientGreeting}. En Fitness Club Pass tenemos planes mensuales en Bs:\n\n- Fit Básico: Bs 180 (8 pases para salas de pesas y cardio)\n- Fit Pro: Bs 280 (16 pases, incluye crossfit y funcional)\n- Black VIP: Bs 380 (pases ilimitados con natación y pádel)\n\n¿Qué disciplina te gustaría entrenar primero para coordinar tu pase?`,
+      // Catálogo confirmado (agente FC §4): Básica Bs 290/20, Pro Bs 420/25, Élite Bs 560/30 check-ins.
+      // Sin beneficios inventados ni acceso ilimitado (reglas §5/§8 del agente).
+      reply_text: `${clientGreeting}. Tenemos tres opciones de membresía mensual:\n\n- Básica: Bs 290 al mes, con 20 check-ins.\n- Pro: Bs 420 al mes, con 25 check-ins.\n- Élite: Bs 560 al mes, con 30 check-ins.\n\n¿Qué actividades te gustaría hacer? Así te ayudo a ver cuál te conviene.`,
     };
   }
 

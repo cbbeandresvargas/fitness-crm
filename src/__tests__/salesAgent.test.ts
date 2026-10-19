@@ -242,9 +242,11 @@ describe('FASE 1: IA Comercial Experta & Sales Agent', () => {
       expect(action.action).toBe('update_and_reply');
       expect(getActionStatus(action)).toBe('negociacion');
       const text = getActionReplyText(action);
-      expect(text).toContain('Fit Básico: Bs 180');
-      expect(text).toContain('Fit Pro: Bs 280');
-      expect(text).toContain('Black VIP: Bs 380');
+      expect(text).toContain('Básica: Bs 290');
+      expect(text).toContain('Pro: Bs 420');
+      expect(text).toContain('Élite: Bs 560');
+      expect(text).toContain('¿Qué actividades');
+      expect(text).not.toContain('ilimitado');
     });
 
     it('ofrece QR de pago simple cuando el cliente quiere pagar', () => {
