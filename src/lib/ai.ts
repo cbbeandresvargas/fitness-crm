@@ -173,6 +173,23 @@ Tu trabajo consiste en:
 8. Derivar al equipo cualquier consulta que requiera información o confirmación operativa.
 
 Vende mediante asesoría y valor concreto, no mediante presión. No recomiendes automáticamente la membresía más cara ni afirmes que Fitness Club siempre es más económico que pagar cada actividad por separado.
+
+## 3. PROCESO DE PAGO MANUAL POR QR Y ACTIVACIÓN (operación confirmada)
+
+Cuando expliques cómo comprar, describe exactamente este proceso:
+1. El prospecto decide qué membresía quiere.
+2. El equipo le envía un código QR de pago.
+3. El prospecto realiza el pago y comparte el comprobante.
+4. El equipo verifica el pago.
+5. Después de verificarlo, el equipo activa la membresía.
+
+Reglas obligatorias sobre pagos y activación:
+- No inventes QR, cuentas, enlaces, proveedores de pago ni métodos alternativos: el pago se realiza únicamente con el QR que envía el equipo.
+- No digas "pago confirmado" hasta que el equipo confirme el pago.
+- No digas "membresía activa" hasta que el equipo confirme la activación.
+- El comprobante recibido no equivale a pago verificado.
+- No prometas activación inmediata ni ningún plazo que no haya sido confirmado por el equipo.
+- Ante un comprobante ilegible, un pago disputado o retrasos, deriva la consulta al equipo.
   `;
 
   const userPrompt = `Prospecto:
@@ -228,9 +245,14 @@ export async function generateAiWhatsAppMessage(
   const nombre = lead.full_name.split(' ')[0] || '';
 
   if (lead.segment === 'A') {
-    return `¡Hola ${nombre}! Te escribe ${agentName} de Fitness Club Pass. Tenemos tu pase listo para ingresar a la red de gimnasios en Cochabamba. ¿Te gustaría coordinar la activación de tu suscripción hoy?`;
+    // A — Antiguos pagadores (≥1 membresía comprada, dato verificado del CRM).
+    // Reencuentro sin promesas de disponibilidad ni de activación (reglas de
+    // pago/activación del agente comercial: la activación la confirma el equipo).
+    return `¡Hola ${nombre}! Te escribe ${agentName} de Fitness Club Pass. Ya tuviste una membresía con nosotros. ¿Qué actividades te gustaría retomar o probar esta vez?`;
   } else if (lead.segment === 'C') {
-    return `Hola ${nombre}, te saluda ${agentName} de Fitness Club Pass. Tienes pases multideporte en Cochabamba desde Bs 180 al mes. ¿Qué zona te queda más cómoda para entrenar?`;
+    // C — Usuarios con actividad/interés reciente: precio y check-ins reales
+    // de Básica según el catálogo confirmado (Bs 290/mes, 20 check-ins).
+    return `Hola ${nombre}, te saluda ${agentName} de Fitness Club Pass. Con una sola membresía puedes combinar actividades como gimnasio, natación o CrossFit en centros afiliados. Básica cuesta Bs 290 al mes e incluye 20 check-ins. ¿Qué actividades te gustaría hacer?`;
   } else {
     return `¡Hola ${nombre}! Te escribe ${agentName} de Fitness Club Pass Cochabamba. Con una sola membresía en Bs tienes acceso a múltiples gimnasios y disciplinas. ¿Qué deporte te interesa probar primero?`;
   }
