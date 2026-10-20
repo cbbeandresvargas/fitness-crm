@@ -130,7 +130,19 @@ export interface LeadInterest {
   assigned_at?: string;
 }
 
-export type MessageType = 'text' | 'image' | 'document' | 'audio';
+export type MessageType = 'text' | 'image' | 'document' | 'audio' | 'sticker' | 'video';
+
+/** Sticker de la biblioteca del negocio (WebP 512x512) */
+export interface Sticker {
+  id: string;
+  name: string;
+  url: string;
+  animated: boolean;
+  size_bytes: number;
+  created_at: string;
+}
+
+export type WhatsAppSticker = Sticker;
 export type MessageStatus = 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
 
 export interface WhatsAppMessage {

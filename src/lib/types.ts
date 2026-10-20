@@ -96,7 +96,7 @@ export interface AuditLog {
 }
 
 export type MessageSender = 'agent' | 'lead' | 'system';
-export type MessageType = 'text' | 'image' | 'document' | 'audio';
+export type MessageType = 'text' | 'image' | 'document' | 'audio' | 'video' | 'sticker';
 export type MessageStatus = 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
 
 export interface WhatsAppMessage {

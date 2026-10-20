@@ -9,7 +9,15 @@ import {
   MetaApiError,
   normalizeRecipient,
   graphRequest,
+  uploadMetaMedia,
+  sendMetaStickerMessage,
 } from '../lib/meta/client';
+import {
+  validateStickerFile,
+  isMetaMediaValid,
+  stickerFileUrl,
+  STICKER_META_MEDIA_TTL_MS,
+} from '../lib/stickers';
 import { runSalesAgentTurn } from '../lib/ai/salesAgent';
 import { autoAssignAgent } from '../lib/rules';
 
@@ -35,6 +43,16 @@ whatsappRoutes.use('/api/knowledge-base', async (c, next) => {
   return requireAuth(c, next);
 });
 whatsappRoutes.use('/api/knowledge-base/*', requireAdmin);
+
+// Stickers: listar y servir archivo para cualquier usuario autenticado; subir y borrar sólo administradores
+const stickersAdminGuard = async (c: any, next: any) => {
+  if (c.req.method === 'POST' || c.req.method === 'DELETE') {
+    return requireAdmin(c, next);
+  }
+  return next();
+};
+whatsappRoutes.use('/api/whatsapp/stickers', stickersAdminGuard);
+whatsappRoutes.use('/api/whatsapp/stickers/*', stickersAdminGuard);
 
 
 /**
@@ -163,8 +181,14 @@ whatsappRoutes.post('/api/whatsapp/webhook', async (c) => {
             const contactProfile = value.contacts?.find((ct: any) => ct.wa_id === msg.from);
             const profileName = contactProfile?.profile?.name || null;
             const msgType = msg.type || 'text';
-            const content = msg.text?.body || (msgType === 'image' ? (msg.image?.caption ? `[Foto: ${msg.image.caption}]` : '[Foto recibida]') : 'Archivo multimedia');
-            const mediaUrl = msgType === 'image' && msg.image?.id ? `/api/whatsapp/media/${msg.image.id}` : null;
+            const isSticker = msgType === 'sticker' && Boolean(msg.sticker?.id);
+            const content = msg.text?.body
+              || (msgType === 'image' ? (msg.image?.caption ? `[Foto: ${msg.image.caption}]` : '[Foto recibida]')
+              : isSticker ? (msg.sticker?.animated ? '[Sticker animado]' : '[Sticker]')
+              : 'Archivo multimedia');
+            const mediaUrl = msgType === 'image' && msg.image?.id
+              ? `/api/whatsapp/media/${msg.image.id}`
+              : isSticker ? `/api/whatsapp/media/${msg.sticker.id}` : null;
 
             // 1. Idempotencia: Verificar si el mensaje ya fue procesado
             const existing = await c.env.DB.prepare(
@@ -241,6 +265,17 @@ whatsappRoutes.post('/api/whatsapp/webhook', async (c) => {
               )
               .run();
 
+            // 3.1 Stickers: descargar el binario de Meta y persistirlo en R2 (los enlaces de Meta expiran)
+            if (isSticker && creds?.token) {
+              const cachePromise = fetchAndCacheInboundMedia(c.env, creds.token, msg.sticker.id, msg.sticker.mime_type)
+                .catch((mediaErr) => console.warn('[Meta Webhook] No se pudo cachear sticker entrante:', mediaErr));
+              if (c.executionCtx && typeof c.executionCtx.waitUntil === 'function') {
+                c.executionCtx.waitUntil(cachePromise);
+              } else {
+                await cachePromise;
+              }
+            }
+
             // 4. Disparar turno del Agente de Ventas con Cloudflare Workers AI
             if (lead.ai_enabled === 1 && !lead.handoff_at) {
               console.log(`[Sales Agent] Disparando turno de IA para lead ${lead.id} (${lead.full_name})...`);
@@ -248,7 +283,9 @@ whatsappRoutes.post('/api/whatsapp/webhook', async (c) => {
                 ? (msg.image?.caption
                     ? `[El prospecto envió una foto con el texto: "${msg.image.caption}"]`
                     : `[El prospecto envió una foto]`)
-                : content;
+                : isSticker
+                  ? '[El prospecto envió un sticker]'
+                  : content;
 
               const aiPromise = runSalesAgentTurn({
                 env: c.env,
@@ -286,6 +323,44 @@ whatsappRoutes.post('/api/whatsapp/webhook', async (c) => {
 });
 
 /**
+ * Descarga un media entrante de Meta (Graph API -> lookaside con Bearer) y lo persiste en R2
+ * bajo `wa-inbound-media/{mediaId}`. Lo usan el proxy de media y el webhook (stickers).
+ */
+async function fetchAndCacheInboundMedia(
+  env: Env,
+  token: string,
+  mediaId: string,
+  fallbackMime?: string
+): Promise<{ data: ArrayBuffer; mimeType: string }> {
+  const metaRes = await graphRequest<{ url?: string; mime_type?: string }>(
+    mediaId,
+    { method: 'GET', token },
+    env
+  );
+  if (!metaRes?.url) {
+    throw new MetaApiError('Meta no devolvió la URL de descarga del adjunto', { status: 404 });
+  }
+
+  const dlRes = await fetch(metaRes.url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!dlRes.ok) {
+    throw new MetaApiError(`Fallo al descargar adjunto desde Meta (${dlRes.status})`, { status: 502 });
+  }
+
+  const mimeType = metaRes.mime_type || fallbackMime || dlRes.headers.get('content-type') || 'image/jpeg';
+  const data = await dlRes.arrayBuffer();
+
+  // Guardar en R2 para que quede permanente (Meta expira los enlaces tras ~30 días)
+  if (env.STORAGE && typeof env.STORAGE.put === 'function') {
+    try {
+      await env.STORAGE.put(`wa-inbound-media/${mediaId}`, data, { httpMetadata: { contentType: mimeType } });
+    } catch (putErr) {
+      console.warn('[Media Proxy] Error guardando en R2:', putErr);
+    }
+  }
+  return { data, mimeType };
+}
+
+/**
  * 2.1 PROXY Y CACHÉ DE MEDIA ENTRANTE DE WHATSAPP (R2 + META GRAPH API v25.0)
  * Descarga el binario de Meta usando el token del servidor y lo almacena permanentemente en Cloudflare R2
  */
@@ -319,47 +394,17 @@ whatsappRoutes.get('/api/whatsapp/media/:mediaId', async (c) => {
   }
 
   try {
-    // 3. Consultar metadata del media a Meta Graph API v25.0
-    const metaRes = await graphRequest<{ url?: string; mime_type?: string }>(
-      mediaId,
-      { method: 'GET', token: creds.token },
-      c.env
-    );
-
-    if (!metaRes?.url) {
-      return c.text('Meta no devolvió la URL de descarga del adjunto', 404);
-    }
-
-    // 4. Descargar el binario desde Meta Lookaside con Bearer token
-    const dlRes = await fetch(metaRes.url, {
-      headers: { Authorization: `Bearer ${creds.token}` },
-    });
-
-    if (!dlRes.ok) {
-      return c.text(`Fallo al descargar adjunto desde Meta (${dlRes.status})`, 502);
-    }
-
-    const mimeType = metaRes.mime_type || dlRes.headers.get('content-type') || 'image/jpeg';
-    const arrayBuffer = await dlRes.arrayBuffer();
-
-    // 5. Guardar en R2 para que quede permanente (Meta expira los enlaces tras ~30 días)
-    if (c.env.STORAGE && typeof c.env.STORAGE.put === 'function') {
-      try {
-        await c.env.STORAGE.put(r2Key, arrayBuffer, {
-          httpMetadata: { contentType: mimeType },
-        });
-      } catch (putErr) {
-        console.warn('[Media Proxy] Error guardando en R2:', putErr);
-      }
-    }
+    // 3-5. Consultar metadata, descargar desde Meta Lookaside y persistir en R2
+    const { data, mimeType } = await fetchAndCacheInboundMedia(c.env, creds.token, mediaId);
 
     const headers = new Headers();
     headers.set('Content-Type', mimeType);
     headers.set('Cache-Control', 'public, max-age=604800, immutable');
-    return new Response(arrayBuffer, { headers });
+    return new Response(data, { headers });
   } catch (err: any) {
     console.error('[Media Proxy] Error procesando descarga de media:', err);
-    return c.text(err.message || 'Error descargando archivo de Meta', 500);
+    const status = err instanceof MetaApiError && (err.status === 404 || err.status === 502) ? err.status : 500;
+    return c.text(err.message || 'Error descargando archivo de Meta', status);
   }
 });
 
@@ -983,4 +1028,234 @@ whatsappRoutes.delete('/api/knowledge-base/:id', async (c) => {
   const entryId = c.req.param('id');
   await c.env.DB.prepare('DELETE FROM knowledge_base WHERE id = ?').bind(entryId).run();
   return c.json({ success: true, deletedId: entryId });
+});
+
+/**
+ * 11. BIBLIOTECA DE STICKERS DE WHATSAPP (compartida por todo el negocio, archivos en R2)
+ */
+interface StickerRow {
+  id: string;
+  name: string;
+  r2_key: string;
+  mime_type: string;
+  animated: number;
+  size_bytes: number;
+  meta_media_id: string | null;
+  meta_media_expires_at: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+function serializeSticker(s: StickerRow) {
+  return {
+    id: s.id,
+    name: s.name,
+    url: stickerFileUrl(s.id),
+    animated: s.animated === 1,
+    size_bytes: s.size_bytes,
+    created_at: s.created_at,
+  };
+}
+
+whatsappRoutes.get('/api/whatsapp/stickers', async (c) => {
+  const rows = await c.env.DB.prepare(
+    'SELECT * FROM stickers ORDER BY created_at DESC'
+  ).all<StickerRow>();
+  return c.json({ stickers: (rows.results || []).map(serializeSticker) });
+});
+
+whatsappRoutes.post('/api/whatsapp/stickers', async (c) => {
+  const user = c.get('user');
+
+  let form: FormData;
+  try {
+    form = await c.req.formData();
+  } catch {
+    return c.json({ error: 'Se esperaba un formulario multipart con los campos "file" y "name".' }, 400);
+  }
+
+  const file = form.get('file');
+  const rawName = form.get('name');
+  if (!file || typeof file === 'string') {
+    return c.json({ error: 'Debes adjuntar el archivo del sticker en el campo "file".' }, 400);
+  }
+  const name = (typeof rawName === 'string' ? rawName : '').trim();
+  if (!name) {
+    return c.json({ error: 'El nombre del sticker es obligatorio.' }, 400);
+  }
+  if (name.length > 80) {
+    return c.json({ error: 'El nombre del sticker no puede superar 80 caracteres.' }, 400);
+  }
+
+  const bytes = new Uint8Array(await (file as Blob).arrayBuffer());
+  const validation = validateStickerFile(bytes, (file as Blob).type || null);
+  if (!validation.ok) {
+    return c.json({ error: validation.error }, 400);
+  }
+
+  if (!c.env.STORAGE) {
+    return c.json({ error: 'El almacenamiento R2 no está configurado.' }, 503);
+  }
+
+  const id = `stk_${crypto.randomUUID().slice(0, 12)}`;
+  const r2Key = `wa-stickers/${id}.webp`;
+  const now = new Date().toISOString();
+
+  await c.env.STORAGE.put(r2Key, bytes, { httpMetadata: { contentType: 'image/webp' } });
+
+  try {
+    await c.env.DB.prepare(`
+      INSERT INTO stickers (id, name, r2_key, mime_type, animated, size_bytes, created_by, created_at)
+      VALUES (?, ?, ?, 'image/webp', ?, ?, ?, ?)
+    `)
+      .bind(id, name, r2Key, validation.info.animated ? 1 : 0, bytes.length, user?.userId || null, now)
+      .run();
+  } catch (dbErr) {
+    console.error('[Stickers] Error guardando sticker en D1:', dbErr);
+    await c.env.STORAGE.delete(r2Key).catch(() => {});
+    return c.json({ error: 'No se pudo guardar el sticker.' }, 500);
+  }
+
+  return c.json({
+    sticker: serializeSticker({
+      id, name, r2_key: r2Key, mime_type: 'image/webp', animated: validation.info.animated ? 1 : 0,
+      size_bytes: bytes.length, meta_media_id: null, meta_media_expires_at: null,
+      created_by: user?.userId || null, created_at: now,
+    }),
+  }, 201);
+});
+
+whatsappRoutes.delete('/api/whatsapp/stickers/:id', async (c) => {
+  const id = c.req.param('id');
+  const sticker = await c.env.DB.prepare('SELECT * FROM stickers WHERE id = ?').bind(id).first<StickerRow>();
+  if (!sticker) return c.json({ error: 'Sticker no encontrado' }, 404);
+
+  if (c.env.STORAGE) {
+    try {
+      await c.env.STORAGE.delete(sticker.r2_key);
+    } catch (r2Err) {
+      console.warn('[Stickers] Error borrando objeto en R2:', r2Err);
+    }
+  }
+  await c.env.DB.prepare('DELETE FROM stickers WHERE id = ?').bind(id).run();
+  return c.json({ success: true, deletedId: id });
+});
+
+whatsappRoutes.get('/api/whatsapp/stickers/:id/file', async (c) => {
+  const id = c.req.param('id');
+  const sticker = await c.env.DB.prepare('SELECT r2_key, mime_type FROM stickers WHERE id = ?')
+    .bind(id)
+    .first<Pick<StickerRow, 'r2_key' | 'mime_type'>>();
+  if (!sticker || !c.env.STORAGE) return c.text('Sticker no encontrado', 404);
+
+  const obj = await c.env.STORAGE.get(sticker.r2_key);
+  if (!obj) return c.text('Archivo del sticker no encontrado', 404);
+
+  const headers = new Headers();
+  headers.set('Content-Type', obj.httpMetadata?.contentType || sticker.mime_type || 'image/webp');
+  headers.set('Cache-Control', 'private, max-age=86400');
+  return new Response(obj.body, { headers });
+});
+
+/**
+ * 12. ENVIAR STICKER A UN LEAD (sube a Meta /PHONE_ID/media si el media_id cacheado expiró)
+ */
+whatsappRoutes.post('/api/whatsapp/leads/:id/send-sticker', async (c) => {
+  const user = c.get('user');
+  const leadId = c.req.param('id');
+  const body = await c.req.json().catch(() => ({} as any));
+  const stickerId = typeof body?.sticker_id === 'string' ? body.sticker_id.trim() : '';
+  if (!stickerId) return c.json({ error: 'sticker_id es requerido' }, 400);
+
+  const lead = await c.env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(leadId).first<Lead>();
+  if (!lead) return c.json({ error: 'Lead no encontrado' }, 404);
+
+  const sticker = await c.env.DB.prepare('SELECT * FROM stickers WHERE id = ?').bind(stickerId).first<StickerRow>();
+  if (!sticker) return c.json({ error: 'Sticker no encontrado' }, 404);
+
+  const creds = await getActiveMetaCredentials(c.env);
+  let waMessageId: string | null = null;
+  let sendError: string | null = null;
+
+  if (creds) {
+    try {
+      let mediaId = sticker.meta_media_id;
+      if (!isMetaMediaValid(sticker.meta_media_id, sticker.meta_media_expires_at)) {
+        const obj = c.env.STORAGE ? await c.env.STORAGE.get(sticker.r2_key) : null;
+        if (!obj) return c.json({ error: 'Archivo del sticker no encontrado en almacenamiento' }, 404);
+        const uploaded = await uploadMetaMedia({
+          phoneNumberId: creds.phoneNumberId,
+          token: creds.token,
+          data: await obj.arrayBuffer(),
+          mimeType: 'image/webp',
+          filename: `${sticker.id}.webp`,
+          env: c.env,
+        });
+        mediaId = uploaded.mediaId;
+        const expiresAt = new Date(Date.now() + STICKER_META_MEDIA_TTL_MS).toISOString();
+        await c.env.DB.prepare('UPDATE stickers SET meta_media_id = ?, meta_media_expires_at = ? WHERE id = ?')
+          .bind(mediaId, expiresAt, sticker.id)
+          .run();
+      }
+
+      const res = await sendMetaStickerMessage({
+        phoneNumberId: creds.phoneNumberId,
+        token: creds.token,
+        to: lead.phone,
+        mediaId: mediaId!,
+        env: c.env,
+      });
+      waMessageId = res.messageId;
+    } catch (metaErr: any) {
+      console.error('[Sticker Send] Error enviando sticker con Meta Graph API:', metaErr);
+      sendError = metaErr.message || 'Error enviando sticker a Meta';
+      // Si Meta rechazó el media_id cacheado, invalidarlo para forzar re-subida en el próximo intento
+      if (metaErr instanceof MetaApiError && metaErr.status >= 400 && metaErr.status < 500) {
+        await c.env.DB.prepare('UPDATE stickers SET meta_media_id = NULL, meta_media_expires_at = NULL WHERE id = ?')
+          .bind(sticker.id)
+          .run()
+          .catch(() => {});
+      }
+    }
+  } else {
+    sendError = 'Credenciales de Meta no configuradas';
+  }
+
+  const msgId = `msg_${crypto.randomUUID().slice(0, 8)}`;
+  const now = new Date().toISOString();
+  const mediaUrl = stickerFileUrl(sticker.id);
+
+  await c.env.DB.prepare(`
+    INSERT INTO whatsapp_messages (
+      id, lead_id, user_id, sender, message_type, content, media_url, status, whatsapp_message_id, ai_generated, raw_payload, created_at
+    ) VALUES (?, ?, ?, 'agent', 'sticker', ?, ?, ?, ?, 0, ?, ?)
+  `)
+    .bind(
+      msgId,
+      leadId,
+      user?.userId || null,
+      sticker.animated === 1 ? '[Sticker animado]' : '[Sticker]',
+      mediaUrl,
+      waMessageId ? 'delivered' : 'failed',
+      waMessageId,
+      JSON.stringify({ sticker_id: sticker.id, animated: sticker.animated === 1 }),
+      now
+    )
+    .run();
+
+  await c.env.DB.prepare(`
+    UPDATE leads 
+    SET last_contacted_at = ?, updated_by = ?, updated_at = ? 
+    WHERE id = ?
+  `)
+    .bind(now, user?.userId || null, now, leadId)
+    .run();
+
+  return c.json({
+    success: Boolean(waMessageId),
+    messageId: msgId,
+    waMessageId,
+    mediaUrl,
+    metaSendError: sendError,
+  }, waMessageId ? 200 : 502);
 });

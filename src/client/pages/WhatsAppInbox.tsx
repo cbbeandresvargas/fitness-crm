@@ -3,7 +3,7 @@ import { A, useSearchParams } from '@solidjs/router';
 import { Layout } from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
-import { ConversationSummary, WhatsAppMessage, MessageTemplate } from '../types';
+import { ConversationSummary, WhatsAppMessage, MessageTemplate, Sticker } from '../types';
 import {
   MessageSquare,
   Search,
@@ -24,6 +24,9 @@ import {
   Mail,
   ChevronRight,
   ArrowLeft,
+  Sticker as StickerIcon,
+  Smile,
+  Video,
 } from 'lucide-solid';
 
 export default function WhatsAppInbox() {
@@ -45,6 +48,12 @@ export default function WhatsAppInbox() {
   const [triggeringAi, setTriggeringAi] = createSignal(false);
   const [updatingStage, setUpdatingStage] = createSignal(false);
   const [templates, setTemplates] = createSignal<MessageTemplate[]>([]);
+
+  // Stickers state
+  const [stickers, setStickers] = createSignal<Sticker[]>([]);
+  const [loadingStickers, setLoadingStickers] = createSignal(false);
+  const [showStickerPicker, setShowStickerPicker] = createSignal(false);
+  const [sendingSticker, setSendingSticker] = createSignal(false);
 
   const [selectedImage, setSelectedImage] = createSignal<File | null>(null);
   const [imagePreview, setImagePreview] = createSignal<string | null>(null);
@@ -230,6 +239,59 @@ export default function WhatsAppInbox() {
     } finally {
       setUpdatingStage(false);
     }
+  };
+
+  // Sticker Handlers
+  const loadStickers = async () => {
+    if (stickers().length > 0) return;
+    setLoadingStickers(true);
+    try {
+      const res = await api.listStickers();
+      setStickers(res.stickers || []);
+    } catch (err: any) {
+      console.error('Error cargando stickers:', err);
+    } finally {
+      setLoadingStickers(false);
+    }
+  };
+
+  const handleToggleStickerPicker = () => {
+    const next = !showStickerPicker();
+    setShowStickerPicker(next);
+    if (next) {
+      loadStickers();
+    }
+  };
+
+  const handleSendSticker = async (sticker: Sticker) => {
+    const leadId = selectedLeadId();
+    if (!leadId || sendingSticker()) return;
+
+    setSendingSticker(true);
+    setShowStickerPicker(false);
+
+    try {
+      const res = await api.sendSticker(leadId, sticker.id);
+      if (!res.success && res.metaSendError) {
+        showToast(`Sticker guardado, pero hubo un aviso con Meta: ${res.metaSendError}`, 'info');
+      } else {
+        showToast(`Sticker "${sticker.name}" enviado`, 'success');
+      }
+      await loadChat(leadId, false);
+      await loadInboxList();
+    } catch (err: any) {
+      showToast(`Error al enviar sticker: ${err.message || 'Error desconocido'}`, 'error');
+    } finally {
+      setSendingSticker(false);
+    }
+  };
+
+  const formatLastMessagePreview = (text: string) => {
+    if (!text) return '';
+    const lower = text.toLowerCase();
+    if (lower.includes('[sticker animado]')) return '[Sticker animado]';
+    if (lower.includes('[sticker]') || lower === 'sticker') return '[Sticker]';
+    return text;
   };
 
   onMount(async () => {
@@ -448,11 +510,11 @@ export default function WhatsAppInbox() {
                             </span>
                           </div>
 
-                          <p class="text-[11px] text-body-soft truncate">
+                          <p class="text-[11px] text-body-soft truncate flex items-center gap-1">
                             {conv.lastMessageSender === 'agent' && (
-                              <span class="text-emerald-400 font-semibold">Tú: </span>
+                              <span class="text-emerald-400 font-semibold shrink-0">Tú: </span>
                             )}
-                            {conv.lastMessageText}
+                            <span class="truncate">{formatLastMessagePreview(conv.lastMessageText)}</span>
                           </p>
 
                           {/* Status and Badges */}
@@ -647,39 +709,72 @@ export default function WhatsAppInbox() {
                             }`}
                           >
                             <div
-                              class={`max-w-[78%] rounded-xl px-3 py-2 text-xs shadow-xs space-y-1 relative ${
-                                isOutbound
-                                  ? 'bg-emerald-700 text-white rounded-tr-none'
-                                  : 'bg-surface border border-edge text-body rounded-tl-none'
+                              class={`max-w-[78%] rounded-xl text-xs space-y-1 relative ${
+                                msg.message_type === 'sticker'
+                                  ? 'bg-transparent border-0 shadow-none p-1'
+                                  : isOutbound
+                                    ? 'bg-emerald-700 text-white rounded-tr-none px-3 py-2 shadow-xs'
+                                    : 'bg-surface border border-edge text-body rounded-tl-none px-3 py-2 shadow-xs'
                               }`}
                             >
                               {/* Sender Badge */}
-                              <div class="flex items-center justify-between gap-2 text-[10px] opacity-80 pb-0.5">
-                                <span class="font-medium flex items-center gap-1">
-                                  <Show
-                                    when={isOutbound}
-                                    fallback={
-                                      <>
-                                        <User size={10} />
-                                        <span>{activeLead()?.full_name || 'Prospecto'}</span>
-                                      </>
-                                    }
-                                  >
+                              <Show when={msg.message_type !== 'sticker'}>
+                                <div class="flex items-center justify-between gap-2 text-[10px] opacity-80 pb-0.5">
+                                  <span class="font-medium flex items-center gap-1">
                                     <Show
-                                      when={msg.ai_generated === 1}
+                                      when={isOutbound}
                                       fallback={
                                         <>
                                           <User size={10} />
-                                          <span>{msg.user_name || 'Asesor Comercial'}</span>
+                                          <span>{activeLead()?.full_name || 'Prospecto'}</span>
                                         </>
                                       }
                                     >
-                                      <Bot size={10} />
-                                      <span>IA Closer</span>
+                                      <Show
+                                        when={msg.ai_generated === 1}
+                                        fallback={
+                                          <>
+                                            <User size={10} />
+                                            <span>{msg.user_name || 'Asesor Comercial'}</span>
+                                          </>
+                                        }
+                                      >
+                                        <Bot size={10} />
+                                        <span>IA Closer</span>
+                                      </Show>
                                     </Show>
-                                  </Show>
-                                </span>
-                              </div>
+                                  </span>
+                                </div>
+                              </Show>
+
+                              {/* Media if sticker */}
+                              <Show when={msg.message_type === 'sticker' && msg.media_url}>
+                                <div class="relative inline-block group">
+                                  <img
+                                    src={msg.media_url!}
+                                    alt={msg.content || 'Sticker'}
+                                    loading="lazy"
+                                    class="w-32 h-32 sm:w-36 sm:h-36 object-contain drop-shadow select-none transition-transform hover:scale-105"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none';
+                                      const fallback = e.currentTarget.parentElement?.querySelector('.sticker-error-fallback');
+                                      if (fallback) fallback.classList.remove('hidden');
+                                    }}
+                                  />
+                                  <div class="sticker-error-fallback hidden p-2.5 rounded-xl bg-surface border border-edge text-xs text-muted flex items-center gap-1.5 shadow-xs">
+                                    <AlertCircle size={14} class="text-amber-400 shrink-0" />
+                                    <span>Sticker no disponible</span>
+                                  </div>
+                                </div>
+                              </Show>
+
+                              {/* Fallback if sticker has no media_url */}
+                              <Show when={msg.message_type === 'sticker' && !msg.media_url}>
+                                <div class="p-2.5 rounded-xl bg-surface border border-edge text-xs text-muted flex items-center gap-1.5 shadow-xs">
+                                  <AlertCircle size={14} class="text-amber-400 shrink-0" />
+                                  <span>Sticker no disponible</span>
+                                </div>
+                              </Show>
 
                               {/* Media if image */}
                               <Show when={msg.message_type === 'image' && msg.media_url}>
@@ -687,6 +782,15 @@ export default function WhatsAppInbox() {
                                   src={msg.media_url!}
                                   alt="Imagen de chat"
                                   class="w-full max-h-48 sm:max-h-64 object-cover rounded-lg border border-white/10"
+                                />
+                              </Show>
+
+                              {/* Media if video */}
+                              <Show when={msg.message_type === 'video' && msg.media_url}>
+                                <video
+                                  src={msg.media_url!}
+                                  controls
+                                  class="w-full max-w-xs rounded-lg my-1 border border-edge"
                                 />
                               </Show>
 
@@ -699,24 +803,42 @@ export default function WhatsAppInbox() {
                                 />
                               </Show>
 
-                              {/* Message Body */}
-                              <p class="whitespace-pre-wrap leading-relaxed">
-                                {msg.content}
-                              </p>
+                              {/* Message Body (only when not sticker) */}
+                              <Show when={msg.message_type !== 'sticker'}>
+                                <p class="whitespace-pre-wrap leading-relaxed">
+                                  {msg.content}
+                                </p>
+                              </Show>
 
                               {/* Timestamp and Status Icons */}
-                              <div class="flex items-center justify-end gap-1 text-[9px] opacity-75 pt-0.5">
+                              <div
+                                class={`flex items-center justify-end gap-1 text-[9px] pt-0.5 ${
+                                  msg.message_type === 'sticker'
+                                    ? 'bg-black/55 text-white px-2 py-0.5 rounded-full w-fit ml-auto backdrop-blur-xs font-medium'
+                                    : 'opacity-75'
+                                }`}
+                              >
                                 <span>{formatMsgTime(msg.created_at)}</span>
                                 <Show when={isOutbound}>
                                   <span>
                                     <Show
-                                      when={msg.status === 'read' || msg.status === 'delivered'}
-                                      fallback={<Check size={11} />}
+                                      when={msg.status === 'failed'}
+                                      fallback={
+                                        <Show
+                                          when={msg.status === 'read' || msg.status === 'delivered'}
+                                          fallback={<Check size={11} />}
+                                        >
+                                          <CheckCheck
+                                            size={11}
+                                            class={msg.status === 'read' ? 'text-sky-300 font-bold' : 'text-emerald-300'}
+                                          />
+                                        </Show>
+                                      }
                                     >
-                                      <CheckCheck
-                                        size={11}
-                                        class={msg.status === 'read' ? 'text-sky-300 font-bold' : 'text-emerald-300'}
-                                      />
+                                      <span title="Fallo en envío Meta" class="text-red-400 font-semibold flex items-center gap-0.5">
+                                        <AlertCircle size={10} />
+                                        <span>Fallo</span>
+                                      </span>
                                     </Show>
                                   </span>
                                 </Show>
@@ -779,6 +901,91 @@ export default function WhatsAppInbox() {
                   </div>
                 </Show>
 
+                {/* Popover Galería de Stickers */}
+                <Show when={showStickerPicker()}>
+                  <div class="p-3 bg-surface border border-edge rounded-xl shadow-xl space-y-2.5 animate-fade-in max-w-sm sm:max-w-md">
+                    <div class="flex items-center justify-between border-b border-edge pb-2">
+                      <div class="flex items-center gap-1.5 text-xs font-bold text-body">
+                        <StickerIcon size={14} class="text-accent" />
+                        <span>Stickers de WhatsApp</span>
+                        <Show when={stickers().length > 0}>
+                          <span class="text-[10px] text-muted font-normal">({stickers().length})</span>
+                        </Show>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowStickerPicker(false)}
+                        class="text-muted hover:text-body p-1 cursor-pointer transition"
+                        title="Cerrar selector"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+
+                    <Show
+                      when={!loadingStickers()}
+                      fallback={
+                        <div class="py-8 text-center text-xs text-muted flex flex-col items-center justify-center gap-2">
+                          <RefreshCw size={16} class="animate-spin text-accent" />
+                          <span>Cargando stickers...</span>
+                        </div>
+                      }
+                    >
+                      <Show
+                        when={stickers().length > 0}
+                        fallback={
+                          <div class="py-6 text-center space-y-2 text-xs">
+                            <p class="text-muted font-medium">No hay stickers registrados todavía.</p>
+                            <A
+                              href="/settings/whatsapp"
+                              class="text-[11px] text-accent hover:underline font-semibold inline-block"
+                            >
+                              Ir a Configuración para subir stickers →
+                            </A>
+                          </div>
+                        }
+                      >
+                        <div class="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-56 overflow-y-auto p-1 pr-1.5">
+                          <For each={stickers()}>
+                            {(stk) => (
+                              <button
+                                type="button"
+                                onClick={() => handleSendSticker(stk)}
+                                disabled={sendingSticker()}
+                                class="group p-1.5 rounded-lg bg-app/80 hover:bg-elevate border border-edge/60 hover:border-accent flex flex-col items-center justify-center transition cursor-pointer disabled:opacity-50 relative"
+                                title={`Enviar "${stk.name}" a ${activeLead()?.full_name || 'este lead'}`}
+                              >
+                                <img
+                                  src={stk.url}
+                                  alt={stk.name}
+                                  loading="lazy"
+                                  class="w-12 h-12 sm:w-14 sm:h-14 object-contain transition-transform group-hover:scale-110 drop-shadow-xs"
+                                />
+                                <span class="text-[9px] text-muted group-hover:text-body truncate max-w-full block pt-1">
+                                  {stk.name}
+                                </span>
+                                <Show when={stk.animated}>
+                                  <span
+                                    class="absolute top-1 right-1 w-2 h-2 rounded-full bg-purple-500 shadow-xs"
+                                    title="Animado"
+                                  />
+                                </Show>
+                              </button>
+                            )}
+                          </For>
+                        </div>
+                      </Show>
+                    </Show>
+
+                    <Show when={sendingSticker()}>
+                      <div class="py-1 px-2 rounded-md bg-accent/15 border border-accent/25 text-accent-text text-[11px] flex items-center justify-center gap-1.5 animate-pulse">
+                        <RefreshCw size={12} class="animate-spin" />
+                        <span>Enviando sticker...</span>
+                      </div>
+                    </Show>
+                  </div>
+                </Show>
+
                 {/* Form Input */}
                 <form onSubmit={handleSendMessage} class="flex items-center gap-1.5 sm:gap-2">
                   <input
@@ -798,11 +1005,25 @@ export default function WhatsAppInbox() {
                     <Image size={16} />
                   </button>
 
+                  <button
+                    type="button"
+                    onClick={handleToggleStickerPicker}
+                    class={`min-h-[44px] min-w-[44px] p-2 rounded-lg transition cursor-pointer flex items-center justify-center shrink-0 ${
+                      showStickerPicker()
+                        ? 'bg-accent text-white border border-accent'
+                        : 'bg-elevate hover:bg-elevate-strong text-body-soft border border-edge'
+                    }`}
+                    title="Enviar sticker de WhatsApp"
+                    aria-label="Abrir galería de stickers"
+                  >
+                    <StickerIcon size={16} />
+                  </button>
+
                   <input
                     type="text"
                     value={chatInput()}
                     onInput={(e) => setChatInput(e.currentTarget.value)}
-                    placeholder="Escribe un mensaje o envía una foto..."
+                    placeholder="Escribe un mensaje o envía un sticker..."
                     class="flex-1 min-h-[44px] px-3 py-2 bg-app border border-edge rounded-lg text-xs sm:text-sm text-body placeholder-muted focus:outline-none focus:border-emerald-500 transition"
                   />
 

@@ -188,6 +188,79 @@ export async function sendMetaImageMessage(params: {
 }
 
 /**
+ * Subir un binario a Meta (POST /PHONE_NUMBER_ID/media, multipart) y obtener su media_id
+ */
+export async function uploadMetaMedia(params: {
+  phoneNumberId: string;
+  token: string;
+  data: ArrayBuffer | Uint8Array;
+  mimeType: string;
+  filename?: string;
+  env?: Partial<Env>;
+}): Promise<{ mediaId: string }> {
+  const version = params.env?.META_GRAPH_API_VERSION || META_DEFAULT_GRAPH_VERSION;
+  const baseUrl = params.env?.META_GRAPH_BASE_URL || META_DEFAULT_GRAPH_BASE_URL;
+  const form = new FormData();
+  form.append('messaging_product', 'whatsapp');
+  form.append('type', params.mimeType);
+  form.append('file', new Blob([params.data as any], { type: params.mimeType }), params.filename || 'file');
+
+  let res: Response;
+  try {
+    res = await fetch(`${baseUrl}/${version}/${params.phoneNumberId}/media`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${params.token}` },
+      body: form,
+    });
+  } catch (cause) {
+    throw new MetaApiError('No se pudo contactar la API de Meta para subir el archivo', { status: 0, details: cause });
+  }
+
+  const json: any = await res.json().catch(() => null);
+  if (!res.ok || !json?.id) {
+    throw new MetaApiError(json?.error?.message || `Meta rechazó la subida del archivo (${res.status})`, {
+      status: res.ok ? 500 : res.status,
+      code: json?.error?.code ?? null,
+      type: json?.error?.type ?? null,
+      details: json,
+    });
+  }
+  return { mediaId: String(json.id) };
+}
+
+/**
+ * Enviar sticker (por media_id previamente subido) por WhatsApp Cloud API
+ */
+export async function sendMetaStickerMessage(params: {
+  phoneNumberId: string;
+  token: string;
+  to: string;
+  mediaId: string;
+  env?: Partial<Env>;
+}): Promise<{ messageId: string }> {
+  const res = await graphRequest<{ messages?: { id: string }[] }>(
+    `${params.phoneNumberId}/messages`,
+    {
+      method: 'POST',
+      token: params.token,
+      body: {
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: normalizeRecipient(params.to),
+        type: 'sticker',
+        sticker: { id: params.mediaId },
+      },
+    },
+    params.env
+  );
+  const messageId = res.messages?.[0]?.id;
+  if (!messageId) {
+    throw new MetaApiError('Meta no devolvió el ID del mensaje de sticker', { status: 500, details: res });
+  }
+  return { messageId };
+}
+
+/**
  * Enviar plantilla aprobada (para iniciar conversaciones o reabrir ventana de 24h)
  */
 export async function sendMetaTemplateMessage(params: {

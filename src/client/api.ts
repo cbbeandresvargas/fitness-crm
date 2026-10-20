@@ -13,7 +13,17 @@ import {
   ConversationSummary,
   Activity,
   LeadInterest,
+  Sticker,
+  WhatsAppSticker,
 } from './types';
+
+export interface SendStickerResult {
+  success: boolean;
+  messageId: string;
+  waMessageId?: string;
+  mediaUrl: string;
+  metaSendError?: string;
+}
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -329,7 +339,7 @@ export const api = {
     id: string,
     payload: {
       content: string;
-      message_type?: 'text' | 'image' | 'document' | 'audio';
+      message_type?: 'text' | 'image' | 'document' | 'audio' | 'sticker' | 'video';
       media_url?: string;
       sender?: 'agent' | 'lead' | 'system';
     }
@@ -503,6 +513,53 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ text, image_url: imageUrl }),
     });
+  },
+
+  // --- STICKERS ---
+  async listStickers(): Promise<{ stickers: Sticker[] }> {
+    return fetchJson('/api/whatsapp/stickers');
+  },
+
+  async uploadSticker(file: File | Blob, name: string): Promise<{ sticker: Sticker }> {
+    const formData = new FormData();
+    const filename = file instanceof File && file.name ? file.name : 'sticker.webp';
+    formData.append('file', file, filename);
+    formData.append('name', name.trim());
+    return postFormData('/api/whatsapp/stickers', formData);
+  },
+
+  async deleteSticker(id: string): Promise<{ success: boolean; deletedId: string }> {
+    return fetchJson(`/api/whatsapp/stickers/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  },
+
+  /** 200 = enviado; 502 = fallo en Meta pero el mensaje queda guardado como failed */
+  async sendSticker(
+    leadId: string,
+    stickerId: string
+  ): Promise<{ success: boolean; messageId: string; waMessageId?: string; mediaUrl: string; metaSendError?: string }> {
+    const res = await fetch(`/api/whatsapp/leads/${encodeURIComponent(leadId)}/send-sticker`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ sticker_id: stickerId }),
+    });
+    let data: any = null;
+    try {
+      data = await res.json();
+    } catch {}
+    if (res.status === 401 && typeof window !== 'undefined') {
+      window.location.href = '/login';
+    }
+    if (res.ok || (res.status === 502 && data && data.messageId)) {
+      return {
+        success: Boolean(res.ok && data?.success !== false),
+        messageId: data?.messageId || '',
+        waMessageId: data?.waMessageId,
+        mediaUrl: data?.mediaUrl || '',
+        metaSendError: data?.metaSendError,
+      };
+    }
+    throw new Error((data && data.error) || `Error ${res.status}`);
   },
 
   async toggleLeadAi(

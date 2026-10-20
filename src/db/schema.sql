@@ -60,13 +60,27 @@ CREATE TABLE IF NOT EXISTS whatsapp_messages (
   lead_id TEXT NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
   user_id TEXT REFERENCES users(id),
   sender TEXT NOT NULL CHECK(sender IN ('agent', 'lead', 'system')),
-  message_type TEXT NOT NULL DEFAULT 'text' CHECK(message_type IN ('text', 'image', 'document', 'audio')),
+  message_type TEXT NOT NULL DEFAULT 'text' CHECK(message_type IN ('text', 'image', 'document', 'audio', 'video', 'sticker')),
   content TEXT NOT NULL,
   media_url TEXT,
   status TEXT NOT NULL DEFAULT 'sent' CHECK(status IN ('pending', 'sent', 'delivered', 'read', 'failed')),
   whatsapp_message_id TEXT UNIQUE,
   ai_generated INTEGER NOT NULL DEFAULT 0,
   raw_payload TEXT,
+  created_at TEXT NOT NULL DEFAULT (DATETIME('now'))
+);
+
+-- Biblioteca de stickers de WhatsApp compartida por todo el negocio (archivos en R2)
+CREATE TABLE IF NOT EXISTS stickers (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  r2_key TEXT NOT NULL UNIQUE,
+  mime_type TEXT NOT NULL DEFAULT 'image/webp',
+  animated INTEGER NOT NULL DEFAULT 0,
+  size_bytes INTEGER NOT NULL,
+  meta_media_id TEXT,
+  meta_media_expires_at TEXT,
+  created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
   created_at TEXT NOT NULL DEFAULT (DATETIME('now'))
 );
 
@@ -126,5 +140,6 @@ CREATE INDEX IF NOT EXISTS idx_whatsapp_lead_created ON whatsapp_messages(lead_i
 CREATE INDEX IF NOT EXISTS idx_whatsapp_created ON whatsapp_messages(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_whatsapp_unread ON whatsapp_messages(lead_id, sender, status) WHERE status != 'read';
 CREATE INDEX IF NOT EXISTS idx_kb_category ON knowledge_base(category);
+CREATE INDEX IF NOT EXISTS idx_stickers_created ON stickers(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_prospect_activities_activity ON prospect_activities(activity_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_prospect_activities_unique ON prospect_activities(lead_id, activity_id);
