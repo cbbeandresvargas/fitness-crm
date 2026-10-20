@@ -124,7 +124,7 @@ export async function callCloudflareWorkersAi(
   env: Env,
   model: string,
   messages: { role: 'system' | 'user' | 'assistant'; content: string }[],
-  maxTokens: number = 400
+  maxTokens: number = 300
 ): Promise<string | null> {
   const modelsToTry = [
     model,
@@ -140,7 +140,7 @@ export async function callCloudflareWorkersAi(
         const res = await env.AI.run(m, {
           messages,
           max_tokens: maxTokens,
-          temperature: 0.3,
+          temperature: 0.2,
         });
         if (res && res.response && res.response.trim().length > 0) {
           return res.response.trim();
@@ -167,7 +167,7 @@ export async function callCloudflareWorkersAi(
           body: JSON.stringify({
             messages,
             max_tokens: maxTokens,
-            temperature: 0.3,
+            temperature: 0.2,
           }),
         });
 
@@ -210,7 +210,7 @@ export async function chatJson<T>(
             },
           ];
 
-    const raw = await callCloudflareWorkersAi(env, model, attemptMessages, 600);
+    const raw = await callCloudflareWorkersAi(env, model, attemptMessages, 300);
     if (!raw) {
       lastDetail = 'El proveedor de Workers AI no devolvió respuesta';
       continue;
@@ -372,7 +372,7 @@ export async function runSalesAgentTurn(params: {
     } else {
       console.warn(`[Sales Agent] Workers AI no devolvió respuesta (${result.detail}). Activando motor de contingencia comercial...`);
       usedFallback = true;
-      action = generateSmartSalesFallback({ lead, incomingText, kbEntries });
+      action = generateSmartSalesFallback({ lead, incomingText, kbEntries, settings });
     }
 
     const now = new Date().toISOString();

@@ -26,6 +26,8 @@ import {
   Upload,
   Image as ImageIcon,
   Film,
+  Lightbulb,
+  Zap,
 } from 'lucide-solid';
 import {
   processImageForSticker,
@@ -586,106 +588,138 @@ export default function WhatsAppSettings() {
 
           {/* TAB 2: AGENTE COMERCIAL WORKERS AI */}
           <Show when={activeTab() === 'ai'}>
-            <form onSubmit={handleSaveAiSettings} class="p-4 sm:p-5 rounded-xl bg-surface border border-edge space-y-3.5 text-xs shadow-xs">
-              <div class="flex items-center justify-between border-b border-edge pb-3">
-                <div class="flex items-center gap-2">
-                  <Bot size={16} class="text-accent" />
-                  <div>
-                    <h3 class="font-bold text-body text-xs">Motor del Asesor Comercial con IA</h3>
-                    <p class="text-[11px] text-muted">Cloudflare Workers AI (Llama 3.2 Instruct)</p>
+            <div class="space-y-4">
+              {/* Tip visual informativo: Precios y respuestas breves */}
+              <div class="p-3.5 rounded-xl bg-accent/10 border border-accent/25 space-y-2">
+                <div class="flex items-center gap-2 text-accent-text font-bold text-xs">
+                  <Lightbulb size={16} class="text-accent shrink-0" />
+                  <span>💡 ¿Cómo configurar precios e información para que la IA responda directo?</span>
+                </div>
+                <div class="space-y-1.5 text-[11px] text-body-soft leading-relaxed pl-6">
+                  <p>
+                    <strong class="text-body font-semibold">1. Coloca tus precios y promociones:</strong> Pon tus precios, planes y reglas en el campo <span class="text-accent-text font-medium">"Información Relevante para la IA, Precios y Contexto del Negocio"</span> o en la pestaña <button type="button" onClick={() => setActiveTab('kb')} class="underline text-accent hover:text-accent-hover font-semibold">Catálogo & Precios</button>.
+                  </p>
+                  <p>
+                    <strong class="text-body font-semibold">2. Respuestas directas y sin rodeos:</strong> La IA tomará estos datos de forma prioritaria y responderá directamente a los prospectos sin rodeos ni datos desactualizados, manteniendo mensajes concisos y claros en WhatsApp.
+                  </p>
+                </div>
+              </div>
+
+              <form onSubmit={handleSaveAiSettings} class="p-4 sm:p-5 rounded-xl bg-surface border border-edge space-y-4 text-xs shadow-xs">
+                <div class="flex items-center justify-between border-b border-edge pb-3">
+                  <div class="flex items-center gap-2">
+                    <Bot size={16} class="text-accent" />
+                    <div>
+                      <h3 class="font-bold text-body text-xs">Motor del Asesor Comercial con IA</h3>
+                      <p class="text-[11px] text-muted">Cloudflare Workers AI (Llama 3.2 Instruct)</p>
+                    </div>
                   </div>
-                </div>
 
-                <label class="flex items-center gap-2 cursor-pointer">
-                  <span class="text-xs font-medium text-muted">Activar IA Global:</span>
-                  <input
-                    type="checkbox"
-                    checked={aiEnabled()}
-                    onChange={(e) => setAiEnabled(e.currentTarget.checked)}
-                    class="w-3.5 h-3.5 accent-accent rounded"
-                  />
-                </label>
-              </div>
-
-              {/* Modelo */}
-              <div class="space-y-1">
-                <label class="font-medium text-muted">Modelo de Inteligencia Artificial:</label>
-                <select
-                  value={aiModel()}
-                  onChange={(e) => setAiModel(e.currentTarget.value)}
-                  class="w-full px-3 py-2 bg-app border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent cursor-pointer"
-                >
-                  <option value="@cf/meta/llama-3.2-3b-instruct">
-                    @cf/meta/llama-3.2-3b-instruct (Recomendado: ultra rápido y alta precisión)
-                  </option>
-                  <option value="@cf/meta/llama-3.2-1b-instruct">
-                    @cf/meta/llama-3.2-1b-instruct (Ultra ligero y respuesta instantánea)
-                  </option>
-                  <option value="@cf/meta/llama-3.3-70b-instruct">
-                    @cf/meta/llama-3.3-70b-instruct (Razonamiento profundo)
-                  </option>
-                </select>
-              </div>
-
-              {/* Tono */}
-              <div class="space-y-1">
-                <label class="font-medium text-muted">Tono y Personalidad del Asesor Virtual:</label>
-                <input
-                  type="text"
-                  value={aiTone()}
-                  onInput={(e) => setAiTone(e.currentTarget.value)}
-                  placeholder="Ej: enérgico, asesor consultivo, empático y enfocado en cerrar suscripciones"
-                  class="w-full px-3 py-2 bg-app border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent"
-                />
-              </div>
-
-              {/* Contexto del Negocio */}
-              <div class="space-y-1">
-                <div class="flex items-center justify-between">
-                  <label class="font-medium text-muted">
-                    Contexto del Negocio y Propuesta de Valor:
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <span class="text-xs font-medium text-muted">Activar IA Global:</span>
+                    <input
+                      type="checkbox"
+                      checked={aiEnabled()}
+                      onChange={(e) => setAiEnabled(e.currentTarget.checked)}
+                      class="w-3.5 h-3.5 accent-accent rounded"
+                    />
                   </label>
-                  <span class="text-[10px] text-accent-text font-medium">Fitness Club Pass Cochabamba</span>
                 </div>
-                <textarea
-                  rows={4}
-                  value={businessContext()}
-                  onInput={(e) => setBusinessContext(e.currentTarget.value)}
-                  placeholder="Define el contexto y propuesta de valor de Fitness Club Pass Cochabamba (zonas de cobertura como Zona Norte, Cala Cala, Centro, sedes aliadas, pases multideporte y propuesta de valor única)..."
-                  class="w-full p-2.5 bg-app border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent leading-relaxed"
-                />
-                <p class="text-[10px] text-muted">
-                  Información de contexto que la IA utilizará para asesorar a los prospectos sobre zonas, sedes y la propuesta de valor en Cochabamba.
-                </p>
-              </div>
 
-              {/* Instrucciones de Ventas */}
-              <div class="space-y-1">
-                <label class="font-medium text-muted">
-                  Estrategia y Reglas de Negocio para el Cierre de Ventas:
-                </label>
-                <textarea
-                  rows={4}
-                  value={aiInstructions()}
-                  onInput={(e) => setAiInstructions(e.currentTarget.value)}
-                  placeholder="Fitness Club Pass es la plataforma de pases multideporte en Cochabamba, Bolivia..."
-                  class="w-full p-2.5 bg-app border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent leading-relaxed"
-                />
-              </div>
+                {/* Modelo */}
+                <div class="space-y-1">
+                  <label class="font-medium text-muted">Modelo de Inteligencia Artificial:</label>
+                  <select
+                    value={aiModel()}
+                    onChange={(e) => setAiModel(e.currentTarget.value)}
+                    class="w-full px-3 py-2 bg-app border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent cursor-pointer"
+                  >
+                    <option value="@cf/meta/llama-3.2-3b-instruct">
+                      @cf/meta/llama-3.2-3b-instruct (Recomendado: ultra rápido y alta precisión)
+                    </option>
+                    <option value="@cf/meta/llama-3.2-1b-instruct">
+                      @cf/meta/llama-3.2-1b-instruct (Ultra ligero y respuesta instantánea)
+                    </option>
+                    <option value="@cf/meta/llama-3.3-70b-instruct">
+                      @cf/meta/llama-3.3-70b-instruct (Razonamiento profundo)
+                    </option>
+                  </select>
+                </div>
 
-              <div class="flex justify-end pt-1">
-                <button
-                  type="submit"
-                  disabled={saving()}
-                  class="px-4 py-2 bg-accent hover:bg-accent-hover text-white text-xs font-semibold rounded-lg transition shadow-xs disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
-                >
-                  <Show when={saving()} fallback={<Bot size={13} />}>
-                    <RefreshCw size={13} class="animate-spin" />
-                  </Show>
-                  <span>{saving() ? 'Guardando...' : 'Guardar Ajustes de IA'}</span>
-                </button>
-              </div>
-            </form>
+                {/* Tono */}
+                <div class="space-y-1">
+                  <label class="font-medium text-muted">Tono y Personalidad del Asesor Virtual:</label>
+                  <input
+                    type="text"
+                    value={aiTone()}
+                    onInput={(e) => setAiTone(e.currentTarget.value)}
+                    placeholder="Ej: breve, directo al grano, sin rodeos, amigable y claro en WhatsApp"
+                    class="w-full px-3 py-2 bg-app border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent"
+                  />
+                  <p class="text-[10px] text-muted">
+                    Define el estilo de respuesta. Para respuestas concisas y rápidas, mantén un tono directo y sin rodeos.
+                  </p>
+                </div>
+
+                {/* Contexto del Negocio y Precios */}
+                <div class="space-y-1.5">
+                  <div class="flex items-center justify-between flex-wrap gap-2">
+                    <label class="font-bold text-body flex items-center gap-1.5">
+                      <Zap size={13} class="text-amber-400" />
+                      <span>Información Relevante para la IA, Precios y Contexto del Negocio:</span>
+                    </label>
+                    <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 flex items-center gap-1">
+                      <CheckCircle2 size={10} />
+                      <span>Fuente prioritaria para la IA: Precios, planes, promociones y reglas</span>
+                    </span>
+                  </div>
+                  <textarea
+                    rows={6}
+                    value={businessContext()}
+                    onInput={(e) => setBusinessContext(e.currentTarget.value)}
+                    placeholder={"Ej: Precios y planes actuales de Fitness Club Pass Cochabamba:\n- Plan Básico: Bs 200/mes (10 accesos al mes a sedes aliadas)\n- Plan Full / Ilimitado: Bs 350/mes (accesos ilimitados multisede)\n- Promoción Trimestral: Bs 900 por 3 meses (descuento especial)\n- Sedes destacadas en Zona Norte, Cala Cala, América y Centro\n- Horarios: Lunes a Viernes 06:00 a 22:00, Sábados 08:00 a 14:00\n- Incluye: Pase digital QR desde la app, sin matrícula extra ni contratos forzosos"}
+                    class="w-full p-2.5 bg-app border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent leading-relaxed font-mono"
+                  />
+                  <p class="text-[10px] text-muted flex items-center gap-1">
+                    <Sparkles size={11} class="text-accent shrink-0" />
+                    <span>La IA leerá esta información con máxima prioridad para responder consultas sobre precios, sedes y detalles de Fitness Club Pass.</span>
+                  </p>
+                </div>
+
+                {/* Instrucciones de Ventas */}
+                <div class="space-y-1.5">
+                  <div class="flex items-center justify-between">
+                    <label class="font-medium text-muted">
+                      Reglas de Respuesta Rápida y Cierre de Ventas:
+                    </label>
+                    <span class="text-[10px] text-accent-text font-medium">Directivas Estrictas</span>
+                  </div>
+                  <textarea
+                    rows={4}
+                    value={aiInstructions()}
+                    onInput={(e) => setAiInstructions(e.currentTarget.value)}
+                    placeholder={"Ej: Reglas de respuesta rápida:\n- No dar rodeos ni escribir parrafadas; responder siempre de forma breve y directa (1 a 3 oraciones).\n- Responder siempre el precio en la primera frase cuando el prospecto consulte por costos.\n- Derivar a un asesor humano si solicitan llamada, número de cuenta o pago manual."}
+                    class="w-full p-2.5 bg-app border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent leading-relaxed font-mono"
+                  />
+                  <p class="text-[10px] text-muted">
+                    Aquí puedes definir reglas de respuesta rápida (ej: "No dar rodeos, responder siempre el precio en la primera frase, derivar a asesor humano si piden teléfono").
+                  </p>
+                </div>
+
+                <div class="flex justify-end pt-1">
+                  <button
+                    type="submit"
+                    disabled={saving()}
+                    class="px-4 py-2 bg-accent hover:bg-accent-hover text-white text-xs font-semibold rounded-lg transition shadow-xs disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Show when={saving()} fallback={<Bot size={13} />}>
+                      <RefreshCw size={13} class="animate-spin" />
+                    </Show>
+                    <span>{saving() ? 'Guardando...' : 'Guardar Ajustes de IA'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
           </Show>
 
           {/* TAB 3: CATÁLOGO & PRECIOS (KNOWLEDGE BASE) */}
@@ -697,18 +731,28 @@ export default function WhatsAppSettings() {
                     Base de Conocimiento & Catálogo Oficial
                   </h3>
                   <p class="text-[11px] text-muted">
-                    Fuente de verdad inyectada a la IA para evitar alucinaciones en precios en Bolivianos (Bs).
+                    Fuente de verdad inyectada con máxima prioridad a la IA para evitar alucinaciones en precios en Bolivianos (Bs).
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={openNewKbModal}
-                  class="px-3 py-1.5 bg-accent hover:bg-accent-hover text-white text-xs font-semibold rounded-lg transition shadow-xs cursor-pointer flex items-center gap-1"
-                >
-                  <Plus size={13} />
-                  <span>Nueva Entrada</span>
-                </button>
+                <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('ai')}
+                    class="px-3 py-1.5 bg-elevate hover:bg-elevate-strong text-body text-xs font-medium rounded-lg transition border border-edge cursor-pointer flex items-center gap-1"
+                  >
+                    <Bot size={13} class="text-accent" />
+                    <span>Ver Ajustes de IA</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={openNewKbModal}
+                    class="px-3 py-1.5 bg-accent hover:bg-accent-hover text-white text-xs font-semibold rounded-lg transition shadow-xs cursor-pointer flex items-center gap-1"
+                  >
+                    <Plus size={13} />
+                    <span>Nueva Entrada</span>
+                  </button>
+                </div>
               </div>
 
               {/* Entries Grid */}

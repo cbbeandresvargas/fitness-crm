@@ -1,4 +1,4 @@
-import type { Lead, KnowledgeBaseEntry } from '../types';
+import type { Lead, KnowledgeBaseEntry, WhatsAppSettings } from '../types';
 import { normalizeActivityName } from '../activities';
 import type { AgentAction } from './salesAgent';
 
@@ -8,22 +8,103 @@ import type { AgentAction } from './salesAgent';
  * Se ejecuta únicamente desde runSalesAgentTurn() cuando Cloudflare Workers AI
  * no devuelve ninguna respuesta (binding y REST agotados para toda la cadena de
  * modelos): garantiza que el prospecto NUNCA se quede sin respuesta mediante un
- * motor de reglas por palabras clave.
+ * motor de reglas por palabras clave y lectura dinámica de Ajustes y KB.
  *
  * Nota: AgentAction se importa como tipo desde ./salesAgent (type-only import,
  * se elimina en compilación) para evitar una dependencia circular en runtime.
  */
 
 /**
+ * Extrae información de precios configurada dinámicamente en Ajustes (KB o Business Context).
+ */
+function extractPricingInfo(
+  kbEntries: KnowledgeBaseEntry[],
+  settings?: WhatsAppSettings | null
+): string | null {
+  // 1. Prioridad: Buscar en kbEntries entradas activas de planes / precios
+  const pricingKb = (kbEntries || []).filter((entry) => {
+    if (entry.is_active === 0) return false;
+    const cat = (entry.category || '').toLowerCase();
+    const title = (entry.title || '').toLowerCase();
+    const content = (entry.content || '').toLowerCase();
+    return (
+      cat.includes('plan') ||
+      cat.includes('precio') ||
+      cat.includes('pricing') ||
+      cat.includes('membres') ||
+      cat.includes('tarifa') ||
+      title.includes('plan') ||
+      title.includes('precio') ||
+      title.includes('membres') ||
+      title.includes('fit') ||
+      title.includes('pase') ||
+      content.includes('bs') ||
+      content.includes('precio') ||
+      content.includes('tarifa')
+    );
+  });
+
+  if (pricingKb.length > 0) {
+    const lines = pricingKb.slice(0, 4).map((e) => {
+      const firstLine =
+        e.content
+          .split('\n')
+          .map((l) => l.trim())
+          .find((l) => l.length > 0) || e.content.trim();
+      return `- ${e.title}: ${firstLine}`;
+    });
+    return `Tenemos las siguientes opciones oficiales registradas en Ajustes:\n\n${lines.join('\n')}`;
+  }
+
+  // 2. Prioridad: Revisar si settings?.business_context contiene información de precios personalizada
+  const customContext = settings?.business_context?.trim();
+  if (customContext) {
+    const candidateLines = customContext
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(
+        (l) =>
+          l.length > 0 &&
+          (l.includes('Bs') ||
+            l.toLowerCase().includes('precio') ||
+            l.toLowerCase().includes('plan') ||
+            l.toLowerCase().includes('tarifa') ||
+            l.toLowerCase().includes('costo') ||
+            l.toLowerCase().includes('membres'))
+      );
+
+    // Preferir líneas con formato de viñeta o número si existen; de lo contrario incluir las candidatas
+    const bulletLines = candidateLines.filter(
+      (l) => l.startsWith('-') || l.startsWith('*') || /^\d+[\.\)]/.test(l)
+    );
+    const selected = bulletLines.length > 0 ? bulletLines : candidateLines;
+
+    if (selected.length > 0) {
+      const formatted = selected.slice(0, 4).map((l) => {
+        if (l.startsWith('-') || l.startsWith('*') || /^\d+[\.\)]/.test(l)) {
+          return l;
+        }
+        return `- ${l}`;
+      });
+      return `Nuestras opciones de membresía son:\n\n${formatted.join('\n')}`;
+    }
+  }
+
+  return null;
+}
+
+/**
  * Generador de respuesta comercial inteligente de contingencia (Zero-failure fallback)
- * Garantiza que el prospecto NUNCA se quede sin respuesta aunque Workers AI tenga latencia o caída temporal.
+ * Garantiza que el prospecto NUNCA se quede sin respuesta aunque Workers AI tenga latencia o caída temporal,
+ * priorizando la información configurada por el usuario en Ajustes y KB.
  */
 export function generateSmartSalesFallback(params: {
   lead: Lead;
   incomingText: string;
   kbEntries: KnowledgeBaseEntry[];
+  settings?: WhatsAppSettings | null;
 }): AgentAction {
-  const { lead, incomingText } = params;
+  const { lead, incomingText, kbEntries, settings } = params;
   const lower = incomingText.toLowerCase().trim();
   const firstName = lead.full_name?.split(' ')[0] || '';
   const greeting =
@@ -154,20 +235,25 @@ export function generateSmartSalesFallback(params: {
     lower.includes('cuanto') ||
     lower.includes('cuánto') ||
     lower.includes('vale') ||
+    lower.includes('valor') ||
     lower.includes('membresia') ||
     lower.includes('membresía') ||
     lower.includes('tarifa') ||
-    lower.includes('promo')
+    lower.includes('promo') ||
+    lower.includes('descuento')
   ) {
+    const customPricing = extractPricingInfo(kbEntries, settings);
+    const pricingBody =
+      customPricing ||
+      `Tenemos tres opciones de membresía mensual:\n\n- Básica: Bs 290 al mes, con 20 check-ins.\n- Pro: Bs 420 al mes, con 25 check-ins.\n- Élite: Bs 560 al mes, con 30 check-ins.`;
+
     return {
       action: 'update_and_reply',
       suggested_status: 'negociacion',
       detected_name: detectedName,
       detected_disciplines: detectedDisciplines,
       suggested_tags: ['consulta_precios'],
-      // Catálogo confirmado (agente FC §4): Básica Bs 290/20, Pro Bs 420/25, Élite Bs 560/30 check-ins.
-      // Sin beneficios inventados ni acceso ilimitado (reglas §5/§8 del agente).
-      reply_text: `${clientGreeting}. Tenemos tres opciones de membresía mensual:\n\n- Básica: Bs 290 al mes, con 20 check-ins.\n- Pro: Bs 420 al mes, con 25 check-ins.\n- Élite: Bs 560 al mes, con 30 check-ins.\n\n¿Qué actividades te gustaría hacer? Así te ayudo a ver cuál te conviene.`,
+      reply_text: `${clientGreeting}. ${pricingBody}\n\n¿Qué actividades te gustaría hacer? Así te ayudo a ver cuál te conviene.`,
     };
   }
 
@@ -182,13 +268,31 @@ export function generateSmartSalesFallback(params: {
     lower.includes('ubicación') ||
     (lower.includes('cochabamba') && !detectedName)
   ) {
+    const sedeKb = (kbEntries || []).filter((entry) => {
+      if (entry.is_active === 0) return false;
+      const cat = (entry.category || '').toLowerCase();
+      const title = (entry.title || '').toLowerCase();
+      return (
+        cat.includes('sede') ||
+        cat.includes('ubicacion') ||
+        cat.includes('zona') ||
+        title.includes('sede') ||
+        title.includes('zona')
+      );
+    });
+
+    const sedesInfo =
+      sedeKb.length > 0
+        ? `Sedes y centros confirmados en Ajustes:\n\n${sedeKb.slice(0, 3).map((e) => `- ${e.title}: ${e.content.split('\n')[0].trim()}`).join('\n')}`
+        : `Nuestra red multideporte cubre las mejores zonas de Cochabamba: Zona Norte, Cala Cala, América, Zona Central, Recoleta y Sarco.`;
+
     return {
       action: 'update_and_reply',
       suggested_status: 'contactado',
       detected_name: detectedName,
       detected_disciplines: detectedDisciplines,
       suggested_tags: ['consulta_sedes'],
-      reply_text: `${clientGreeting}. Nuestra red multideporte cubre las mejores zonas de Cochabamba: Zona Norte, Cala Cala, América, Zona Central, Recoleta y Sarco. Con una sola membresía en la app puedes entrenar en cualquiera. ¿En qué zona te queda más cómodo entrenar?`,
+      reply_text: `${clientGreeting}. ${sedesInfo}\n\n¿En qué zona te queda más cómodo entrenar?`,
     };
   }
 

@@ -170,11 +170,16 @@ describe('FASE 1: IA Comercial Experta & Sales Agent', () => {
       expect(prompt).toContain('NUNCA, BAJO NINGUNA CIRCUNSTANCIA, digas frases de evasión como:');
       expect(prompt).toContain('No tengo acceso a información privada...');
 
-      // 2. Moneda en Bolivianos
+      // 2. Moneda en Bolivianos y precios confirmados (KB prioritario y planes base)
       expect(prompt).toContain('Bolivianos (Bs)');
-      expect(prompt).toContain('Bs 180');
-      expect(prompt).toContain('Bs 280');
-      expect(prompt).toContain('Bs 380');
+      expect(prompt).toContain('Bs 180'); // Entrada de KB
+      expect(prompt).toContain('Bs 290'); // Plan base de referencia
+      expect(prompt).toContain('Bs 420'); // Plan base de referencia
+      expect(prompt).toContain('Bs 560'); // Plan base de referencia
+
+      // Regla de Ajustes y brevedad
+      expect(prompt).toContain('FUENTE DE VERDAD Y PRIORIDAD ABSOLUTA (AJUSTES DEL ADMINISTRADOR)');
+      expect(prompt).toContain('RESPUESTAS BREVES, DIRECTAS Y CERO RODEOS');
 
       // 3. Etapas del embudo
       expect(prompt).toContain('ETAPA 1: INDAGACIÓN DISCRETA DE DATOS');
@@ -286,6 +291,140 @@ describe('FASE 1: IA Comercial Experta & Sales Agent', () => {
       expect(getActionStatus(action)).toBe('contactado');
       expect(getActionReplyText(action)).toContain('Cala Cala');
       expect(getActionReplyText(action)).toContain('Zona Central');
+    });
+
+    it('fallback utiliza precios dinámicos de kbEntries si están configurados en Ajustes', () => {
+      const customKb: KnowledgeBaseEntry[] = [
+        {
+          id: 'kb_custom',
+          category: 'plan_precio',
+          title: 'Plan Anual Black',
+          content: 'Bs 1500 por 12 meses ilimitados.',
+          is_active: 1,
+          created_at: '2026-10-07T12:00:00Z',
+          updated_at: '2026-10-07T12:00:00Z',
+        },
+      ];
+
+      const action = generateSmartSalesFallback({
+        lead: mockLead,
+        incomingText: '¿Qué precios tienen?',
+        kbEntries: customKb,
+      });
+
+      const reply = getActionReplyText(action);
+      expect(reply).toContain('Plan Anual Black');
+      expect(reply).toContain('Bs 1500');
+    });
+
+    it('fallback utiliza precios de settings.business_context si no hay en kbEntries', () => {
+      const customSettings: WhatsAppSettings = {
+        id: 'ws_custom',
+        ai_enabled: 1,
+        ai_model: '@cf/meta/llama-3.2-3b-instruct',
+        business_context: `Nuevos planes:\n- Plan Semestral: Bs 800\n- Plan Trimestral: Bs 450`,
+        status: 'connected',
+        created_at: '2026-10-07T12:00:00Z',
+        updated_at: '2026-10-07T12:00:00Z',
+      };
+
+      const action = generateSmartSalesFallback({
+        lead: mockLead,
+        incomingText: '¿Cuáles son las tarifas y precios actuales?',
+        kbEntries: [],
+        settings: customSettings,
+      });
+
+      const reply = getActionReplyText(action);
+      expect(reply).toContain('Plan Semestral: Bs 800');
+      expect(reply).toContain('Plan Trimestral: Bs 450');
+    });
+
+    it('fallback extrae precios de business_context incluso si las líneas no tienen viñetas ni guiones', () => {
+      const settingsNoBullets: WhatsAppSettings = {
+        id: 'ws_no_bullets',
+        ai_enabled: 1,
+        ai_model: '@cf/meta/llama-3.2-3b-instruct',
+        business_context: `Planes y precios oficiales en Cochabamba:
+Membresía Básico: Bs 150 mensual
+Membresía Ilimitado: Bs 320 mensual`,
+        status: 'connected',
+        created_at: '2026-10-07T12:00:00Z',
+        updated_at: '2026-10-07T12:00:00Z',
+      };
+
+      const action = generateSmartSalesFallback({
+        lead: mockLead,
+        incomingText: 'hola, qué valor tienen los pases?',
+        kbEntries: [],
+        settings: settingsNoBullets,
+      });
+
+      const reply = getActionReplyText(action);
+      expect(reply).toContain('Bs 150');
+      expect(reply).toContain('Bs 320');
+      expect(reply).not.toContain('Bs 290');
+    });
+
+    it('fallback ignora entradas de KB inactivas (is_active === 0) y toma solo las activas', () => {
+      const kbWithInactive: KnowledgeBaseEntry[] = [
+        {
+          id: 'kb_inactive',
+          category: 'plan_precio',
+          title: 'Plan Antiguo Desactivado',
+          content: 'Bs 90 mensual',
+          is_active: 0,
+          created_at: '2026-10-07T12:00:00Z',
+          updated_at: '2026-10-07T12:00:00Z',
+        },
+        {
+          id: 'kb_active',
+          category: 'plan_precio',
+          title: 'Plan Oro Vigente',
+          content: '\n\nBs 380 mensual con natación incluida',
+          is_active: 1,
+          created_at: '2026-10-07T12:00:00Z',
+          updated_at: '2026-10-07T12:00:00Z',
+        },
+      ];
+
+      const action = generateSmartSalesFallback({
+        lead: mockLead,
+        incomingText: '¿Tienen paquetes o descuentos?',
+        kbEntries: kbWithInactive,
+      });
+
+      const reply = getActionReplyText(action);
+      expect(reply).toContain('Plan Oro Vigente');
+      expect(reply).toContain('Bs 380');
+      expect(reply).not.toContain('Plan Antiguo Desactivado');
+    });
+
+    it('buildSalesAgentPrompt inyecta advertencia de prioridad obligatoria cuando hay precios configurados en Ajustes', () => {
+      const customSettings: WhatsAppSettings = {
+        id: 'ws_custom_prompt',
+        ai_enabled: 1,
+        ai_model: '@cf/meta/llama-3.2-3b-instruct',
+        ai_tone: 'ultra directo y conciso',
+        ai_instructions: 'Decir siempre el precio en la primera frase.',
+        business_context: 'Plan Básico: Bs 190. Plan VIP: Bs 390.',
+        status: 'connected',
+        created_at: '2026-10-07T12:00:00Z',
+        updated_at: '2026-10-07T12:00:00Z',
+      };
+
+      const prompt = buildSalesAgentPrompt({
+        lead: mockLead,
+        kbEntries: [],
+        settings: customSettings,
+      });
+
+      expect(prompt).toContain('ATENCIÓN OBLIGATORIA: Se han configurado precios o planes específicos en Ajustes');
+      expect(prompt).toContain('Plan Básico: Bs 190. Plan VIP: Bs 390.');
+      expect(prompt).toContain('ultra directo y conciso');
+      expect(prompt).toContain('Decir siempre el precio en la primera frase.');
+      expect(prompt).toContain('MÁXIMA CONCISIÓN (1 A 3 FRASES CORTAS)');
+      expect(prompt).toContain('CERO RODEOS');
     });
   });
 });

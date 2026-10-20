@@ -87,9 +87,11 @@ describe('AUDITORÍA INTEGRAL DE QA: Fitness CRM (docs/PLAN_MEJORAS_TESTING.md)'
       });
 
       expect(prompt).toContain('Moneda EXCLUSIVA: Bolivianos (Bs). NUNCA menciones dólares ni otra divisa.');
-      expect(prompt).toContain('Bs 180');
-      expect(prompt).toContain('Bs 280');
-      expect(prompt).toContain('Bs 380');
+      expect(prompt).toContain('Bs 180'); // De mockKb
+      expect(prompt).toContain('Bs 280'); // De mockKb
+      expect(prompt).toContain('Bs 290'); // Plan base
+      expect(prompt).toContain('Bs 420'); // Plan base
+      expect(prompt).toContain('Bs 560'); // Plan base
     });
 
     it('fallback comercial extrae nombre compuesto o simple y avanza a contactado', () => {
