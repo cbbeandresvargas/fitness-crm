@@ -172,6 +172,7 @@ export interface Env {
   STORAGE: R2Bucket;
   AI?: any;
   ASSETS?: Fetcher;
+  AI_SERVICE?: { fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response> };
   AI_MICROSERVICE_URL?: string;
   CLOUDFLARE_API_TOKEN?: string;
   CLOUDFLARE_ACCOUNT_ID?: string;

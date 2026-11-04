@@ -58,6 +58,23 @@ interface ChatRequestBody {
   message: string;
 }
 
+/**
+ * Extracción universal y robusta de la respuesta devuelta por Cloudflare Workers AI.
+ * Soporta formatos de texto directo, { response: string }, { result: { response: string } },
+ * o formato compatible con chat completions { choices: [{ message: { content: string } }] }.
+ */
+function extractAiResponse(res: any): string {
+  if (!res) return '';
+  if (typeof res === 'string') return res.trim();
+  if (typeof res.response === 'string') return res.response.trim();
+  if (res.result && typeof res.result.response === 'string') return res.result.response.trim();
+  if (typeof res.text === 'string') return res.text.trim();
+  if (res.choices && Array.isArray(res.choices) && res.choices[0]?.message?.content) {
+    return String(res.choices[0].message.content).trim();
+  }
+  return '';
+}
+
 // Endpoint principal de chat
 app.post('/chat', async (c) => {
   let body: ChatRequestBody;
@@ -84,77 +101,111 @@ app.post('/chat', async (c) => {
   let rawOutput = '';
   let modelUsed = '';
 
-  // 1. Intento con el modelo primario usando Workers AI
+  // Modelos a intentar en orden de prioridad y resiliencia en Workers AI
+  const modelsToTry = Array.from(
+    new Set([
+      primaryModel,
+      fallbackModel,
+      '@cf/meta/llama-3.2-3b-instruct',
+      '@cf/mistralai/mistral-small-3.1-24b-instruct',
+    ])
+  );
+
+  // 1. Ejecución con Workers AI recorriendo modelos candidatos si hay fallo
   if (c.env.AI && typeof c.env.AI.run === 'function') {
-    try {
-      const res = await c.env.AI.run(primaryModel, {
-        messages,
-        temperature: 0.1,
-        max_tokens: 300,
-      });
-
-      if (res && res.response) {
-        rawOutput = res.response;
-        modelUsed = primaryModel;
-      }
-    } catch (primaryErr) {
-      console.warn(`[ai-micro] Error en modelo primario (${primaryModel}):`, primaryErr);
-
-      // 2. Intento con el modelo secundario de respaldo
+    for (const model of modelsToTry) {
       try {
-        const fallbackRes = await c.env.AI.run(fallbackModel, {
+        const res = await c.env.AI.run(model, {
           messages,
           temperature: 0.1,
           max_tokens: 300,
         });
 
-        if (fallbackRes && fallbackRes.response) {
-          rawOutput = fallbackRes.response;
-          modelUsed = fallbackModel;
+        const extracted = extractAiResponse(res);
+        if (extracted) {
+          rawOutput = extracted;
+          modelUsed = model;
+          break;
+        } else {
+          console.warn(`[ai-micro] Respuesta vacía de Workers AI con modelo ${model}:`, res);
         }
-      } catch (fallbackErr) {
-        console.error(`[ai-micro] Error en modelo fallback (${fallbackModel}):`, fallbackErr);
+      } catch (primaryErr) {
+        console.error(`[ai-micro] Error AI con modelo ${model}:`, primaryErr);
       }
     }
   }
 
-  // 3. Procesamiento y respuesta
+  // 2. Procesamiento y respuesta
   let result: AiResponsePayload;
 
   if (rawOutput) {
     result = parseAiOutput(rawOutput);
   } else {
-    // 4. Contingencia determinista de alta seguridad si Workers AI no respondió
+    // 3. Contingencia determinista de alta seguridad si Workers AI no respondió
     modelUsed = 'rule-based-fallback';
-    const lower = message.toLowerCase();
+    const lower = message.toLowerCase().trim();
+    const normalized = lower.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-    if (lower.includes('asesor') || lower.includes('humano') || lower.includes('persona') || lower.includes('queja') || lower.includes('reclamo')) {
+    // Detección de disciplinas
+    const detectedDisciplines: string[] = [];
+    if (/gym|pesas|musculacion|fuerza|gimnasio/i.test(normalized)) detectedDisciplines.push('gimnasio');
+    if (/natacion|pileta|piscina|nadar/i.test(normalized)) detectedDisciplines.push('natacion');
+    if (/crossfit|box|funcional/i.test(normalized)) detectedDisciplines.push('crossfit');
+    if (/padel|paddle/i.test(normalized)) detectedDisciplines.push('padel');
+    if (/pilates/i.test(normalized)) detectedDisciplines.push('pilates');
+    if (/yoga/i.test(normalized)) detectedDisciplines.push('yoga');
+
+    // Detección de nombre del prospecto
+    const nameMatch = message.match(/(?:me llamo|mi nombre es|soy)\s+([A-Za-zÁÉÍÓÚáéíóúñÑ]+)/i);
+    const detectedName = nameMatch ? nameMatch[1].trim() : (body.lead?.name || null);
+
+    const isSticker = normalized === '[sticker]' || normalized.includes('[sticker]') || normalized === 'sticker';
+    const isGreeting = /^(hola|buenas|buen dia|buenos dias|buenas tardes|buenas noches|hey|que tal|saludos)[\s!.]*$/i.test(normalized);
+    const wantsHuman = /asesor|humano|persona|agente|supervisor|queja|reclamo|denuncia|cancelar/i.test(normalized);
+    const asksPrice = /precio|cuanto|costo|plan|tarifa|mensualidad|pagar|valor|promo/i.test(normalized);
+    const asksLocation = /donde|sede|ubicacion|direccion|zona|cala cala|america|recoleta|sarco|centro/i.test(normalized);
+
+    if (wantsHuman) {
       result = {
         reply: 'Con gusto te comunico ahora mismo con uno de nuestros asesores para que te atienda personalmente.',
         action: 'handoff',
-        detectedName: body.lead?.name || null,
-        detectedDisciplines: [],
+        detectedName,
+        detectedDisciplines,
       };
-    } else if (lower.includes('precio') || lower.includes('cuanto') || lower.includes('costo') || lower.includes('plan')) {
+    } else if (isSticker || isGreeting) {
+      result = {
+        reply: '¡Hola! Con Fitness Club Pass tienes acceso a gimnasios, natación y más en Cochabamba desde Bs 290 al mes. ¿Qué actividad te gustaría practicar?',
+        action: 'reply',
+        detectedName,
+        detectedDisciplines,
+      };
+    } else if (asksPrice) {
       result = {
         reply: 'Nuestros planes mensuales en Cochabamba son: Básica Bs 290 (20 accesos), Pro Bs 420 (25 accesos) y Élite Bs 560 (30 accesos). ¿Qué disciplina o zona te gustaría probar primero?',
         action: 'reply',
-        detectedName: body.lead?.name || null,
-        detectedDisciplines: [],
+        detectedName,
+        detectedDisciplines,
       };
-    } else if (lower.includes('donde') || lower.includes('sede') || lower.includes('ubicacion') || lower.includes('zona')) {
+    } else if (asksLocation) {
       result = {
         reply: 'Tenemos centros afiliados en Zona Norte, Cala Cala, Avenida América, Zona Central, La Recoleta y Sarco. ¿En cuál de estas zonas te queda más cómodo?',
         action: 'reply',
-        detectedName: body.lead?.name || null,
-        detectedDisciplines: [],
+        detectedName,
+        detectedDisciplines,
+      };
+    } else if (detectedDisciplines.length > 0) {
+      result = {
+        reply: `¡Excelente! Con Fitness Club Pass tienes acceso a ${detectedDisciplines.join(' y ')} en Cochabamba desde Bs 290 al mes. ¿En qué zona de la ciudad te gustaría entrenar?`,
+        action: 'reply',
+        detectedName,
+        detectedDisciplines,
       };
     } else {
       result = {
-        reply: '¡Hola! Con Fitness Club Pass tienes acceso a múltiples gimnasios y disciplinas en Cochabamba desde Bs 290 al mes. ¿Qué deporte o actividad te gustaría realizar?',
+        reply: '¡Hola! Con Fitness Club Pass tienes acceso a gimnasios, natación y más en Cochabamba desde Bs 290 al mes. ¿Qué actividad te gustaría practicar?',
         action: 'reply',
-        detectedName: body.lead?.name || null,
-        detectedDisciplines: [],
+        detectedName,
+        detectedDisciplines,
       };
     }
   }

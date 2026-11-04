@@ -38,6 +38,12 @@
 	"ai": {
 		"binding": "AI"
 	},
+	"services": [
+		{
+			"binding": "AI_SERVICE",
+			"service": "fitness-ai-micro"
+		}
+	],
 	"vars": {
 		"CLOUDFLARE_ACCOUNT_ID": "__CLOUDFLARE_ACCOUNT_ID__",
 		"AI_MICROSERVICE_URL": "__AI_MICROSERVICE_URL__"

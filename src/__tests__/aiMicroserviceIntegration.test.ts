@@ -198,7 +198,7 @@ describe('Integración con Microservicio Autónomo de IA (ai-micro)', () => {
     // Workers AI local ya no se llama en el proyecto principal
     expect(env.AI.run).not.toHaveBeenCalled();
     expect(result.action?.reply_text).toBe(
-      'Hola, en este momento un asesor atenderá tu consulta personalmente.'
+      'Nuestros planes en Cochabamba son: Básica Bs 290 (20 accesos), Pro Bs 420 (25 accesos) y Élite Bs 560 (30 accesos). ¿Qué disciplina o zona te interesa para entrenar?'
     );
   });
 
@@ -215,7 +215,71 @@ describe('Integración con Microservicio Autónomo de IA (ai-micro)', () => {
 
     expect(result.executed).toBe(true);
     expect(result.action?.reply_text).toBe(
-      'Hola, en este momento un asesor atenderá tu consulta personalmente.'
+      'Nuestros planes en Cochabamba son: Básica Bs 290 (20 accesos), Pro Bs 420 (25 accesos) y Élite Bs 560 (30 accesos). ¿Qué disciplina o zona te interesa para entrenar?'
+    );
+  });
+
+  it('utiliza Service Binding oficial (AI_SERVICE) si está disponible', async () => {
+    let bindingUrl = '';
+    let bindingBody: any = null;
+
+    const mockAiService = {
+      fetch: vi.fn().mockImplementation(async (url: string | URL | Request, init?: RequestInit) => {
+        bindingUrl = String(url);
+        bindingBody = JSON.parse(init?.body as string);
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            reply: '¡Hola! Respuesta despachada vía Service Binding de Cloudflare.',
+            action: 'reply',
+          }),
+        } as Response;
+      }),
+    };
+
+    const { env } = createMockEnv({ AI_SERVICE: mockAiService });
+
+    const result = await runSalesAgentTurn({
+      env,
+      leadId: 'lead_micro_1',
+      incomingText: 'Hola vía binding',
+    });
+
+    expect(result.executed).toBe(true);
+    expect(mockAiService.fetch).toHaveBeenCalledTimes(1);
+    expect(bindingUrl).toBe('http://ai-micro/chat');
+    expect(bindingBody.message).toBe('Hola vía binding');
+    expect(result.action?.reply_text).toBe('¡Hola! Respuesta despachada vía Service Binding de Cloudflare.');
+  });
+
+  it('fallback responde sobre sedes y zonas si el cliente pregunta por ubicación', async () => {
+    const { env } = createMockEnv({ AI_MICROSERVICE_URL: undefined });
+
+    const result = await runSalesAgentTurn({
+      env,
+      leadId: 'lead_micro_1',
+      incomingText: '¿En qué zonas o sedes tienen gimnasios?',
+    });
+
+    expect(result.executed).toBe(true);
+    expect(result.action?.reply_text).toBe(
+      'Tenemos centros aliados en Zona Norte, Cala Cala, América, Central y Recoleta. ¿En qué zona prefieres entrenar?'
+    );
+  });
+
+  it('fallback responde con bienvenida accesible si saluda o envía sticker', async () => {
+    const { env } = createMockEnv({ AI_MICROSERVICE_URL: undefined });
+
+    const result = await runSalesAgentTurn({
+      env,
+      leadId: 'lead_micro_1',
+      incomingText: '¡Buenas tardes!',
+    });
+
+    expect(result.executed).toBe(true);
+    expect(result.action?.reply_text).toBe(
+      '¡Hola! En Fitness Club Pass tienes acceso a múltiples gimnasios y deportes en Cochabamba desde Bs 290 al mes. ¿Qué actividad te gustaría practicar?'
     );
   });
 

@@ -192,52 +192,74 @@ export async function runSalesAgentTurn(params: {
     let action: AgentAction | undefined;
 
     // 4. Delegar al microservicio autónomo de IA (POST /chat)
-    if (microserviceUrl) {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
+    // Intentar primero vía Service Binding oficial (env.AI_SERVICE) o vía HTTP a microserviceUrl
+    const payload = JSON.stringify({
+      lead: {
+        id: lead.id,
+        name: lead.full_name,
+        phone: lead.phone,
+        status: lead.status,
+      },
+      history,
+      message: incomingText,
+    });
 
-        const response = await fetch(`${microserviceUrl}/chat`, {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    try {
+      let response: Response | null = null;
+
+      if (env.AI_SERVICE && typeof env.AI_SERVICE.fetch === 'function') {
+        try {
+          console.log('[Sales Agent] Invocando microservicio de IA vía Service Binding (AI_SERVICE)...');
+          response = await env.AI_SERVICE.fetch('http://ai-micro/chat', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: payload,
+            signal: controller.signal,
+          });
+        } catch (bindingErr: any) {
+          console.warn('[Sales Agent] Service Binding falló o no respondió, intentando fallback HTTP si aplica:', bindingErr?.message || bindingErr);
+        }
+      }
+
+      if (!response && microserviceUrl) {
+        console.log(`[Sales Agent] Invocando microservicio de IA vía HTTP (${microserviceUrl}/chat)...`);
+        response = await fetch(`${microserviceUrl}/chat`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            lead: {
-              id: lead.id,
-              name: lead.full_name,
-              phone: lead.phone,
-              status: lead.status,
-            },
-            history,
-            message: incomingText,
-          }),
+          body: payload,
           signal: controller.signal,
         });
-
-        clearTimeout(timeoutId);
-
-        if (response.ok) {
-          const data = (await response.json()) as any;
-          if (data && (data.reply || data.reply_text)) {
-            action = {
-              action: data.action === 'handoff' ? 'handoff' : 'reply',
-              reply_text: data.reply || data.reply_text,
-              detected_name: data.detectedName || data.detected_name || undefined,
-              detected_disciplines: data.detectedDisciplines || data.detected_disciplines || [],
-              handoff_reason: data.action === 'handoff' ? 'Solicitud detectada por microservicio de IA' : undefined,
-              suggested_status: lead.status === 'nuevo' ? 'contactado' : lead.status,
-            };
-            console.log(`[Sales Agent] Respuesta procesada con éxito por microservicio externo de IA (${microserviceUrl})`);
-          } else {
-            console.warn('[Sales Agent] Microservicio de IA respondió sin texto de respuesta válido');
-          }
-        } else {
-          console.warn(`[Sales Agent] Microservicio de IA respondió con estado HTTP ${response.status}`);
-        }
-      } catch (microErr: any) {
-        console.warn(`[Sales Agent] Fallo al consultar microservicio de IA (${microserviceUrl}):`, microErr?.message || microErr);
       }
+
+      if (response && response.ok) {
+        const data = (await response.json()) as any;
+        if (data && (data.reply || data.reply_text)) {
+          action = {
+            action: data.action === 'handoff' ? 'handoff' : 'reply',
+            reply_text: data.reply || data.reply_text,
+            detected_name: data.detectedName || data.detected_name || undefined,
+            detected_disciplines: data.detectedDisciplines || data.detected_disciplines || [],
+            handoff_reason: data.action === 'handoff' ? 'Solicitud detectada por microservicio de IA' : undefined,
+            suggested_status: lead.status === 'nuevo' ? 'contactado' : lead.status,
+          };
+          console.log(`[Sales Agent] Respuesta procesada con éxito por microservicio externo de IA (${microserviceUrl || 'Service Binding'})`);
+        } else {
+          console.warn('[Sales Agent] Microservicio de IA respondió sin texto de respuesta válido');
+        }
+      } else if (response) {
+        console.warn(`[Sales Agent] Microservicio de IA respondió con estado HTTP ${response.status}`);
+      }
+    } catch (microErr: any) {
+      console.warn(`[Sales Agent] Fallo al consultar microservicio de IA (${microserviceUrl || 'Service Binding'}):`, microErr?.message || microErr);
+    } finally {
+      clearTimeout(timeoutId);
     }
 
     // 5. Respuesta directa simple de contingencia si el microservicio falla o no está configurado
@@ -245,28 +267,42 @@ export async function runSalesAgentTurn(params: {
       console.warn('[Sales Agent] Microservicio no disponible o no configurado. Usando respuesta directa de contingencia.');
       const lower = incomingText.toLowerCase();
       const wantsHuman = /humano|asesor|agente|persona|reclamo|queja|supervisor/i.test(lower);
+      const nameMatch = incomingText.match(/(?:me llamo|mi nombre es|soy)\s+([A-Za-zÁÉÍÓÚáéíóúñÑ]+)/i);
+      const detectedName = nameMatch ? nameMatch[1].trim() : undefined;
+
+      const detectedDisciplines: string[] = [];
+      if (/gym|pesas|musculaci[oó]n/i.test(lower)) detectedDisciplines.push('Gym');
+      if (/nataci[oó]n|pileta|piscina/i.test(lower)) detectedDisciplines.push('Natación');
+      if (/crossfit|box/i.test(lower)) detectedDisciplines.push('CrossFit');
+      if (/p[aá]del|paddle/i.test(lower)) detectedDisciplines.push('Pádel');
+      if (/pilates/i.test(lower)) detectedDisciplines.push('Pilates');
+      if (/yoga/i.test(lower)) detectedDisciplines.push('Yoga');
+
       if (wantsHuman) {
         action = {
           action: 'handoff',
           reply_text: 'Te comunico enseguida con uno de nuestros asesores para atenderte personalmente por aquí.',
           handoff_reason: 'Solicitud de atención humana',
           suggested_status: lead.status === 'nuevo' ? 'contactado' : lead.status,
+          detected_name: detectedName,
+          detected_disciplines: detectedDisciplines.length > 0 ? detectedDisciplines : undefined,
         };
       } else {
-        const nameMatch = incomingText.match(/(?:me llamo|mi nombre es|soy)\s+([A-Za-zÁÉÍÓÚáéíóúñÑ]+)/i);
-        const detectedName = nameMatch ? nameMatch[1].trim() : undefined;
-
-        const detectedDisciplines: string[] = [];
-        if (/gym|pesas|musculaci[oó]n/i.test(lower)) detectedDisciplines.push('Gym');
-        if (/nataci[oó]n|pileta|piscina/i.test(lower)) detectedDisciplines.push('Natación');
-        if (/crossfit|box/i.test(lower)) detectedDisciplines.push('CrossFit');
-        if (/p[aá]del|paddle/i.test(lower)) detectedDisciplines.push('Pádel');
-        if (/pilates/i.test(lower)) detectedDisciplines.push('Pilates');
-        if (/yoga/i.test(lower)) detectedDisciplines.push('Yoga');
+        let replyText: string;
+        if (/precio|plan|planes|costo|costos|tarifa|tarifas|cu[aá]nto|valor|membres[ií]a|mensualidad|paquete|promo/i.test(lower)) {
+          replyText =
+            'Nuestros planes en Cochabamba son: Básica Bs 290 (20 accesos), Pro Bs 420 (25 accesos) y Élite Bs 560 (30 accesos). ¿Qué disciplina o zona te interesa para entrenar?';
+        } else if (/sede|sedes|zona|zonas|donde|d[oó]nde|ubicaci[oó]n|ubicacion|sucursal|sucursales|gimnasio|gimnasios|direcci[oó]n|direccion|lugar|queda/i.test(lower)) {
+          replyText =
+            'Tenemos centros aliados en Zona Norte, Cala Cala, América, Central y Recoleta. ¿En qué zona prefieres entrenar?';
+        } else {
+          replyText =
+            '¡Hola! En Fitness Club Pass tienes acceso a múltiples gimnasios y deportes en Cochabamba desde Bs 290 al mes. ¿Qué actividad te gustaría practicar?';
+        }
 
         action = {
           action: 'reply',
-          reply_text: 'Hola, en este momento un asesor atenderá tu consulta personalmente.',
+          reply_text: replyText,
           detected_name: detectedName,
           detected_disciplines: detectedDisciplines.length > 0 ? detectedDisciplines : undefined,
           suggested_status: lead.status === 'nuevo' ? 'contactado' : lead.status,
