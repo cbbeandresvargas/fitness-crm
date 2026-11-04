@@ -434,7 +434,7 @@ whatsappRoutes.get('/api/whatsapp/config', async (c) => {
       status: isEnvConfigured ? 'connected' : 'disconnected',
       verify_token: c.env.META_WA_VERIFY_TOKEN || 'fitnessclub_secure_verify_token_2026',
       ai_enabled: settings?.ai_enabled ?? 1,
-      ai_model: settings?.ai_model || '@cf/meta/llama-3.2-3b-instruct',
+      ai_model: settings?.ai_model || '@cf/zai-org/glm-4.7-flash',
       ai_tone: settings?.ai_tone || 'enérgico, motivador, empático y altamente enfocado en cerrar ventas',
       ai_instructions: settings?.ai_instructions || '',
       business_context: settings?.business_context || '',
@@ -486,7 +486,7 @@ whatsappRoutes.post('/api/whatsapp/config', async (c) => {
     .bind(
       id,
       ai_enabled !== undefined ? (ai_enabled ? 1 : 0) : 1,
-      ai_model || '@cf/meta/llama-3.2-3b-instruct',
+      ai_model || '@cf/zai-org/glm-4.7-flash',
       ai_tone || 'enérgico, motivador, empático y altamente enfocado en cerrar ventas',
       ai_instructions || null,
       business_context || null,

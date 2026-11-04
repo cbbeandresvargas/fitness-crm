@@ -56,7 +56,7 @@ export default function WhatsAppSettings() {
 
   // Form Fields para IA
   const [aiEnabled, setAiEnabled] = createSignal(true);
-  const [aiModel, setAiModel] = createSignal('@cf/meta/llama-3.2-3b-instruct');
+  const [aiModel, setAiModel] = createSignal('@cf/zai-org/glm-4.7-flash');
   const [aiTone, setAiTone] = createSignal('');
   const [aiInstructions, setAiInstructions] = createSignal('');
   const [businessContext, setBusinessContext] = createSignal('');
@@ -90,7 +90,7 @@ export default function WhatsAppSettings() {
       if (res.settings) {
         setSettings(res.settings as any);
         setAiEnabled(res.settings.ai_enabled === 1);
-        setAiModel(res.settings.ai_model || '@cf/meta/llama-3.2-3b-instruct');
+        setAiModel(res.settings.ai_model || '@cf/zai-org/glm-4.7-flash');
         setAiTone(res.settings.ai_tone || '');
         setAiInstructions(res.settings.ai_instructions || '');
         setBusinessContext(res.settings.business_context || '');
@@ -611,7 +611,7 @@ export default function WhatsAppSettings() {
                     <Bot size={16} class="text-accent" />
                     <div>
                       <h3 class="font-bold text-body text-xs">Motor del Asesor Comercial con IA</h3>
-                      <p class="text-[11px] text-muted">Cloudflare Workers AI (Llama 3.2 Instruct)</p>
+                      <p class="text-[11px] text-muted">Cloudflare Workers AI</p>
                     </div>
                   </div>
 
@@ -634,15 +634,32 @@ export default function WhatsAppSettings() {
                     onChange={(e) => setAiModel(e.currentTarget.value)}
                     class="w-full px-3 py-2 bg-app border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent cursor-pointer"
                   >
+                    <option value="@cf/zai-org/glm-4.7-flash">
+                      @cf/zai-org/glm-4.7-flash (Recomendado: ultra rápido, diálogo multilingüe, baja latencia y alta precisión en seguimiento de instrucciones)
+                    </option>
+                    <option value="@cf/mistralai/mistral-small-3.1-24b-instruct">
+                      @cf/mistralai/mistral-small-3.1-24b-instruct (Excelente para formato JSON estructurado y respuestas sobrias)
+                    </option>
+                    <option value="@cf/meta/llama-3.3-70b-instruct-fp8-fast">
+                      @cf/meta/llama-3.3-70b-instruct-fp8-fast (Razonamiento de alta complejidad rápido)
+                    </option>
                     <option value="@cf/meta/llama-3.2-3b-instruct">
-                      @cf/meta/llama-3.2-3b-instruct (Recomendado: ultra rápido y alta precisión)
+                      @cf/meta/llama-3.2-3b-instruct (Ultra rápido y equilibrado)
                     </option>
                     <option value="@cf/meta/llama-3.2-1b-instruct">
                       @cf/meta/llama-3.2-1b-instruct (Ultra ligero y respuesta instantánea)
                     </option>
-                    <option value="@cf/meta/llama-3.3-70b-instruct">
-                      @cf/meta/llama-3.3-70b-instruct (Razonamiento profundo)
-                    </option>
+                    {![
+                      '@cf/zai-org/glm-4.7-flash',
+                      '@cf/mistralai/mistral-small-3.1-24b-instruct',
+                      '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
+                      '@cf/meta/llama-3.2-3b-instruct',
+                      '@cf/meta/llama-3.2-1b-instruct',
+                    ].includes(aiModel()) && aiModel() ? (
+                      <option value={aiModel()}>
+                        {aiModel()} (Configuración personalizada / anterior)
+                      </option>
+                    ) : null}
                   </select>
                 </div>
 

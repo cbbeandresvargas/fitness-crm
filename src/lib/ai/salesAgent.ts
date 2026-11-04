@@ -117,6 +117,52 @@ export function extractJson(raw: string): unknown | null {
   return null;
 }
 
+export const SUPPORTED_AI_MODELS = [
+  '@cf/zai-org/glm-4.7-flash',
+  '@cf/mistralai/mistral-small-3.1-24b-instruct',
+  '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
+  '@cf/meta/llama-3.2-3b-instruct',
+  '@cf/meta/llama-3.2-1b-instruct',
+] as const;
+
+export const DEFAULT_AI_MODEL = '@cf/zai-org/glm-4.7-flash';
+
+/**
+ * Normaliza y valida el identificador del modelo en Cloudflare Workers AI
+ */
+export function normalizeAiModel(model?: string | null): string {
+  if (!model || typeof model !== 'string') return DEFAULT_AI_MODEL;
+  const trimmed = model.trim();
+  if (!trimmed || trimmed.includes('llama-3.1-8b')) return DEFAULT_AI_MODEL;
+
+  // Si ya tiene prefijo @cf/...
+  if (trimmed.startsWith('@cf/')) {
+    if (trimmed === '@cf/meta/llama-3.3-70b-instruct') {
+      return '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+    }
+    return trimmed;
+  }
+
+  const lower = trimmed.toLowerCase();
+  if (lower.includes('glm-4.7') || lower.includes('glm') || lower.includes('flash')) {
+    return '@cf/zai-org/glm-4.7-flash';
+  }
+  if (lower.includes('mistral-small') || lower.includes('mistral-3.1') || lower.includes('mistral')) {
+    return '@cf/mistralai/mistral-small-3.1-24b-instruct';
+  }
+  if (lower.includes('llama-3.3') || lower.includes('70b')) {
+    return '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+  }
+  if (lower.includes('llama-3.2-1b') || lower.includes('1b')) {
+    return '@cf/meta/llama-3.2-1b-instruct';
+  }
+  if (lower.includes('llama-3.2-3b') || lower.includes('3b')) {
+    return '@cf/meta/llama-3.2-3b-instruct';
+  }
+
+  return trimmed.startsWith('@') ? trimmed : `@cf/${trimmed}`;
+}
+
 /**
  * Llamada al modelo en Cloudflare Workers AI con soporte nativo, cadena de fallbacks y REST
  */
@@ -124,13 +170,17 @@ export async function callCloudflareWorkersAi(
   env: Env,
   model: string,
   messages: { role: 'system' | 'user' | 'assistant'; content: string }[],
-  maxTokens: number = 300
+  maxTokens: number = 300,
+  temperature: number = 0.1
 ): Promise<string | null> {
+  const normalizedPrimary = normalizeAiModel(model);
   const modelsToTry = [
-    model,
+    normalizedPrimary,
+    DEFAULT_AI_MODEL,
+    '@cf/mistralai/mistral-small-3.1-24b-instruct',
+    '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
     '@cf/meta/llama-3.2-3b-instruct',
     '@cf/meta/llama-3.2-1b-instruct',
-    '@cf/meta/llama-2-7b-chat-int8',
   ].filter((m, idx, arr) => Boolean(m) && !m.includes('llama-3.1-8b') && arr.indexOf(m) === idx);
 
   // 1. Intento por binding nativo env.AI con reintento sobre modelo rápido si el principal falla
@@ -140,7 +190,7 @@ export async function callCloudflareWorkersAi(
         const res = await env.AI.run(m, {
           messages,
           max_tokens: maxTokens,
-          temperature: 0.2,
+          temperature,
         });
         if (res && res.response && res.response.trim().length > 0) {
           return res.response.trim();
@@ -167,7 +217,7 @@ export async function callCloudflareWorkersAi(
           body: JSON.stringify({
             messages,
             max_tokens: maxTokens,
-            temperature: 0.2,
+            temperature,
           }),
         });
 
@@ -191,7 +241,9 @@ export async function chatJson<T>(
   schema: z.ZodType<T>,
   messages: { role: 'system' | 'user' | 'assistant'; content: string }[],
   env: Env,
-  model: string = '@cf/meta/llama-3.2-3b-instruct'
+  model: string = DEFAULT_AI_MODEL,
+  maxTokens: number = 300,
+  temperature: number = 0.1
 ): Promise<{ ok: true; data: T; raw: string } | { ok: false; error: string; detail: string; lastRaw?: string }> {
   const MAX_ATTEMPTS = 2;
   let lastDetail = '';
@@ -210,7 +262,7 @@ export async function chatJson<T>(
             },
           ];
 
-    const raw = await callCloudflareWorkersAi(env, model, attemptMessages, 300);
+    const raw = await callCloudflareWorkersAi(env, model, attemptMessages, maxTokens, temperature);
     if (!raw) {
       lastDetail = 'El proveedor de Workers AI no devolvió respuesta';
       continue;
@@ -292,10 +344,7 @@ export async function runSalesAgentTurn(params: {
       return { executed: false, error: 'IA global apagada' };
     }
 
-    const aiModel =
-      settings?.ai_model && !settings.ai_model.includes('llama-3.1-8b')
-        ? settings.ai_model
-        : '@cf/meta/llama-3.2-3b-instruct';
+    const aiModel = normalizeAiModel(settings?.ai_model);
 
     // 3. Obtener catálogo y base de conocimiento
     const kbRows = await env.DB.prepare(

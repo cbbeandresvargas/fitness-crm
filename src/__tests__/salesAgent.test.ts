@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import { z } from 'zod';
 import {
   AgentActionSchema,
   getActionReplyText,
@@ -9,8 +10,13 @@ import {
   buildSalesAgentPrompt,
   generateSmartSalesFallback,
   DEFAULT_BUSINESS_CONTEXT,
+  normalizeAiModel,
+  DEFAULT_AI_MODEL,
+  SUPPORTED_AI_MODELS,
+  callCloudflareWorkersAi,
+  chatJson,
 } from '../lib/ai/salesAgent';
-import { Lead, KnowledgeBaseEntry, WhatsAppSettings } from '../lib/types';
+import { Lead, KnowledgeBaseEntry, WhatsAppSettings, Env } from '../lib/types';
 
 describe('FASE 1: IA Comercial Experta & Sales Agent', () => {
   describe('AgentActionSchema (Validación y Resiliencia Zod)', () => {
@@ -425,6 +431,315 @@ Membresía Ilimitado: Bs 320 mensual`,
       expect(prompt).toContain('Decir siempre el precio en la primera frase.');
       expect(prompt).toContain('MÁXIMA CONCISIÓN (1 A 3 FRASES CORTAS)');
       expect(prompt).toContain('CERO RODEOS');
+    });
+  });
+
+  describe('normalizeAiModel y configuración de modelos de Workers AI', () => {
+    it('retorna @cf/zai-org/glm-4.7-flash como modelo por defecto', () => {
+      expect(DEFAULT_AI_MODEL).toBe('@cf/zai-org/glm-4.7-flash');
+      expect(normalizeAiModel(null)).toBe('@cf/zai-org/glm-4.7-flash');
+      expect(normalizeAiModel(undefined)).toBe('@cf/zai-org/glm-4.7-flash');
+      expect(normalizeAiModel('')).toBe('@cf/zai-org/glm-4.7-flash');
+      expect(normalizeAiModel('   ')).toBe('@cf/zai-org/glm-4.7-flash');
+    });
+
+    it('reemplaza modelos deprecados como llama-3.1-8b por el modelo recomendado', () => {
+      expect(normalizeAiModel('@cf/meta/llama-3.1-8b-instruct')).toBe('@cf/zai-org/glm-4.7-flash');
+      expect(normalizeAiModel('llama-3.1-8b')).toBe('@cf/zai-org/glm-4.7-flash');
+    });
+
+    it('normaliza nombres de modelos con y sin prefijo @cf/', () => {
+      expect(normalizeAiModel('glm-4.7-flash')).toBe('@cf/zai-org/glm-4.7-flash');
+      expect(normalizeAiModel('@cf/zai-org/glm-4.7-flash')).toBe('@cf/zai-org/glm-4.7-flash');
+      expect(normalizeAiModel('mistral-small')).toBe('@cf/mistralai/mistral-small-3.1-24b-instruct');
+      expect(normalizeAiModel('@cf/mistralai/mistral-small-3.1-24b-instruct')).toBe('@cf/mistralai/mistral-small-3.1-24b-instruct');
+      expect(normalizeAiModel('llama-3.3-70b')).toBe('@cf/meta/llama-3.3-70b-instruct-fp8-fast');
+      expect(normalizeAiModel('@cf/meta/llama-3.3-70b-instruct')).toBe('@cf/meta/llama-3.3-70b-instruct-fp8-fast');
+      expect(normalizeAiModel('@cf/meta/llama-3.2-3b-instruct')).toBe('@cf/meta/llama-3.2-3b-instruct');
+    });
+
+    it('incluye todos los modelos recomendados en SUPPORTED_AI_MODELS', () => {
+      expect(SUPPORTED_AI_MODELS).toContain('@cf/zai-org/glm-4.7-flash');
+      expect(SUPPORTED_AI_MODELS).toContain('@cf/mistralai/mistral-small-3.1-24b-instruct');
+      expect(SUPPORTED_AI_MODELS).toContain('@cf/meta/llama-3.3-70b-instruct-fp8-fast');
+      expect(SUPPORTED_AI_MODELS).toContain('@cf/meta/llama-3.2-3b-instruct');
+      expect(SUPPORTED_AI_MODELS).toContain('@cf/meta/llama-3.2-1b-instruct');
+    });
+  });
+
+  describe('Separación Categórica: DB vs Historial de Chat y Concisión Estricta', () => {
+    const mockLead: Lead = {
+      id: 'lead_prompt_audit',
+      full_name: 'Ana Gómez',
+      phone: '+59170011223',
+      status: 'nuevo',
+      segment: 'A',
+      tags: [],
+      metadata: {},
+      ai_enabled: 1,
+      created_at: '2026-10-07T12:00:00Z',
+      updated_at: '2026-10-07T12:00:00Z',
+    };
+
+    it('prompt exige categóricamente extraer precios y reglas de DB y jamás del historial de chat', () => {
+      const prompt = buildSalesAgentPrompt({
+        lead: mockLead,
+        kbEntries: [],
+      });
+
+      expect(prompt).toContain('SEPARACIÓN CATEGÓRICA: FUENTE DE VERDAD (DB) vs HISTORIAL DE CHAT');
+      expect(prompt).toContain('ROL ESTRICTO DEL HISTORIAL DE MENSAJES (SÓLO ESTADO CONVERSACIONAL)');
+      expect(prompt).toContain('Queda estrictamente PROHIBIDO extraer o asumir precios, descuentos, planes, promociones, reglas o datos del historial del chat');
+      expect(prompt).toContain('La verdad objetiva proviene ÚNICAMENTE de la DB');
+      expect(prompt).toContain('No dispongo de ese dato en este momento. ¿Deseas que te comunique con un asesor?');
+      expect(prompt).toContain('ESTRICTAMENTE de 1 a 2 oraciones breves');
+      expect(prompt).toContain('RESPUESTA INMEDIATA AL GRANO');
+      expect(prompt).toContain('CERO RODEOS');
+    });
+
+    it('prompt omite advertencia obligatoria de reemplazo si sólo se usa el contexto base por defecto', () => {
+      const prompt = buildSalesAgentPrompt({
+        lead: mockLead,
+        kbEntries: [],
+        settings: {
+          id: 'ws_default',
+          ai_enabled: 1,
+          ai_model: '@cf/zai-org/glm-4.7-flash',
+          business_context: DEFAULT_BUSINESS_CONTEXT,
+          status: 'connected',
+          created_at: '2026-10-07T12:00:00Z',
+          updated_at: '2026-10-07T12:00:00Z',
+        },
+      });
+
+      expect(prompt).not.toContain('⚠️ ATENCIÓN OBLIGATORIA: Se han configurado precios o planes específicos en Ajustes');
+    });
+
+    it('prompt parsea correctamente metadata y tags en formatos JSON string y nativos', () => {
+      const leadWithJson: Lead = {
+        ...mockLead,
+        metadata: JSON.stringify({ ciudad: 'Cochabamba', horario_preferido: 'tarde' }) as any,
+        tags: JSON.stringify(['promo_verano', 'zona_recoleta']) as any,
+      };
+
+      const prompt = buildSalesAgentPrompt({
+        lead: leadWithJson,
+        kbEntries: [],
+        registeredDisciplines: ['Pádel', 'Calistenia'],
+      });
+
+      expect(prompt).toContain('- ciudad: Cochabamba');
+      expect(prompt).toContain('- horario_preferido: tarde');
+      expect(prompt).toContain('promo_verano, zona_recoleta');
+      expect(prompt).toContain('Pádel, Calistenia');
+    });
+  });
+
+  describe('Inferencia Cloudflare Workers AI (callCloudflareWorkersAi & chatJson)', () => {
+    it('ejecuta env.AI.run con temperature: 0.1 por defecto y tokens acotados', async () => {
+      const mockAiRun = vi.fn().mockResolvedValue({
+        response: '{"action": "reply", "reply_text": "¡Hola! Membresía Pro a Bs 420."}',
+      });
+
+      const mockEnv: any = {
+        AI: { run: mockAiRun },
+      };
+
+      const messages: { role: 'system' | 'user' | 'assistant'; content: string }[] = [
+        { role: 'system', content: 'Prompt del sistema' },
+        { role: 'user', content: '¿Precios?' },
+      ];
+
+      const res = await callCloudflareWorkersAi(
+        mockEnv,
+        '@cf/zai-org/glm-4.7-flash',
+        messages,
+        300,
+        0.1
+      );
+
+      expect(res).toBe('{"action": "reply", "reply_text": "¡Hola! Membresía Pro a Bs 420."}');
+      expect(mockAiRun).toHaveBeenCalledTimes(1);
+      expect(mockAiRun).toHaveBeenCalledWith(
+        '@cf/zai-org/glm-4.7-flash',
+        expect.objectContaining({
+          messages,
+          max_tokens: 300,
+          temperature: 0.1,
+        })
+      );
+    });
+
+    it('reintenta automáticamente con el siguiente modelo de la cadena si el modelo principal falla', async () => {
+      let runCount = 0;
+      const mockAiRun = vi.fn().mockImplementation(async (model: string) => {
+        runCount++;
+        if (model === '@cf/meta/llama-3.2-3b-instruct') {
+          throw new Error('Model temporarily rate-limited');
+        }
+        return { response: '{"action": "reply", "reply_text": "Respuesta desde fallback"}' };
+      });
+
+      const mockEnv: any = {
+        AI: { run: mockAiRun },
+      };
+
+      const res = await callCloudflareWorkersAi(
+        mockEnv,
+        '@cf/meta/llama-3.2-3b-instruct',
+        [{ role: 'user', content: 'Hola' }]
+      );
+
+      expect(res).toBe('{"action": "reply", "reply_text": "Respuesta desde fallback"}');
+      expect(runCount).toBeGreaterThanOrEqual(2);
+    });
+
+    it('utiliza Cloudflare REST API de Workers AI si env.AI no está disponible y hay credenciales', async () => {
+      const originalFetch = globalThis.fetch;
+      const mockFetch = vi.fn().mockResolvedValue({
+        json: async () => ({
+          success: true,
+          result: { response: '{"action": "reply", "reply_text": "Respuesta vía REST API"}' },
+        }),
+      });
+      globalThis.fetch = mockFetch;
+
+      try {
+        const mockEnv: any = {
+          AI: null,
+          CLOUDFLARE_API_TOKEN: 'token_secreto_test',
+          CLOUDFLARE_ACCOUNT_ID: 'acc_123456789',
+        };
+
+        const res = await callCloudflareWorkersAi(
+          mockEnv,
+          '@cf/zai-org/glm-4.7-flash',
+          [{ role: 'user', content: 'Tarifas' }],
+          250,
+          0.1
+        );
+
+        expect(res).toBe('{"action": "reply", "reply_text": "Respuesta vía REST API"}');
+        expect(mockFetch).toHaveBeenCalledWith(
+          expect.stringContaining('https://api.cloudflare.com/client/v4/accounts/acc_123456789/ai/run/'),
+          expect.objectContaining({
+            method: 'POST',
+            headers: expect.objectContaining({
+              Authorization: 'Bearer token_secreto_test',
+              'Content-Type': 'application/json',
+            }),
+            body: expect.stringContaining('"temperature":0.1'),
+          })
+        );
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('retorna null de forma segura si ni el binding ni la REST API responden', async () => {
+      const mockEnv: any = {
+        AI: {
+          run: vi.fn().mockRejectedValue(new Error('AI cluster unavailable')),
+        },
+      };
+
+      const res = await callCloudflareWorkersAi(mockEnv, '@cf/zai-org/glm-4.7-flash', [
+        { role: 'user', content: 'Hola' },
+      ]);
+
+      expect(res).toBeNull();
+    });
+
+    it('chatJson ejecuta reintento estricto cuando el primer intento no es JSON válido', async () => {
+      let callCount = 0;
+      const mockAiRun = vi.fn().mockImplementation(async () => {
+        callCount++;
+        if (callCount === 1) {
+          // Primer intento: texto plano con markdown defectuoso
+          return { response: 'Hola estimado cliente, claro con gusto te paso los precios.' };
+        }
+        // Segundo intento: JSON corregido
+        return {
+          response: JSON.stringify({
+            action: 'reply',
+            reply_text: 'Nuestros planes son Básica Bs 290 y Pro Bs 420.',
+          }),
+        };
+      });
+
+      const mockEnv: any = { AI: { run: mockAiRun } };
+
+      const result = await chatJson(
+        AgentActionSchema,
+        [{ role: 'user', content: 'Hola' }],
+        mockEnv,
+        '@cf/zai-org/glm-4.7-flash'
+      );
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.data.action).toBe('reply');
+        expect(result.data.reply_text).toContain('Básica Bs 290');
+      }
+      expect(callCount).toBe(2);
+    });
+  });
+
+  describe('Auditoría de Concisión y Formato en Respuestas de Contingencia', () => {
+    const mockLeadUser: Lead = {
+      id: 'lead_concise_test',
+      full_name: 'Rodrigo Torrico',
+      phone: '+59178945612',
+      status: 'nuevo',
+      segment: 'A',
+      tags: [],
+      metadata: {},
+      ai_enabled: 1,
+      created_at: '2026-10-07T12:00:00Z',
+      updated_at: '2026-10-07T12:00:00Z',
+    };
+
+    it('personaliza el saludo usando el primer nombre si no es un placeholder del sistema', () => {
+      const action = generateSmartSalesFallback({
+        lead: mockLeadUser,
+        incomingText: 'Buenas tardes',
+        kbEntries: [],
+      });
+
+      const text = getActionReplyText(action);
+      expect(text).toContain('Rodrigo');
+      expect(text).not.toContain('WhatsApp');
+    });
+
+    it('utiliza saludo neutro si el nombre es un prefijo genérico como WhatsApp 71234567', () => {
+      const genericLead: Lead = {
+        ...mockLeadUser,
+        full_name: 'WhatsApp 71234567',
+      };
+
+      const action = generateSmartSalesFallback({
+        lead: genericLead,
+        incomingText: 'Hola buenas',
+        kbEntries: [],
+      });
+
+      const text = getActionReplyText(action);
+      expect(text).toContain('¡Hola!');
+      expect(text).not.toContain('WhatsApp');
+    });
+
+    it('las respuestas de precios son directas y no exceden 2 a 3 oraciones cortas', () => {
+      const action = generateSmartSalesFallback({
+        lead: mockLeadUser,
+        incomingText: 'Precios por favor',
+        kbEntries: [],
+      });
+
+      const text = getActionReplyText(action);
+      // Contar oraciones aproximadamente por signos de puntuación (. ? !)
+      const sentences = text.split(/(?<=[.?!])\s+/).filter(Boolean);
+      expect(sentences.length).toBeLessThanOrEqual(3);
+      expect(text).toContain('Bs 290');
     });
   });
 });

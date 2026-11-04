@@ -45,15 +45,15 @@ function extractPricingInfo(
   });
 
   if (pricingKb.length > 0) {
-    const lines = pricingKb.slice(0, 4).map((e) => {
+    const lines = pricingKb.slice(0, 3).map((e) => {
       const firstLine =
         e.content
           .split('\n')
           .map((l) => l.trim())
           .find((l) => l.length > 0) || e.content.trim();
-      return `- ${e.title}: ${firstLine}`;
+      return `${e.title}: ${firstLine.replace(/^-\s*/, '')}`;
     });
-    return `Tenemos las siguientes opciones oficiales registradas en Ajustes:\n\n${lines.join('\n')}`;
+    return `Nuestras membresías oficiales son: ${lines.join(', ')}.`;
   }
 
   // 2. Prioridad: Revisar si settings?.business_context contiene información de precios personalizada
@@ -80,13 +80,10 @@ function extractPricingInfo(
     const selected = bulletLines.length > 0 ? bulletLines : candidateLines;
 
     if (selected.length > 0) {
-      const formatted = selected.slice(0, 4).map((l) => {
-        if (l.startsWith('-') || l.startsWith('*') || /^\d+[\.\)]/.test(l)) {
-          return l;
-        }
-        return `- ${l}`;
+      const formatted = selected.slice(0, 3).map((l) => {
+        return l.replace(/^[-*•\s]+/, '').replace(/^\d+[\.\)]\s*/, '').trim();
       });
-      return `Nuestras opciones de membresía son:\n\n${formatted.join('\n')}`;
+      return `Nuestras membresías oficiales son: ${formatted.join(', ')}.`;
     }
   }
 
@@ -199,7 +196,7 @@ export function generateSmartSalesFallback(params: {
       detected_name: detectedName,
       detected_disciplines: detectedDisciplines,
       suggested_tags: ['pago_confirmado', 'cliente_activo'],
-      reply_text: `¡Excelente noticia! Bienvenido a Fitness Club Pass. Por favor pásame tu correo electrónico para dar de alta tu cuenta y enviarte los enlaces de descarga de la app móvil.`,
+      reply_text: `¡Excelente noticia, bienvenido! Por favor compárteme tu correo electrónico para dar de alta tu cuenta y enviarte los enlaces de descarga de la app móvil.`,
     };
   }
 
@@ -245,7 +242,7 @@ export function generateSmartSalesFallback(params: {
     const customPricing = extractPricingInfo(kbEntries, settings);
     const pricingBody =
       customPricing ||
-      `Tenemos tres opciones de membresía mensual:\n\n- Básica: Bs 290 al mes, con 20 check-ins.\n- Pro: Bs 420 al mes, con 25 check-ins.\n- Élite: Bs 560 al mes, con 30 check-ins.`;
+      `Nuestras membresías oficiales son Básica: Bs 290 (20 check-ins), Pro: Bs 420 (25 check-ins) y Élite: Bs 560 (30 check-ins).`;
 
     return {
       action: 'update_and_reply',
@@ -253,7 +250,7 @@ export function generateSmartSalesFallback(params: {
       detected_name: detectedName,
       detected_disciplines: detectedDisciplines,
       suggested_tags: ['consulta_precios'],
-      reply_text: `${clientGreeting}. ${pricingBody}\n\n¿Qué actividades te gustaría hacer? Así te ayudo a ver cuál te conviene.`,
+      reply_text: `${clientGreeting}. ${pricingBody} ¿Qué actividades te gustaría hacer?`,
     };
   }
 
@@ -283,7 +280,7 @@ export function generateSmartSalesFallback(params: {
 
     const sedesInfo =
       sedeKb.length > 0
-        ? `Sedes y centros confirmados en Ajustes:\n\n${sedeKb.slice(0, 3).map((e) => `- ${e.title}: ${e.content.split('\n')[0].trim()}`).join('\n')}`
+        ? `Sedes y centros confirmados en Ajustes: ${sedeKb.slice(0, 3).map((e) => `${e.title} (${e.content.split('\n')[0].trim()})`).join(', ')}.`
         : `Nuestra red multideporte cubre las mejores zonas de Cochabamba: Zona Norte, Cala Cala, América, Zona Central, Recoleta y Sarco.`;
 
     return {
@@ -292,7 +289,7 @@ export function generateSmartSalesFallback(params: {
       detected_name: detectedName,
       detected_disciplines: detectedDisciplines,
       suggested_tags: ['consulta_sedes'],
-      reply_text: `${clientGreeting}. ${sedesInfo}\n\n¿En qué zona te queda más cómodo entrenar?`,
+      reply_text: `${clientGreeting}. ${sedesInfo} ¿En qué zona te queda más cómodo entrenar?`,
     };
   }
 
@@ -305,7 +302,7 @@ export function generateSmartSalesFallback(params: {
       detected_name: detectedName,
       detected_disciplines: detectedDisciplines,
       suggested_tags: detectedDisciplines.map((d) => `interes_${normalizeActivityName(d).replace(/[\s/]+/g, '_')}`),
-      reply_text: `¡${clientGreeting}! Excelente opción con ${discStr}. Con Fitness Club Pass tienes acceso en toda Cochabamba con una sola membresía en Bs. ¿En qué zona o barrio te queda más cómodo entrenar?`,
+      reply_text: `¡${clientGreeting}! Excelente opción con ${discStr}. Con Fitness Club Pass tienes acceso en toda Cochabamba en Bs. ¿En qué zona te queda más cómodo entrenar?`,
     };
   }
 
@@ -314,6 +311,6 @@ export function generateSmartSalesFallback(params: {
     suggested_status: 'contactado',
     detected_name: detectedName,
     detected_disciplines: detectedDisciplines,
-    reply_text: `¡${clientGreeting}! Te saluda el equipo de Fitness Club Pass Cochabamba. Con una sola membresía en Bs tienes acceso a múltiples gimnasios y disciplinas en la ciudad. ¿Cuál es tu nombre y qué deporte te gustaría practicar?`,
+    reply_text: `¡${clientGreeting}! Te saluda el equipo de Fitness Club Pass Cochabamba. ¿Cuál es tu nombre y qué deporte te gustaría practicar?`,
   };
 }
