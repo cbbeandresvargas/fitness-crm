@@ -34,6 +34,7 @@ whatsappRoutes.use('/api/whatsapp/*', async (c, next) => {
 // Configuración y pruebas de conectividad de WhatsApp requieren rol Administrador
 whatsappRoutes.use('/api/whatsapp/config', requireAdmin);
 whatsappRoutes.use('/api/whatsapp/test-connection', requireAdmin);
+whatsappRoutes.use('/api/whatsapp/test-ai-microservice', requireAdmin);
 
 // Base de conocimiento: lectura autenticada, creación y borrado sólo administradores
 whatsappRoutes.use('/api/knowledge-base', async (c, next) => {
@@ -439,6 +440,7 @@ whatsappRoutes.get('/api/whatsapp/config', async (c) => {
       ai_instructions: settings?.ai_instructions || '',
       business_context: settings?.business_context || '',
       env_configured: isEnvConfigured,
+      ai_microservice_url: c.env.AI_MICROSERVICE_URL || 'http://127.0.0.1:8788',
     },
     webhook: {
       url: webhookUrl,
@@ -458,7 +460,7 @@ whatsappRoutes.post('/api/whatsapp/config', async (c) => {
     return c.json({ error: 'Solo administradores pueden configurar WhatsApp' }, 403);
   }
 
-  const body = await c.req.json();
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, any>;
   const { ai_enabled, ai_model, ai_tone, ai_instructions, business_context } = body;
 
   const id = 'ws_default';
@@ -470,6 +472,16 @@ whatsappRoutes.post('/api/whatsapp/config', async (c) => {
   } catch {
     // Columna ya existe
   }
+
+  const existing = await c.env.DB.prepare(
+    'SELECT * FROM whatsapp_settings WHERE id = ?'
+  ).bind(id).first<WhatsAppSettings>();
+
+  const finalAiEnabled = ai_enabled !== undefined ? (ai_enabled ? 1 : 0) : (existing?.ai_enabled ?? 1);
+  const finalAiModel = ai_model !== undefined ? ai_model : (existing?.ai_model || '@cf/zai-org/glm-4.7-flash');
+  const finalAiTone = ai_tone !== undefined ? ai_tone : (existing?.ai_tone || null);
+  const finalAiInstructions = ai_instructions !== undefined ? ai_instructions : (existing?.ai_instructions || null);
+  const finalBusinessContext = business_context !== undefined ? business_context : (existing?.business_context || null);
 
   await c.env.DB.prepare(`
     INSERT INTO whatsapp_settings (
@@ -485,11 +497,11 @@ whatsappRoutes.post('/api/whatsapp/config', async (c) => {
   `)
     .bind(
       id,
-      ai_enabled !== undefined ? (ai_enabled ? 1 : 0) : 1,
-      ai_model || '@cf/zai-org/glm-4.7-flash',
-      ai_tone || 'enérgico, motivador, empático y altamente enfocado en cerrar ventas',
-      ai_instructions || null,
-      business_context || null,
+      finalAiEnabled,
+      finalAiModel,
+      finalAiTone,
+      finalAiInstructions,
+      finalBusinessContext,
       now,
       now
     )
@@ -544,7 +556,61 @@ whatsappRoutes.post('/api/whatsapp/test-connection', async (c) => {
 });
 
 /**
- * 5.1 DIAGNÓSTICO EN TIEMPO REAL DEL SISTEMA (META WHATSAPP + WORKERS AI + D1)
+ * 5.1 TEST DE CONEXIÓN CON EL MICROSERVICIO AUTÓNOMO DE IA (ai-micro)
+ */
+whatsappRoutes.post('/api/whatsapp/test-ai-microservice', async (c) => {
+  const url = (
+    c.env.AI_MICROSERVICE_URL ||
+    (typeof process !== 'undefined' ? process.env?.AI_MICROSERVICE_URL : undefined) ||
+    'http://127.0.0.1:8788'
+  ).trim().replace(/\/+$/, '');
+
+  const start = Date.now();
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+    const res = await fetch(`${url}/health`, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    const durationMs = Date.now() - start;
+
+    if (!res.ok) {
+      return c.json({
+        success: false,
+        url,
+        status: res.status,
+        error: `El microservicio respondió con HTTP ${res.status}`,
+        durationMs,
+      }, 200);
+    }
+
+    const data: any = await res.json().catch(() => ({}));
+    return c.json({
+      success: true,
+      url,
+      service: data.service || 'fitness-ai-micro',
+      status: data.status || 'ok',
+      models: data.models,
+      aiBindingAvailable: data.aiBindingAvailable,
+      durationMs,
+    });
+  } catch (err: any) {
+    return c.json({
+      success: false,
+      url,
+      error: err.name === 'AbortError' ? 'Tiempo de espera agotado (timeout 6s)' : err.message || 'No se pudo conectar al microservicio de IA',
+      durationMs: Date.now() - start,
+    }, 200);
+  }
+});
+
+/**
+ * 5.2 DIAGNÓSTICO EN TIEMPO REAL DEL SISTEMA (META WHATSAPP + WORKERS AI + D1)
  */
 whatsappRoutes.get('/api/whatsapp/diagnostics', async (c) => {
   const creds = await getActiveMetaCredentials(c.env);
@@ -582,47 +648,50 @@ whatsappRoutes.get('/api/whatsapp/diagnostics', async (c) => {
     }
   }
 
-  // B) Test Cloudflare Workers AI
-  let aiStatus: {
+  // B) Test Microservicio Autónomo de IA
+  const microserviceUrl = (
+    c.env.AI_MICROSERVICE_URL ||
+    (typeof process !== 'undefined' ? process.env?.AI_MICROSERVICE_URL : undefined) ||
+    'http://127.0.0.1:8788'
+  ).trim().replace(/\/+$/, '');
+
+  let aiMicroserviceStatus: {
     status: 'ok' | 'error';
-    model: string;
+    url: string;
     latencyMs: number;
-    response?: string;
+    details?: any;
     error?: string;
-  } = { status: 'error', model: '@cf/meta/llama-3.2-3b-instruct', latencyMs: 0 };
+  } = { status: 'error', url: microserviceUrl, latencyMs: 0 };
 
   const startAi = Date.now();
-  const testModels = ['@cf/meta/llama-3.2-3b-instruct', '@cf/meta/llama-3.2-1b-instruct', '@cf/meta/llama-2-7b-chat-int8'];
-
-  if (c.env.AI && typeof c.env.AI.run === 'function') {
-    for (const testModel of testModels) {
-      try {
-        const testRes = await c.env.AI.run(testModel, {
-          messages: [{ role: 'user', content: 'Di "OK" únicamente' }],
-          max_tokens: 10,
-        });
-        aiStatus = {
-          status: 'ok',
-          model: testModel,
-          latencyMs: Date.now() - startAi,
-          response: testRes?.response?.trim() || 'OK',
-        };
-        break;
-      } catch (aiErr: any) {
-        aiStatus = {
-          status: 'error',
-          model: testModel,
-          latencyMs: Date.now() - startAi,
-          error: aiErr.message || 'Fallo al ejecutar modelo Workers AI',
-        };
-      }
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const microRes = await fetch(`${microserviceUrl}/health`, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    const latencyMs = Date.now() - startAi;
+    if (microRes.ok) {
+      const data = await microRes.json().catch(() => ({}));
+      aiMicroserviceStatus = {
+        status: 'ok',
+        url: `${microserviceUrl}/health`,
+        latencyMs,
+        details: data,
+      };
+    } else {
+      aiMicroserviceStatus = {
+        status: 'error',
+        url: `${microserviceUrl}/health`,
+        latencyMs,
+        error: `HTTP ${microRes.status}`,
+      };
     }
-  } else {
-    aiStatus = {
+  } catch (aiErr: any) {
+    aiMicroserviceStatus = {
       status: 'error',
-      model: '@cf/meta/llama-3.2-3b-instruct',
+      url: `${microserviceUrl}/health`,
       latencyMs: Date.now() - startAi,
-      error: 'El binding env.AI no está disponible en este entorno',
+      error: aiErr?.message || String(aiErr),
     };
   }
 
@@ -639,19 +708,67 @@ whatsappRoutes.get('/api/whatsapp/diagnostics', async (c) => {
 
   return c.json({
     metaApi: metaStatus,
-    workersAi: aiStatus,
+    aiMicroservice: aiMicroserviceStatus,
     database: {
       leadsCount: leadsCountRes?.count || 0,
       messagesCount: msgsCountRes?.count || 0,
       kbEntriesCount: kbCountRes?.count || 0,
       aiEnabledGlobal: settingsRes?.ai_enabled === 1,
-      aiModel: settingsRes?.ai_model || '@cf/meta/llama-3.2-3b-instruct',
+      aiModel: settingsRes?.ai_model || '@cf/zai-org/glm-4.7-flash',
     },
     webhook: {
       url: `${proto}://${host}/api/whatsapp/webhook`,
       verify_token: c.env.META_WA_VERIFY_TOKEN || 'fitnessclub_secure_verify_token_2026',
     },
   });
+});
+
+/**
+ * 5.3 HEALTH CHECK DIRECTO DEL MICROSERVICIO DE IA
+ */
+whatsappRoutes.get('/api/whatsapp/ai-health', async (c) => {
+  const url = (
+    c.env.AI_MICROSERVICE_URL ||
+    (typeof process !== 'undefined' ? process.env?.AI_MICROSERVICE_URL : undefined) ||
+    'http://127.0.0.1:8788'
+  ).trim().replace(/\/+$/, '');
+
+  const start = Date.now();
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(`${url}/health`, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    const latencyMs = Date.now() - start;
+    if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      return c.json({
+        status: 'ok',
+        url: `${url}/health`,
+        latencyMs,
+        data,
+      });
+    }
+
+    return c.json({
+      status: 'error',
+      url: `${url}/health`,
+      latencyMs,
+      error: `Microservicio respondió con HTTP ${res.status}`,
+    }, 502);
+  } catch (err: any) {
+    return c.json({
+      status: 'error',
+      url: `${url}/health`,
+      latencyMs: Date.now() - start,
+      error: err?.message || 'Error conectando con el microservicio de IA',
+    }, 504);
+  }
 });
 
 /**

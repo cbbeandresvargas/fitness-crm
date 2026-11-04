@@ -7,5 +7,3 @@
 .DS_Store
 *.log
 worker-configuration.d.ts
-/whatsapp-crm-main
-/vocero-crm-main

@@ -39,6 +39,7 @@
 		"binding": "AI"
 	},
 	"vars": {
-		"CLOUDFLARE_ACCOUNT_ID": "7779d2868c06758814b3bad6cae29f6b"
+		"CLOUDFLARE_ACCOUNT_ID": "7779d2868c06758814b3bad6cae29f6b",
+		"AI_MICROSERVICE_URL": "http://127.0.0.1:8788"
 	}
 }

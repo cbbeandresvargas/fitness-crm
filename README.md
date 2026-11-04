@@ -187,11 +187,60 @@ Para ingresar al sistema en el entorno inicial:
 
 | Comando | Descripción |
 | :--- | :--- |
-| `npm run dev` | Sincroniza variables de entorno e inicia el servidor local con Wrangler y recarga en vivo. |
+| `npm run dev` | Sincroniza variables de entorno e inicia el servidor local del CRM con Wrangler y recarga en vivo (`http://127.0.0.1:8787`). |
+| `npm run dev:ai` | Inicia el microservicio autónomo de IA (`ai-micro`) localmente en el puerto `8788`. |
 | `npm run build` | Sincroniza variables, compila la SPA cliente (SolidJS/Vite) y valida tipos de TypeScript (`tsc --noEmit`). |
-| `npm run deploy` | Compila el cliente y despliega la aplicación a tu cuenta de Cloudflare Workers. |
+| `npm run typecheck:ai` | Valida estricta y estáticamente los tipos de TypeScript del microservicio de IA (`ai-micro`). |
+| `npm run deploy` | Compila el cliente y despliega el CRM principal (`fitness-crm`) a Cloudflare Workers. |
+| `npm run deploy:ai` | Despliega el microservicio de IA (`fitness-ai-micro`) a Cloudflare Workers. |
+| `npm run deploy:all` | Compila el frontend y despliega sucesivamente tanto el CRM principal como el microservicio de IA. |
 | `npm run config:sync` | Regenera manualmente `wrangler.jsonc` y `.dev.vars` a partir de tu archivo `.env`. |
 | `npm run d1:init` | Aplica `schema.sql` y `seed.sql` en la base de datos local SQLite de D1. |
+| `npm test` | Ejecuta la suite completa de pruebas unitarias e integración con Vitest. |
+
+---
+
+## 🚀 CI/CD & Despliegue Continuo Automatizado (GitHub Actions)
+
+El proyecto implementa un pipeline de Integración y Despliegue Continuo (CI/CD) de nivel producción mediante **GitHub Actions**, garantizando que tanto el CRM principal como el microservicio de IA (`fitness-ai-micro`) se validen y desplieguen automáticamente en Cloudflare.
+
+### 1. Workflows Configurados
+
+- **Quality Gate CI (`.github/workflows/ci.yml`)**:
+  - **Triggers**: Pull requests y pushes hacia la rama `main`.
+  - **Acciones**:
+    - Instalación limpia de dependencias (`npm ci`) para el CRM y para `ai-micro`.
+    - Typecheck estricto de TypeScript en ambos componentes (`npx tsc --noEmit` y `npm --prefix ai-micro run typecheck`).
+    - Compilación de producción de la SPA (Vite + SolidJS + Tailwind CSS 4).
+    - Ejecución de la suite completa de tests automatizados (Vitest).
+
+- **Continuous Deployment (`.github/workflows/deploy.yml`)**:
+  - **Triggers**: Push a la rama `main` o ejecución manual vía `workflow_dispatch` (con selector para desplegar `all`, `ai-micro` o solo `crm`).
+  - **Concurrencia segura**: Grupo `production-deploy` para evitar despliegues concurrentes conflictivos.
+  - **Job 1 (`deploy-ai`)**:
+    - Instala dependencias y valida tipos en `./ai-micro`.
+    - Despliega el microservicio `fitness-ai-micro` a Cloudflare Workers usando `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID`.
+  - **Job 2 (`deploy-crm`)**:
+    - Se ejecuta tras el éxito de `deploy-ai` (o de forma independiente si se selecciona en `workflow_dispatch`).
+    - Genera el build de assets de la SPA y valida TypeScript.
+    - Despliega el Worker edge principal `fitness-crm` y sirve los assets estáticos sincronizados.
+
+---
+
+### 🔑 Configuración de Secrets en GitHub Repository
+
+Para que GitHub Actions pueda desplegar automáticamente a tu cuenta de Cloudflare, debes registrar los siguientes secretos en tu repositorio:
+
+1. Dirígete a tu repositorio en GitHub: **Settings > Secrets and variables > Actions > New repository secret**.
+2. Agrega las siguientes variables:
+
+| Secreto | Descripción | ¿Dónde obtenerlo en Cloudflare? |
+| :--- | :--- | :--- |
+| **`CLOUDFLARE_API_TOKEN`** | Token de API con permisos de despliegue para Cloudflare Workers. | Cloudflare Dashboard > **My Profile > API Tokens > Create Token** > Usar plantilla *"Edit Cloudflare Workers"* (permisos para Workers Scripts, KV, D1, R2, Workers AI y Assets). |
+| **`CLOUDFLARE_ACCOUNT_ID`** | Identificador de tu cuenta en Cloudflare. | Cloudflare Dashboard > Barra lateral derecha en la vista de Overview de Workers, o ejecutando `npx wrangler whoami`. |
+
+> [!IMPORTANT]
+> Los secretos `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` se transmiten de forma cifrada a los runners de GitHub Actions y nunca son expuestos en los logs ni en el código fuente.
 
 ---
 
@@ -199,46 +248,57 @@ Para ingresar al sistema en el entorno inicial:
 
 ```text
 fitness-crm/
-├── .dev.vars                  # Variables locales para wrangler dev (auto-generado)
-├── .env                       # Variables de tu cuenta local (ignorado en git)
-├── .env.example               # Plantilla para que nuevos miembros creen su .env
-├── .gitignore                 # Exclusiones de Git (.env, .dev.vars, node_modules, etc.)
-├── index.html                 # Punto de entrada HTML de la aplicación web
-├── package.json               # Dependencias y scripts del proyecto
-├── README.md                  # Documentación oficial del CRM
-├── tsconfig.json              # Configuración de TypeScript
-├── vite.config.ts             # Configuración de Vite para SolidJS y TailwindCSS
-├── wrangler.jsonc             # Configuración activa de Cloudflare (auto-generada con run_worker_first: true)
-├── wrangler.template.jsonc    # Plantilla de configuración con marcadores de variables
+├── .github/
+│   └── workflows/
+│       ├── ci.yml                 # Pipeline de validación y pruebas de calidad (Root + AI)
+│       └── deploy.yml             # Pipeline de despliegue continuo a Cloudflare Workers
+├── .dev.vars                      # Variables locales para wrangler dev (auto-generado)
+├── .env                           # Variables de tu cuenta local (ignorado en git)
+├── .env.example                   # Plantilla para que nuevos miembros creen su .env
+├── .gitignore                     # Exclusiones de Git (.env, .dev.vars, node_modules, etc.)
+├── index.html                     # Punto de entrada HTML de la aplicación web
+├── package.json                   # Dependencias y scripts globales del CRM
+├── README.md                      # Documentación oficial del CRM
+├── tsconfig.json                  # Configuración de TypeScript
+├── vite.config.ts                 # Configuración de Vite para SolidJS y TailwindCSS
+├── wrangler.jsonc                 # Configuración activa de Cloudflare (auto-generada con run_worker_first: true)
+├── wrangler.template.jsonc        # Plantilla de configuración con marcadores de variables
 ├── scripts/
-│   └── sync-wrangler-env.mjs  # Sincronizador automático .env -> wrangler.jsonc
+│   └── sync-wrangler-env.mjs      # Sincronizador automático .env -> wrangler.jsonc
+├── ai-micro/                      # Microservicio autónomo de IA (Hono + Workers AI)
+│   ├── package.json               # Dependencias del microservicio
+│   ├── tsconfig.json              # Tipado estricto para Workers
+│   ├── wrangler.jsonc             # Configuración y bindings de Workers AI
+│   ├── README.md                  # Documentación del microservicio
+│   └── src/                       # Lógica de prompts, knowledge base y endpoints /health y /chat
 └── src/
-    ├── index.ts               # Servidor Hono y Worker principal en el Edge (CORS, Auth, Static)
-    ├── client/                # Frontend SPA con SolidJS y Tailwind CSS 4
-    │   ├── App.tsx            # Enrutamiento de vistas con Route Guards
-    │   ├── api.ts             # Cliente HTTP tipado hacia los endpoints de Hono con credentials:include
-    │   ├── index.css          # Sistema de diseño, tokens de color fuego y temas
-    │   ├── index.tsx          # Renderizado inicial en el DOM
-    │   ├── types.ts           # Interfaces de datos del cliente
-    │   ├── components/        # Componentes UI reutilizables (Layout, ProtectedRoute, modales)
-    │   ├── context/           # Contextos globales (AuthContext, ThemeContext)
-    │   └── pages/             # Vistas: Dashboard, Leads, LeadDetail, Team, Login, etc.
+    ├── index.ts                   # Servidor Hono y Worker principal en el Edge (CORS, Auth, Static)
+    ├── client/                    # Frontend SPA con SolidJS y Tailwind CSS 4
+    │   ├── App.tsx                # Enrutamiento de vistas con Route Guards
+    │   ├── api.ts                 # Cliente HTTP tipado hacia los endpoints de Hono con credentials:include
+    │   ├── index.css              # Sistema de diseño, tokens de color fuego y temas
+    │   ├── index.tsx              # Renderizado inicial en el DOM
+    │   ├── types.ts               # Interfaces de datos del cliente
+    │   ├── components/            # Componentes UI reutilizables (Layout, ProtectedRoute, modales)
+    │   ├── context/               # Contextos globales (AuthContext, ThemeContext)
+    │   └── pages/                 # Vistas: Dashboard, Leads, LeadDetail, Team, Login, etc.
     ├── db/
-    │   ├── schema.sql         # Esquema D1 relacional (users, leads, activity, etc.)
-    │   └── seed.sql           # Datos iniciales limpios para el CRM
+    │   ├── schema.sql             # Esquema D1 relacional (users, leads, activity, etc.)
+    │   └── seed.sql               # Datos iniciales limpios para el CRM
     ├── lib/
-    │   ├── ai.ts              # Integración con Cloudflare Workers AI
-    │   ├── auth.ts            # Autenticación con cookies HTTP-only (Secure en HTTPS) y sesiones en KV
-    │   ├── crypto.ts          # Cifrado AES-GCM para tokens de WhatsApp
-    │   ├── fcImport.ts        # Adaptador del modelo de datos de leads
-    │   ├── rules.ts           # Reglas de negocio (segmentación y normalización)
-    │   └── types.ts           # Tipos de TypeScript del backend y entorno (Env)
+    │   ├── ai.ts                  # Integración con Cloudflare Workers AI
+    │   ├── auth.ts                # Autenticación con cookies HTTP-only (Secure en HTTPS) y sesiones en KV
+    │   ├── crypto.ts              # Cifrado AES-GCM para tokens de WhatsApp
+    │   ├── fcImport.ts            # Adaptador del modelo de datos de leads
+    │   ├── rules.ts               # Reglas de negocio (segmentación y normalización)
+    │   └── types.ts               # Tipos de TypeScript del backend y entorno (Env)
     └── routes/
-        ├── activities.ts      # Catálogo de actividades de prospectos (/activities)
-        ├── auth.ts            # Rutas seguras de autenticación (/api/auth)
-        ├── importExport.ts    # Importación y exportación de prospectos (/api/import, /api/export)
-        ├── leads.ts           # Pipeline y gestión comercial de prospectos (/api/leads)
-        ├── team.ts            # Gestión de asesores, roles RBAC y auditoría (/api/team)
-        ├── templates.ts       # Plantillas de mensajes para WhatsApp (/api/templates)
-        └── whatsapp.ts        # Meta Graph API v25.0, webhook, chat y Knowledge Base
+        ├── activities.ts          # Catálogo de actividades de prospectos (/activities)
+        ├── auth.ts                # Rutas seguras de autenticación (/api/auth)
+        ├── importExport.ts        # Importación y exportación de prospectos (/api/import, /api/export)
+        ├── leads.ts               # Pipeline y gestión comercial de prospectos (/api/leads)
+        ├── team.ts                # Gestión de asesores, roles RBAC y auditoría (/api/team)
+        ├── templates.ts           # Plantillas de mensajes para WhatsApp (/api/templates)
+        └── whatsapp.ts            # Meta Graph API v25.0, webhook, chat y Knowledge Base
 ```
+

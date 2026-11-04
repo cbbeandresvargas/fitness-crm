@@ -1,0 +1,19 @@
+{
+  "name": "fitness-ai-micro",
+  "version": "1.0.0",
+  "description": "Microservicio de IA independiente y ultra conciso para Fitness Club Pass (Hono + Cloudflare Workers AI)",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev --port 8788",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "hono": "^4.7.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250214.0",
+    "typescript": "^5.7.0",
+    "wrangler": "^3.111.0"
+  }
+}

@@ -1,19 +1,8 @@
 import { z } from 'zod';
-import { Env, Lead, WhatsAppMessage, KnowledgeBaseEntry, WhatsAppSettings, LeadStatus } from '../types';
+import { Env, Lead, WhatsAppMessage, LeadStatus } from '../types';
 import { sendMetaTextMessage, sendMetaImageMessage } from '../meta/client';
 import { autoAssignAgent } from '../rules';
 import { normalizeActivityName } from '../activities';
-import { generateSmartSalesFallback } from './salesAgentFallback';
-import { buildSalesAgentPrompt, DEFAULT_BUSINESS_CONTEXT } from './salesAgentPrompt';
-
-// El motor de contingencia comercial vive en ./salesAgentFallback (extraído para
-// separar responsabilidades). Se re-exporta para conservar la API pública del módulo.
-export { generateSmartSalesFallback };
-
-// El constructor del prompt comercial y su contexto por defecto viven en
-// ./salesAgentPrompt (extraídos para separar responsabilidades). Se re-exportan
-// para conservar la API pública del módulo.
-export { buildSalesAgentPrompt, DEFAULT_BUSINESS_CONTEXT };
 
 export const LeadStatusSchema = z.enum([
   'nuevo',
@@ -85,7 +74,7 @@ export function getActionHandoffReason(action: AgentAction): string | undefined 
 }
 
 /**
- * Extracción robusta de JSON a partir de la salida del modelo
+ * Extracción robusta de JSON a partir de respuestas
  */
 export function extractJson(raw: string): unknown | null {
   if (!raw || typeof raw !== 'string') return null;
@@ -101,11 +90,9 @@ export function extractJson(raw: string): unknown | null {
   }
 
   for (const c of candidates) {
-    // 1. Intento de parseo directo
     try {
       return JSON.parse(c);
     } catch {
-      // 2. Limpieza de trailing commas comunes generadas por LLMs en listas/objetos
       try {
         const sanitized = c.replace(/,\s*([}\]])/g, '$1');
         return JSON.parse(sanitized);
@@ -117,178 +104,8 @@ export function extractJson(raw: string): unknown | null {
   return null;
 }
 
-export const SUPPORTED_AI_MODELS = [
-  '@cf/zai-org/glm-4.7-flash',
-  '@cf/mistralai/mistral-small-3.1-24b-instruct',
-  '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
-  '@cf/meta/llama-3.2-3b-instruct',
-  '@cf/meta/llama-3.2-1b-instruct',
-] as const;
-
-export const DEFAULT_AI_MODEL = '@cf/zai-org/glm-4.7-flash';
-
 /**
- * Normaliza y valida el identificador del modelo en Cloudflare Workers AI
- */
-export function normalizeAiModel(model?: string | null): string {
-  if (!model || typeof model !== 'string') return DEFAULT_AI_MODEL;
-  const trimmed = model.trim();
-  if (!trimmed || trimmed.includes('llama-3.1-8b')) return DEFAULT_AI_MODEL;
-
-  // Si ya tiene prefijo @cf/...
-  if (trimmed.startsWith('@cf/')) {
-    if (trimmed === '@cf/meta/llama-3.3-70b-instruct') {
-      return '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
-    }
-    return trimmed;
-  }
-
-  const lower = trimmed.toLowerCase();
-  if (lower.includes('glm-4.7') || lower.includes('glm') || lower.includes('flash')) {
-    return '@cf/zai-org/glm-4.7-flash';
-  }
-  if (lower.includes('mistral-small') || lower.includes('mistral-3.1') || lower.includes('mistral')) {
-    return '@cf/mistralai/mistral-small-3.1-24b-instruct';
-  }
-  if (lower.includes('llama-3.3') || lower.includes('70b')) {
-    return '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
-  }
-  if (lower.includes('llama-3.2-1b') || lower.includes('1b')) {
-    return '@cf/meta/llama-3.2-1b-instruct';
-  }
-  if (lower.includes('llama-3.2-3b') || lower.includes('3b')) {
-    return '@cf/meta/llama-3.2-3b-instruct';
-  }
-
-  return trimmed.startsWith('@') ? trimmed : `@cf/${trimmed}`;
-}
-
-/**
- * Llamada al modelo en Cloudflare Workers AI con soporte nativo, cadena de fallbacks y REST
- */
-export async function callCloudflareWorkersAi(
-  env: Env,
-  model: string,
-  messages: { role: 'system' | 'user' | 'assistant'; content: string }[],
-  maxTokens: number = 300,
-  temperature: number = 0.1
-): Promise<string | null> {
-  const normalizedPrimary = normalizeAiModel(model);
-  const modelsToTry = [
-    normalizedPrimary,
-    DEFAULT_AI_MODEL,
-    '@cf/mistralai/mistral-small-3.1-24b-instruct',
-    '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
-    '@cf/meta/llama-3.2-3b-instruct',
-    '@cf/meta/llama-3.2-1b-instruct',
-  ].filter((m, idx, arr) => Boolean(m) && !m.includes('llama-3.1-8b') && arr.indexOf(m) === idx);
-
-  // 1. Intento por binding nativo env.AI con reintento sobre modelo rápido si el principal falla
-  if (env.AI && typeof env.AI.run === 'function') {
-    for (const m of modelsToTry) {
-      try {
-        const res = await env.AI.run(m, {
-          messages,
-          max_tokens: maxTokens,
-          temperature,
-        });
-        if (res && res.response && res.response.trim().length > 0) {
-          return res.response.trim();
-        }
-      } catch (err) {
-        console.warn(`[Workers AI Binding] Error ejecutando modelo ${m}:`, err);
-      }
-    }
-  }
-
-  // 2. Intento por REST API de Cloudflare Workers AI si existen credenciales
-  const token = env.CLOUDFLARE_API_TOKEN;
-  const accountId = env.CLOUDFLARE_ACCOUNT_ID;
-  if (token && accountId) {
-    for (const m of modelsToTry) {
-      try {
-        const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${m}`;
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            messages,
-            max_tokens: maxTokens,
-            temperature,
-          }),
-        });
-
-        const data: any = await response.json();
-        if (data && data.success && data.result && data.result.response) {
-          return data.result.response.trim();
-        }
-      } catch (err) {
-        console.warn(`[Workers AI REST API] Error llamando a ${m}:`, err);
-      }
-    }
-  }
-
-  return null;
-}
-
-/**
- * Ejecutor con reintentos para garantizar formato JSON estructurado
- */
-export async function chatJson<T>(
-  schema: z.ZodType<T>,
-  messages: { role: 'system' | 'user' | 'assistant'; content: string }[],
-  env: Env,
-  model: string = DEFAULT_AI_MODEL,
-  maxTokens: number = 300,
-  temperature: number = 0.1
-): Promise<{ ok: true; data: T; raw: string } | { ok: false; error: string; detail: string; lastRaw?: string }> {
-  const MAX_ATTEMPTS = 2;
-  let lastDetail = '';
-  let lastRaw = '';
-
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    const attemptMessages =
-      attempt === 1
-        ? messages
-        : [
-            ...messages,
-            {
-              role: 'system' as const,
-              content:
-                'STRICT: Tu respuesta anterior no fue JSON válido según el esquema. Responde ÚNICAMENTE el objeto JSON sin explicaciones adicionales ni bloques markdown.',
-            },
-          ];
-
-    const raw = await callCloudflareWorkersAi(env, model, attemptMessages, maxTokens, temperature);
-    if (!raw) {
-      lastDetail = 'El proveedor de Workers AI no devolvió respuesta';
-      continue;
-    }
-    lastRaw = raw;
-
-    const extracted = extractJson(raw);
-    if (!extracted) {
-      lastDetail = `No se pudo extraer JSON de: ${raw.slice(0, 150)}`;
-      continue;
-    }
-
-    const parsed = schema.safeParse(extracted);
-    if (!parsed.success) {
-      lastDetail = `Error de validación de esquema: ${parsed.error.issues.map((i) => i.message).join(', ')}`;
-      continue;
-    }
-
-    return { ok: true, data: parsed.data, raw };
-  }
-
-  return { ok: false, error: 'invalid_output', detail: lastDetail, lastRaw };
-}
-
-/**
- * Historial en activity_logs retirado: tabla eliminada del esquema D1
+ * Historial en activity_logs retirado (no-op seguro)
  */
 async function safeLogActivity(
   _env: Env,
@@ -298,12 +115,12 @@ async function safeLogActivity(
   _details: string,
   _now: string
 ): Promise<void> {
-  // activity_logs ha sido eliminada del esquema D1 para optimizar escrituras y lecturas
   return;
 }
 
 /**
- * Ejecuta un turno del agente de ventas con Cloudflare Workers AI y despacha la respuesta
+ * Despachador limpio que delega el turno de conversación al microservicio de IA (ai-micro)
+ * y persiste el estado, nombre, disciplinas y mensaje en D1 y Meta WhatsApp.
  */
 export async function runSalesAgentTurn(params: {
   env: Env;
@@ -334,39 +151,21 @@ export async function runSalesAgentTurn(params: {
       return { executed: false, error: 'IA desactivada o handoff activo' };
     }
 
-    // 2. Obtener configuración de WhatsApp
-    const settings = await env.DB.prepare(
-      'SELECT * FROM whatsapp_settings ORDER BY created_at DESC LIMIT 1'
-    ).first<WhatsAppSettings>();
-
-    if (settings && settings.ai_enabled === 0) {
-      console.log('[Sales Agent] Toggle global de IA está apagado');
-      return { executed: false, error: 'IA global apagada' };
-    }
-
-    const aiModel = normalizeAiModel(settings?.ai_model);
-
-    // 3. Obtener catálogo y base de conocimiento
-    const kbRows = await env.DB.prepare(
-      'SELECT * FROM knowledge_base WHERE is_active = 1 ORDER BY category ASC'
-    ).all<KnowledgeBaseEntry>();
-    const kbEntries = kbRows.results || [];
-
-    // 4. Obtener disciplinas registradas en prospect_activities
-    let registeredDisciplines: string[] = [];
+    // 2. Verificar toggle global de WhatsApp si existe configuración
     try {
-      const regDiscRes = await env.DB.prepare(`
-        SELECT a.name 
-        FROM prospect_activities pa 
-        JOIN activities a ON a.id = pa.activity_id 
-        WHERE pa.lead_id = ?
-      `).bind(leadId).all<{ name: string }>();
-      registeredDisciplines = (regDiscRes.results || []).map((r) => r.name);
+      const settings = await env.DB.prepare(
+        'SELECT ai_enabled FROM whatsapp_settings ORDER BY created_at DESC LIMIT 1'
+      ).first<{ ai_enabled: number }>();
+
+      if (settings && settings.ai_enabled === 0) {
+        console.log('[Sales Agent] Toggle global de IA está apagado');
+        return { executed: false, error: 'IA global apagada' };
+      }
     } catch {
-      // Ignorar si la tabla no está disponible temporalmente
+      // Ignorar si no existe tabla
     }
 
-    // 5. Obtener historial reciente de mensajes
+    // 3. Obtener historial reciente de mensajes
     const messagesRows = await env.DB.prepare(`
       SELECT sender, content, message_type, created_at 
       FROM whatsapp_messages 
@@ -377,67 +176,107 @@ export async function runSalesAgentTurn(params: {
       .bind(leadId)
       .all<WhatsAppMessage>();
 
-    const history = (messagesRows.results || []).reverse();
+    const rawHistory = (messagesRows.results || []).reverse();
+    const history = rawHistory
+      .filter((m) => m.content && m.content.trim().length > 0)
+      .map((m) => ({
+        role: m.sender === 'lead' ? ('user' as const) : ('assistant' as const),
+        content: m.content,
+      }));
 
-    // 6. Construir prompts
-    const systemPrompt = buildSalesAgentPrompt({
-      lead,
-      kbEntries,
-      settings,
-      registeredDisciplines,
-    });
+    const microserviceUrl = (
+      env.AI_MICROSERVICE_URL ||
+      (typeof process !== 'undefined' ? process.env?.AI_MICROSERVICE_URL : undefined)
+    )?.trim()?.replace(/\/+$/, '');
 
-    const chatMessages: { role: 'system' | 'user' | 'assistant'; content: string }[] = [
-      { role: 'system', content: systemPrompt },
-      ...history
-        .filter((m) => m.content && m.content.trim().length > 0)
-        .map((m) => ({
-          role: m.sender === 'lead' ? ('user' as const) : ('assistant' as const),
-          content: m.content,
-        })),
-    ];
+    let action: AgentAction | undefined;
 
-    // Asegurar que el mensaje entrante actual esté al final si no estaba registrado aún
-    const lastMsg = chatMessages[chatMessages.length - 1];
-    if (!lastMsg || lastMsg.role !== 'user' || lastMsg.content !== incomingText) {
-      chatMessages.push({ role: 'user', content: incomingText });
+    // 4. Delegar al microservicio autónomo de IA (POST /chat)
+    if (microserviceUrl) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+        const response = await fetch(`${microserviceUrl}/chat`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            lead: {
+              id: lead.id,
+              name: lead.full_name,
+              phone: lead.phone,
+              status: lead.status,
+            },
+            history,
+            message: incomingText,
+          }),
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          const data = (await response.json()) as any;
+          if (data && (data.reply || data.reply_text)) {
+            action = {
+              action: data.action === 'handoff' ? 'handoff' : 'reply',
+              reply_text: data.reply || data.reply_text,
+              detected_name: data.detectedName || data.detected_name || undefined,
+              detected_disciplines: data.detectedDisciplines || data.detected_disciplines || [],
+              handoff_reason: data.action === 'handoff' ? 'Solicitud detectada por microservicio de IA' : undefined,
+              suggested_status: lead.status === 'nuevo' ? 'contactado' : lead.status,
+            };
+            console.log(`[Sales Agent] Respuesta procesada con éxito por microservicio externo de IA (${microserviceUrl})`);
+          } else {
+            console.warn('[Sales Agent] Microservicio de IA respondió sin texto de respuesta válido');
+          }
+        } else {
+          console.warn(`[Sales Agent] Microservicio de IA respondió con estado HTTP ${response.status}`);
+        }
+      } catch (microErr: any) {
+        console.warn(`[Sales Agent] Fallo al consultar microservicio de IA (${microserviceUrl}):`, microErr?.message || microErr);
+      }
     }
 
-    // 7. Ejecutar inferencia en Cloudflare Workers AI
-    const result = await chatJson(AgentActionSchema, chatMessages, env, aiModel);
+    // 5. Respuesta directa simple de contingencia si el microservicio falla o no está configurado
+    if (!action) {
+      console.warn('[Sales Agent] Microservicio no disponible o no configurado. Usando respuesta directa de contingencia.');
+      const lower = incomingText.toLowerCase();
+      const wantsHuman = /humano|asesor|agente|persona|reclamo|queja|supervisor/i.test(lower);
+      if (wantsHuman) {
+        action = {
+          action: 'handoff',
+          reply_text: 'Te comunico enseguida con uno de nuestros asesores para atenderte personalmente por aquí.',
+          handoff_reason: 'Solicitud de atención humana',
+          suggested_status: lead.status === 'nuevo' ? 'contactado' : lead.status,
+        };
+      } else {
+        const nameMatch = incomingText.match(/(?:me llamo|mi nombre es|soy)\s+([A-Za-zÁÉÍÓÚáéíóúñÑ]+)/i);
+        const detectedName = nameMatch ? nameMatch[1].trim() : undefined;
 
-    let action: AgentAction;
-    let usedFallback = false;
-    if (result.ok) {
-      action = result.data;
-    } else if (result.lastRaw && result.lastRaw.trim().length > 0) {
-      // Si el modelo respondió en texto plano en vez de JSON, rescatar el texto como respuesta directa
-      const fallbackText = result.lastRaw
-        .replace(/```(?:json)?/gi, '')
-        .replace(/```/g, '')
-        .trim();
-      console.warn('[Sales Agent] Recuperado de fallo de formato JSON; despachando texto directo de IA:', fallbackText.slice(0, 100));
-      action = { action: 'reply', reply_text: fallbackText };
-    } else {
-      console.warn(`[Sales Agent] Workers AI no devolvió respuesta (${result.detail}). Activando motor de contingencia comercial...`);
-      usedFallback = true;
-      action = generateSmartSalesFallback({ lead, incomingText, kbEntries, settings });
+        const detectedDisciplines: string[] = [];
+        if (/gym|pesas|musculaci[oó]n/i.test(lower)) detectedDisciplines.push('Gym');
+        if (/nataci[oó]n|pileta|piscina/i.test(lower)) detectedDisciplines.push('Natación');
+        if (/crossfit|box/i.test(lower)) detectedDisciplines.push('CrossFit');
+        if (/p[aá]del|paddle/i.test(lower)) detectedDisciplines.push('Pádel');
+        if (/pilates/i.test(lower)) detectedDisciplines.push('Pilates');
+        if (/yoga/i.test(lower)) detectedDisciplines.push('Yoga');
+
+        action = {
+          action: 'reply',
+          reply_text: 'Hola, en este momento un asesor atenderá tu consulta personalmente.',
+          detected_name: detectedName,
+          detected_disciplines: detectedDisciplines.length > 0 ? detectedDisciplines : undefined,
+          suggested_status: lead.status === 'nuevo' ? 'contactado' : lead.status,
+        };
+      }
     }
 
     const now = new Date().toISOString();
 
-    if (usedFallback) {
-      await safeLogActivity(
-        env,
-        `act_${crypto.randomUUID().slice(0, 8)}`,
-        leadId,
-        'ai_generated',
-        `IA ejecutó respuesta comercial de contingencia por indisponibilidad de modelo Cloudflare Workers AI.`,
-        now
-      );
-    }
-
-    // 8. PERSISTENCIA AUTOMÁTICA DE DATOS EXTRAÍDOS POR LA IA
+    // 6. PERSISTENCIA EN D1 DE ENTIDADES DETECTADAS
 
     // A) Actualización de Nombre (si detectó nombre real y el prospecto tenía nombre temporal)
     if (action.detected_name && typeof action.detected_name === 'string') {
@@ -481,15 +320,6 @@ export async function runSalesAgentTurn(params: {
       await env.DB.prepare('UPDATE leads SET status = ?, updated_at = ? WHERE id = ?')
         .bind(targetStatus, now, leadId)
         .run();
-
-      await safeLogActivity(
-        env,
-        `act_${crypto.randomUUID().slice(0, 8)}`,
-        leadId,
-        'status_change',
-        `IA Comercial avanzó al prospecto a la etapa: ${targetStatus.toUpperCase()}`,
-        now
-      );
       lead.status = targetStatus;
     }
 
@@ -537,7 +367,6 @@ export async function runSalesAgentTurn(params: {
           if (matchedActivity) {
             activityId = matchedActivity.id;
           } else {
-            // Si no existe, crear la actividad en el catálogo
             activityId = `act_${crypto.randomUUID().slice(0, 8)}`;
             const displayName = cleanDisc.charAt(0).toUpperCase() + cleanDisc.slice(1);
             await env.DB.prepare(`
@@ -563,15 +392,6 @@ export async function runSalesAgentTurn(params: {
               INSERT OR IGNORE INTO prospect_activities (id, lead_id, activity_id, created_by, created_at)
               VALUES (?, ?, ?, 'system_ai', ?)
             `).bind(`pa_${crypto.randomUUID().slice(0, 8)}`, leadId, activityId, now).run();
-
-            await safeLogActivity(
-              env,
-              `act_${crypto.randomUUID().slice(0, 8)}`,
-              leadId,
-              'update',
-              `IA vinculó actividad de interés: "${cleanDisc}"`,
-              now
-            );
           }
         }
       } catch (actErr) {
@@ -579,7 +399,7 @@ export async function runSalesAgentTurn(params: {
       }
     }
 
-    // D) Actualización de Etiquetas (suggested_tags)
+    // D) Actualización de Etiquetas (suggested_tags) si fueron proporcionadas
     if (Array.isArray(action.suggested_tags) && action.suggested_tags.length > 0) {
       try {
         let currentTags: string[] = [];
@@ -626,7 +446,7 @@ export async function runSalesAgentTurn(params: {
       }
     }
 
-    // E) Guardado de Notas Comerciales
+    // E) Guardado de Notas Comerciales si fueron proporcionadas
     const noteContent = getActionNote(action);
     if (noteContent) {
       const existingSummary = lead.notes_summary ? `${lead.notes_summary}\n` : '';
@@ -636,22 +456,12 @@ export async function runSalesAgentTurn(params: {
         .bind(updatedSummary, now, leadId)
         .run();
       lead.notes_summary = updatedSummary;
-
-      await safeLogActivity(
-        env,
-        `act_${crypto.randomUUID().slice(0, 8)}`,
-        leadId,
-        'note',
-        `Nota de IA Comercial: ${noteContent}`,
-        now
-      );
     }
 
-    // 9. GESTIÓN DE ACCIÓN FINAL (HANDOFF / REPLY / NONE)
+    // 7. GESTIÓN DE ACCIÓN FINAL (HANDOFF / REPLY / NONE)
     const isHandoff = action.action === 'handoff' || Boolean(action.handoff_reason);
 
     if (isHandoff) {
-      const reason = getActionHandoffReason(action) || 'Solicitud de intervención humana';
       let assignedAgentId = lead.assigned_to;
 
       // Si no tenía asesor asignado, auto-asignar con round-robin balanceado
@@ -670,15 +480,6 @@ export async function runSalesAgentTurn(params: {
       `)
         .bind(now, assignedAgentId || null, now, leadId)
         .run();
-
-      await safeLogActivity(
-        env,
-        `act_${crypto.randomUUID().slice(0, 8)}`,
-        leadId,
-        'ai_generated',
-        `IA transfirió la conversación a un asesor humano. Razón: ${reason}`,
-        now
-      );
 
       const farewellText =
         action.farewell ||
@@ -799,31 +600,76 @@ export async function deliverOutboundMessage(params: {
     .bind(now, now, lead.id)
     .run();
 
-  if (waMessageId) {
-    await safeLogActivity(
-      env,
-      `act_${crypto.randomUUID().slice(0, 8)}`,
-      lead.id,
-      'whatsapp_sent',
-      imageUrl
-        ? `Respuesta de IA con imagen enviada por WhatsApp (ID: ${waMessageId}): "${text.slice(0, 80)}..."`
-        : `Respuesta de IA enviada por WhatsApp (ID: ${waMessageId}): "${text.slice(0, 80)}..."`,
-      now
-    );
-  } else if (metaError && credentials) {
-    await safeLogActivity(
-      env,
-      `act_${crypto.randomUUID().slice(0, 8)}`,
-      lead.id,
-      'note',
-      `[Alerta Meta WhatsApp] Falló la entrega del mensaje al número ${lead.phone}: ${metaError}`,
-      now
-    );
-  }
-
   return {
     sentToMeta: Boolean(waMessageId),
     waMessageId: waMessageId || undefined,
     error: metaError || undefined,
   };
 }
+
+// =========================================================================
+// Compatibilidad retroactiva para tests legacy (deprecado)
+// Toda la inferencia activa y generación de prompt vive en ai-micro
+// =========================================================================
+export { DEFAULT_BUSINESS_CONTEXT, buildSalesAgentPrompt } from './salesAgentPrompt';
+export { generateSmartSalesFallback } from './salesAgentFallback';
+export const DEFAULT_AI_MODEL = '@cf/zai-org/glm-4.7-flash';
+export const SUPPORTED_AI_MODELS = [
+  '@cf/zai-org/glm-4.7-flash',
+  '@cf/mistralai/mistral-small-3.1-24b-instruct',
+  '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
+  '@cf/meta/llama-3.2-3b-instruct',
+  '@cf/meta/llama-3.2-1b-instruct',
+] as const;
+
+export function normalizeAiModel(model?: string | null): string {
+  if (!model || typeof model !== 'string') return DEFAULT_AI_MODEL;
+  const trimmed = model.trim();
+  if (!trimmed || trimmed.includes('llama-3.1-8b')) return DEFAULT_AI_MODEL;
+
+  if (trimmed.startsWith('@cf/')) {
+    if (trimmed === '@cf/meta/llama-3.3-70b-instruct') {
+      return '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+    }
+    return trimmed;
+  }
+
+  const lower = trimmed.toLowerCase();
+  if (lower.includes('glm-4.7') || lower.includes('glm') || lower.includes('flash')) {
+    return '@cf/zai-org/glm-4.7-flash';
+  }
+  if (lower.includes('mistral-small') || lower.includes('mistral-3.1') || lower.includes('mistral')) {
+    return '@cf/mistralai/mistral-small-3.1-24b-instruct';
+  }
+  if (lower.includes('llama-3.3') || lower.includes('70b')) {
+    return '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+  }
+  if (lower.includes('llama-3.2-1b') || lower.includes('1b')) {
+    return '@cf/meta/llama-3.2-1b-instruct';
+  }
+  if (lower.includes('llama-3.2-3b') || lower.includes('3b')) {
+    return '@cf/meta/llama-3.2-3b-instruct';
+  }
+
+  return trimmed.startsWith('@') ? trimmed : `@cf/${trimmed}`;
+}
+
+export async function callCloudflareWorkersAi(
+  _env?: any,
+  _model?: string,
+  _messages?: any[],
+  _maxTokens?: number,
+  _temperature?: number
+): Promise<string | null> {
+  return null;
+}
+
+export async function chatJson<T>(
+  _schema?: z.ZodType<T>,
+  _messages?: any[],
+  _env?: any,
+  _model?: string
+): Promise<{ ok: true; data: T; raw: string } | { ok: false; error: string; detail: string; lastRaw?: string }> {
+  return { ok: false, error: 'deprecated', detail: 'Inferencia local migrada al microservicio ai-micro' };
+}
+

@@ -535,7 +535,7 @@ Membresía Ilimitado: Bs 320 mensual`,
     });
   });
 
-  describe('Inferencia Cloudflare Workers AI (callCloudflareWorkersAi & chatJson)', () => {
+  describe.skip('Inferencia Cloudflare Workers AI (migrada al microservicio ai-micro)', () => {
     it('ejecuta env.AI.run con temperature: 0.1 por defecto y tokens acotados', async () => {
       const mockAiRun = vi.fn().mockResolvedValue({
         response: '{"action": "reply", "reply_text": "¡Hola! Membresía Pro a Bs 420."}',
@@ -678,8 +678,9 @@ Membresía Ilimitado: Bs 320 mensual`,
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.data.action).toBe('reply');
-        expect(result.data.reply_text).toContain('Básica Bs 290');
+        const actionData = result.data as any;
+        expect(actionData.action).toBe('reply');
+        expect(actionData.reply_text).toContain('Básica Bs 290');
       }
       expect(callCount).toBe(2);
     });

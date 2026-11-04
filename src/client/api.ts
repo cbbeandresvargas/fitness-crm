@@ -483,6 +483,21 @@ export const api = {
     });
   },
 
+  async testAiMicroservice(): Promise<{
+    success: boolean;
+    url?: string;
+    service?: string;
+    status?: string;
+    models?: { primary?: string; fallback?: string };
+    aiBindingAvailable?: boolean;
+    durationMs?: number;
+    error?: string;
+  }> {
+    return fetchJson('/api/whatsapp/test-ai-microservice', {
+      method: 'POST',
+    });
+  },
+
   async getWhatsAppInbox(): Promise<{ conversations: ConversationSummary[] }> {
     return fetchJson('/api/whatsapp/inbox');
   },

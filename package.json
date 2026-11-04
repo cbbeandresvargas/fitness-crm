@@ -17,6 +17,10 @@
     "build": "vite build && tsc --noEmit",
     "predeploy": "npm run config:sync",
     "deploy": "npm run build && wrangler deploy",
+    "dev:ai": "npm --prefix ai-micro run dev",
+    "typecheck:ai": "npm --prefix ai-micro run typecheck",
+    "deploy:ai": "npm --prefix ai-micro run deploy",
+    "deploy:all": "npm run build && npm run deploy && npm run deploy:ai",
     "d1:init": "wrangler d1 execute fitness-crm-db --local --file=src/db/schema.sql && wrangler d1 execute fitness-crm-db --local --file=src/db/seed.sql",
     "d1:migrate:remote": "wrangler d1 execute fitness-crm-db --remote --file=src/db/schema.sql -y",
     "test": "vitest run"

@@ -2,7 +2,7 @@ import { createSignal, onMount, For, Show } from 'solid-js';
 import { Layout } from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
-import { WhatsAppSettings as SettingsType, WebhookInfo, KnowledgeBaseEntry, Sticker } from '../types';
+import { WhatsAppSettings as SettingsType, WebhookInfo, Sticker } from '../types';
 import {
   Settings,
   Bot,
@@ -11,12 +11,9 @@ import {
   CheckCircle2,
   AlertCircle,
   Copy,
-  Plus,
-  Pencil,
   Trash2,
   RefreshCw,
   Phone,
-  BookOpen,
   Sparkles,
   X,
   Activity,
@@ -26,8 +23,8 @@ import {
   Upload,
   Image as ImageIcon,
   Film,
-  Lightbulb,
   Zap,
+  Server,
 } from 'lucide-solid';
 import {
   processImageForSticker,
@@ -37,7 +34,7 @@ import {
 
 export default function WhatsAppSettings() {
   const { showToast } = useAuth();
-  const [activeTab, setActiveTab] = createSignal<'connection' | 'ai' | 'kb' | 'stickers' | 'diagnostics'>('connection');
+  const [activeTab, setActiveTab] = createSignal<'connection' | 'ai' | 'stickers' | 'diagnostics'>('connection');
   const [settings, setSettings] = createSignal<(SettingsType & { env_configured?: boolean }) | null>(null);
   const [webhook, setWebhook] = createSignal<WebhookInfo | null>(null);
   const [loading, setLoading] = createSignal(true);
@@ -46,6 +43,16 @@ export default function WhatsAppSettings() {
   const [testResult, setTestResult] = createSignal<{ success: boolean; message: string } | null>(null);
   const [savedSuccess, setSavedSuccess] = createSignal(false);
 
+  // Microservicio de IA State & Testing
+  const [aiEnabled, setAiEnabled] = createSignal(true);
+  const [testingMicroservice, setTestingMicroservice] = createSignal(false);
+  const [microserviceTestResult, setMicroserviceTestResult] = createSignal<{
+    success: boolean;
+    message: string;
+    details?: any;
+    durationMs?: number;
+  } | null>(null);
+
   // Diagnostics & Simulator
   const [diagnostics, setDiagnostics] = createSignal<any | null>(null);
   const [runningDiag, setRunningDiag] = createSignal(false);
@@ -53,21 +60,6 @@ export default function WhatsAppSettings() {
   const [sendLiveWhatsApp, setSendLiveWhatsApp] = createSignal(true);
   const [simulating, setSimulating] = createSignal(false);
   const [simResult, setSimResult] = createSignal<any | null>(null);
-
-  // Form Fields para IA
-  const [aiEnabled, setAiEnabled] = createSignal(true);
-  const [aiModel, setAiModel] = createSignal('@cf/zai-org/glm-4.7-flash');
-  const [aiTone, setAiTone] = createSignal('');
-  const [aiInstructions, setAiInstructions] = createSignal('');
-  const [businessContext, setBusinessContext] = createSignal('');
-
-  // Knowledge Base State
-  const [kbEntries, setKbEntries] = createSignal<KnowledgeBaseEntry[]>([]);
-  const [showKbModal, setShowKbModal] = createSignal(false);
-  const [editingKbId, setEditingKbId] = createSignal<string | null>(null);
-  const [kbCategory, setKbCategory] = createSignal<string>('plan_precio');
-  const [kbTitle, setKbTitle] = createSignal('');
-  const [kbContent, setKbContent] = createSignal('');
 
   // Stickers State
   const [stickers, setStickers] = createSignal<Sticker[]>([]);
@@ -90,17 +82,10 @@ export default function WhatsAppSettings() {
       if (res.settings) {
         setSettings(res.settings as any);
         setAiEnabled(res.settings.ai_enabled === 1);
-        setAiModel(res.settings.ai_model || '@cf/zai-org/glm-4.7-flash');
-        setAiTone(res.settings.ai_tone || '');
-        setAiInstructions(res.settings.ai_instructions || '');
-        setBusinessContext(res.settings.business_context || '');
       }
       if (res.webhook) {
         setWebhook(res.webhook);
       }
-
-      const kbRes = await api.getKnowledgeBase();
-      setKbEntries(kbRes.entries || []);
 
       await loadStickers();
     } catch (err) {
@@ -112,29 +97,59 @@ export default function WhatsAppSettings() {
 
   onMount(loadData);
 
-  const handleSaveAiSettings = async (e: Event) => {
-    e.preventDefault();
+  const handleSaveAiSettings = async (e?: Event) => {
+    if (e) e.preventDefault();
     setSaving(true);
 
     try {
       const res = await api.saveWhatsAppConfig({
         ai_enabled: aiEnabled(),
-        ai_model: aiModel(),
-        ai_tone: aiTone(),
-        ai_instructions: aiInstructions(),
-        business_context: businessContext(),
       });
 
       if (res.success) {
         setSavedSuccess(true);
         setTimeout(() => setSavedSuccess(false), 3000);
-        showToast('Configuración de IA guardada con éxito', 'success');
+        showToast('Configuración del Asistente de IA guardada con éxito', 'success');
         await loadData();
       }
     } catch (err: any) {
       showToast(`Error al guardar: ${err.message || 'Error desconocido'}`, 'error');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleTestMicroservice = async () => {
+    setTestingMicroservice(true);
+    setMicroserviceTestResult(null);
+
+    try {
+      const res = await api.testAiMicroservice();
+      if (res.success) {
+        setMicroserviceTestResult({
+          success: true,
+          message: `Microservicio ${res.service || 'ai-micro'} conectado exitosamente (Respuesta OK)`,
+          details: res,
+          durationMs: res.durationMs,
+        });
+        showToast('Conexión con el Microservicio ai-micro exitosa', 'success');
+      } else {
+        setMicroserviceTestResult({
+          success: false,
+          message: res.error || 'Error al conectar con el microservicio',
+          details: res,
+          durationMs: res.durationMs,
+        });
+        showToast(`Fallo al contactar ai-micro: ${res.error || 'Error'}`, 'error');
+      }
+    } catch (err: any) {
+      setMicroserviceTestResult({
+        success: false,
+        message: err.message || 'No se pudo comunicar con el endpoint del microservicio',
+      });
+      showToast(`Error probando microservicio: ${err.message}`, 'error');
+    } finally {
+      setTestingMicroservice(false);
     }
   };
 
@@ -201,72 +216,6 @@ export default function WhatsAppSettings() {
       setSimResult({ success: false, error: err.message });
     } finally {
       setSimulating(false);
-    }
-  };
-
-  // Knowledge Base actions
-  const openNewKbModal = () => {
-    setEditingKbId(null);
-    setKbCategory('plan_precio');
-    setKbTitle('');
-    setKbContent('');
-    setShowKbModal(true);
-  };
-
-  const openEditKbModal = (entry: KnowledgeBaseEntry) => {
-    setEditingKbId(entry.id);
-    setKbCategory(entry.category);
-    setKbTitle(entry.title);
-    setKbContent(entry.content);
-    setShowKbModal(true);
-  };
-
-  const handleSaveKb = async (e: Event) => {
-    e.preventDefault();
-    if (!kbTitle().trim() || !kbContent().trim()) return;
-
-    try {
-      await api.saveKnowledgeBaseEntry({
-        id: editingKbId() || undefined,
-        category: kbCategory(),
-        title: kbTitle().trim(),
-        content: kbContent().trim(),
-      });
-      setShowKbModal(false);
-      const kbRes = await api.getKnowledgeBase();
-      setKbEntries(kbRes.entries || []);
-      showToast('Entrada de base de conocimiento guardada', 'success');
-    } catch (err: any) {
-      showToast(`Error guardando entrada: ${err.message}`, 'error');
-    }
-  };
-
-  const handleDeleteKb = async (id: string) => {
-    if (!confirm('¿Deseas eliminar esta entrada de la base de conocimiento?')) return;
-    try {
-      await api.deleteKnowledgeBaseEntry(id);
-      const kbRes = await api.getKnowledgeBase();
-      setKbEntries(kbRes.entries || []);
-      showToast('Entrada de conocimiento eliminada', 'info');
-    } catch (err: any) {
-      showToast(`Error eliminando entrada: ${err.message}`, 'error');
-    }
-  };
-
-  const formatCategoryLabel = (cat: string) => {
-    switch (cat) {
-      case 'plan_precio':
-        return 'Planes & Precios (Bs)';
-      case 'como_funciona_app':
-        return 'Cómo funciona la App';
-      case 'centros_aliados':
-        return 'Centros & Sedes';
-      case 'objecion_frecuente':
-        return 'Objeción & Cierre';
-      case 'politica':
-        return 'Políticas';
-      default:
-        return cat.replace('_', ' ');
     }
   };
 
@@ -383,7 +332,7 @@ export default function WhatsAppSettings() {
                 <span>WhatsApp Cloud API (v25.0) & IA Comercial</span>
               </h1>
               <p class="text-xs text-muted">
-                Credenciales por variables de entorno y base de conocimiento para Fitness Club Pass Cochabamba.
+                Credenciales por variables de entorno y microservicio autónomo de IA para Fitness Club Pass.
               </p>
             </div>
           </div>
@@ -421,20 +370,7 @@ export default function WhatsAppSettings() {
             }`}
           >
             <Bot size={13} />
-            <span>Agente Comercial IA</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('kb')}
-            class={`px-3 py-1.5 rounded-lg font-medium transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-              activeTab() === 'kb'
-                ? 'bg-accent text-white shadow-xs'
-                : 'text-muted hover:text-body hover:bg-elevate'
-            }`}
-          >
-            <Database size={13} />
-            <span>Catálogo & Precios</span>
+            <span>Microservicio IA (ai-micro)</span>
           </button>
 
           <button
@@ -586,228 +522,233 @@ export default function WhatsAppSettings() {
             </div>
           </Show>
 
-          {/* TAB 2: AGENTE COMERCIAL WORKERS AI */}
+          {/* TAB 2: MICROSERVICIO DE IA (ai-micro) */}
           <Show when={activeTab() === 'ai'}>
             <div class="space-y-4">
-              {/* Tip visual informativo: Precios y respuestas breves */}
-              <div class="p-3.5 rounded-xl bg-accent/10 border border-accent/25 space-y-2">
-                <div class="flex items-center gap-2 text-accent-text font-bold text-xs">
-                  <Lightbulb size={16} class="text-accent shrink-0" />
-                  <span>💡 ¿Cómo configurar precios e información para que la IA responda directo?</span>
-                </div>
-                <div class="space-y-1.5 text-[11px] text-body-soft leading-relaxed pl-6">
-                  <p>
-                    <strong class="text-body font-semibold">1. Coloca tus precios y promociones:</strong> Pon tus precios, planes y reglas en el campo <span class="text-accent-text font-medium">"Información Relevante para la IA, Precios y Contexto del Negocio"</span> o en la pestaña <button type="button" onClick={() => setActiveTab('kb')} class="underline text-accent hover:text-accent-hover font-semibold">Catálogo & Precios</button>.
-                  </p>
-                  <p>
-                    <strong class="text-body font-semibold">2. Respuestas directas y sin rodeos:</strong> La IA tomará estos datos de forma prioritaria y responderá directamente a los prospectos sin rodeos ni datos desactualizados, manteniendo mensajes concisos y claros en WhatsApp.
-                  </p>
-                </div>
-              </div>
-
-              <form onSubmit={handleSaveAiSettings} class="p-4 sm:p-5 rounded-xl bg-surface border border-edge space-y-4 text-xs shadow-xs">
-                <div class="flex items-center justify-between border-b border-edge pb-3">
-                  <div class="flex items-center gap-2">
-                    <Bot size={16} class="text-accent" />
+              {/* Card 1: Toggle General y Estado del Asistente */}
+              <div class="p-4 sm:p-5 rounded-xl bg-surface border border-edge shadow-xs space-y-4">
+                <div class="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-edge">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-accent/10 border border-accent/20 text-accent flex items-center justify-center">
+                      <Bot size={20} />
+                    </div>
                     <div>
-                      <h3 class="font-bold text-body text-xs">Motor del Asesor Comercial con IA</h3>
-                      <p class="text-[11px] text-muted">Cloudflare Workers AI</p>
+                      <h3 class="font-bold text-body text-sm flex items-center gap-2">
+                        <span>Asistente Comercial IA para WhatsApp</span>
+                        <Show
+                          when={aiEnabled()}
+                          fallback={
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-zinc-500/15 text-zinc-400 border border-zinc-500/25">
+                              Pausado
+                            </span>
+                          }
+                        >
+                          <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                            <span>Activo</span>
+                          </span>
+                        </Show>
+                      </h3>
+                      <p class="text-xs text-muted">
+                        Respuestas automatizadas a prospectos y derivación inteligente a asesores humanos.
+                      </p>
                     </div>
                   </div>
 
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <span class="text-xs font-medium text-muted">Activar IA Global:</span>
-                    <input
-                      type="checkbox"
-                      checked={aiEnabled()}
-                      onChange={(e) => setAiEnabled(e.currentTarget.checked)}
-                      class="w-3.5 h-3.5 accent-accent rounded"
-                    />
-                  </label>
-                </div>
-
-                {/* Modelo */}
-                <div class="space-y-1">
-                  <label class="font-medium text-muted">Modelo de Inteligencia Artificial:</label>
-                  <select
-                    value={aiModel()}
-                    onChange={(e) => setAiModel(e.currentTarget.value)}
-                    class="w-full px-3 py-2 bg-app border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent cursor-pointer"
-                  >
-                    <option value="@cf/zai-org/glm-4.7-flash">
-                      @cf/zai-org/glm-4.7-flash (Recomendado: ultra rápido, diálogo multilingüe, baja latencia y alta precisión en seguimiento de instrucciones)
-                    </option>
-                    <option value="@cf/mistralai/mistral-small-3.1-24b-instruct">
-                      @cf/mistralai/mistral-small-3.1-24b-instruct (Excelente para formato JSON estructurado y respuestas sobrias)
-                    </option>
-                    <option value="@cf/meta/llama-3.3-70b-instruct-fp8-fast">
-                      @cf/meta/llama-3.3-70b-instruct-fp8-fast (Razonamiento de alta complejidad rápido)
-                    </option>
-                    <option value="@cf/meta/llama-3.2-3b-instruct">
-                      @cf/meta/llama-3.2-3b-instruct (Ultra rápido y equilibrado)
-                    </option>
-                    <option value="@cf/meta/llama-3.2-1b-instruct">
-                      @cf/meta/llama-3.2-1b-instruct (Ultra ligero y respuesta instantánea)
-                    </option>
-                    {![
-                      '@cf/zai-org/glm-4.7-flash',
-                      '@cf/mistralai/mistral-small-3.1-24b-instruct',
-                      '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
-                      '@cf/meta/llama-3.2-3b-instruct',
-                      '@cf/meta/llama-3.2-1b-instruct',
-                    ].includes(aiModel()) && aiModel() ? (
-                      <option value={aiModel()}>
-                        {aiModel()} (Configuración personalizada / anterior)
-                      </option>
-                    ) : null}
-                  </select>
-                </div>
-
-                {/* Tono */}
-                <div class="space-y-1">
-                  <label class="font-medium text-muted">Tono y Personalidad del Asesor Virtual:</label>
-                  <input
-                    type="text"
-                    value={aiTone()}
-                    onInput={(e) => setAiTone(e.currentTarget.value)}
-                    placeholder="Ej: breve, directo al grano, sin rodeos, amigable y claro en WhatsApp"
-                    class="w-full px-3 py-2 bg-app border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent"
-                  />
-                  <p class="text-[10px] text-muted">
-                    Define el estilo de respuesta. Para respuestas concisas y rápidas, mantén un tono directo y sin rodeos.
-                  </p>
-                </div>
-
-                {/* Contexto del Negocio y Precios */}
-                <div class="space-y-1.5">
-                  <div class="flex items-center justify-between flex-wrap gap-2">
-                    <label class="font-bold text-body flex items-center gap-1.5">
-                      <Zap size={13} class="text-amber-400" />
-                      <span>Información Relevante para la IA, Precios y Contexto del Negocio:</span>
-                    </label>
-                    <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 flex items-center gap-1">
-                      <CheckCircle2 size={10} />
-                      <span>Fuente prioritaria para la IA: Precios, planes, promociones y reglas</span>
+                  {/* Toggle Switch */}
+                  <div class="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setAiEnabled(!aiEnabled())}
+                      class={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                        aiEnabled() ? 'bg-accent' : 'bg-elevate-strong border border-edge'
+                      }`}
+                      role="switch"
+                      aria-checked={aiEnabled()}
+                    >
+                      <span
+                        class={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          aiEnabled() ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                    <span class="text-xs font-medium text-body">
+                      {aiEnabled() ? 'Habilitado' : 'Deshabilitado'}
                     </span>
                   </div>
-                  <textarea
-                    rows={6}
-                    value={businessContext()}
-                    onInput={(e) => setBusinessContext(e.currentTarget.value)}
-                    placeholder={"Ej: Precios y planes actuales de Fitness Club Pass Cochabamba:\n- Plan Básico: Bs 200/mes (10 accesos al mes a sedes aliadas)\n- Plan Full / Ilimitado: Bs 350/mes (accesos ilimitados multisede)\n- Promoción Trimestral: Bs 900 por 3 meses (descuento especial)\n- Sedes destacadas en Zona Norte, Cala Cala, América y Centro\n- Horarios: Lunes a Viernes 06:00 a 22:00, Sábados 08:00 a 14:00\n- Incluye: Pase digital QR desde la app, sin matrícula extra ni contratos forzosos"}
-                    class="w-full p-2.5 bg-app border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent leading-relaxed font-mono"
-                  />
-                  <p class="text-[10px] text-muted flex items-center gap-1">
-                    <Sparkles size={11} class="text-accent shrink-0" />
-                    <span>La IA leerá esta información con máxima prioridad para responder consultas sobre precios, sedes y detalles de Fitness Club Pass.</span>
-                  </p>
                 </div>
 
-                {/* Instrucciones de Ventas */}
-                <div class="space-y-1.5">
-                  <div class="flex items-center justify-between">
-                    <label class="font-medium text-muted">
-                      Reglas de Respuesta Rápida y Cierre de Ventas:
-                    </label>
-                    <span class="text-[10px] text-accent-text font-medium">Directivas Estrictas</span>
-                  </div>
-                  <textarea
-                    rows={4}
-                    value={aiInstructions()}
-                    onInput={(e) => setAiInstructions(e.currentTarget.value)}
-                    placeholder={"Ej: Reglas de respuesta rápida:\n- No dar rodeos ni escribir parrafadas; responder siempre de forma breve y directa (1 a 3 oraciones).\n- Responder siempre el precio en la primera frase cuando el prospecto consulte por costos.\n- Derivar a un asesor humano si solicitan llamada, número de cuenta o pago manual."}
-                    class="w-full p-2.5 bg-app border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent leading-relaxed font-mono"
-                  />
-                  <p class="text-[10px] text-muted">
-                    Aquí puedes definir reglas de respuesta rápida (ej: "No dar rodeos, responder siempre el precio en la primera frase, derivar a asesor humano si piden teléfono").
+                <div class="flex items-center justify-between flex-wrap gap-2 pt-1 text-xs">
+                  <p class="text-muted text-[11px]">
+                    {aiEnabled()
+                      ? 'El asistente responderá de inmediato los mensajes entrantes de WhatsApp canalizándolos a través del microservicio.'
+                      : 'El bot está apagado. Todos los mensajes entrantes permanecerán en bandeja de entrada para atención manual de tu equipo.'}
                   </p>
-                </div>
 
-                <div class="flex justify-end pt-1">
                   <button
-                    type="submit"
+                    type="button"
+                    onClick={handleSaveAiSettings}
                     disabled={saving()}
-                    class="px-4 py-2 bg-accent hover:bg-accent-hover text-white text-xs font-semibold rounded-lg transition shadow-xs disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                    class="px-4 py-2 bg-accent hover:bg-accent-hover text-white text-xs font-semibold rounded-lg transition shadow-xs disabled:opacity-50 cursor-pointer flex items-center gap-1.5 shrink-0"
                   >
                     <Show when={saving()} fallback={<Bot size={13} />}>
                       <RefreshCw size={13} class="animate-spin" />
                     </Show>
-                    <span>{saving() ? 'Guardando...' : 'Guardar Ajustes de IA'}</span>
-                  </button>
-                </div>
-              </form>
-            </div>
-          </Show>
-
-          {/* TAB 3: CATÁLOGO & PRECIOS (KNOWLEDGE BASE) */}
-          <Show when={activeTab() === 'kb'}>
-            <div class="space-y-3.5">
-              <div class="flex items-center justify-between flex-wrap gap-2">
-                <div>
-                  <h3 class="text-xs font-bold text-body uppercase tracking-wider text-muted">
-                    Base de Conocimiento & Catálogo Oficial
-                  </h3>
-                  <p class="text-[11px] text-muted">
-                    Fuente de verdad inyectada con máxima prioridad a la IA para evitar alucinaciones en precios en Bolivianos (Bs).
-                  </p>
-                </div>
-
-                <div class="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('ai')}
-                    class="px-3 py-1.5 bg-elevate hover:bg-elevate-strong text-body text-xs font-medium rounded-lg transition border border-edge cursor-pointer flex items-center gap-1"
-                  >
-                    <Bot size={13} class="text-accent" />
-                    <span>Ver Ajustes de IA</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={openNewKbModal}
-                    class="px-3 py-1.5 bg-accent hover:bg-accent-hover text-white text-xs font-semibold rounded-lg transition shadow-xs cursor-pointer flex items-center gap-1"
-                  >
-                    <Plus size={13} />
-                    <span>Nueva Entrada</span>
+                    <span>{saving() ? 'Guardando...' : 'Guardar Estado'}</span>
                   </button>
                 </div>
               </div>
 
-              {/* Entries Grid */}
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <For each={kbEntries()}>
-                  {(entry) => (
-                    <div class="p-3.5 rounded-xl bg-surface border border-edge space-y-2 relative group hover:border-accent/40 transition shadow-xs">
-                      <div class="flex items-center justify-between">
-                        <span class="px-2 py-0.5 rounded-md text-[9px] font-semibold uppercase tracking-wider bg-app border border-edge text-accent-text">
-                          {formatCategoryLabel(entry.category)}
+              {/* Card 2: Información del Microservicio ai-micro */}
+              <div class="p-4 sm:p-5 rounded-xl bg-surface border border-edge shadow-xs space-y-4">
+                <div class="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-edge">
+                  <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center">
+                      <Server size={16} />
+                    </div>
+                    <div>
+                      <h3 class="font-bold text-body text-xs flex items-center gap-2">
+                        <span>Microservicio Desacoplado: ai-micro</span>
+                        <span class="px-2 py-0.5 rounded-md text-[9px] font-semibold bg-sky-500/15 text-sky-400 border border-sky-500/25">
+                          Worker Autónomo
                         </span>
-                        <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-                          <button
-                            type="button"
-                            onClick={() => openEditKbModal(entry)}
-                            class="p-1 hover:bg-elevate rounded text-muted hover:text-body cursor-pointer"
-                            title="Editar"
-                          >
-                            <Pencil size={12} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteKb(entry.id)}
-                            class="p-1 hover:bg-elevate rounded text-rose-400 cursor-pointer"
-                            title="Eliminar"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-                      </div>
-
-                      <h4 class="text-xs font-semibold text-body">{entry.title}</h4>
-                      <p class="text-[11px] text-muted whitespace-pre-wrap leading-relaxed">
-                        {entry.content}
+                      </h3>
+                      <p class="text-[11px] text-muted">
+                        Inferencia, conocimiento comercial de planes y directivas de venta 100% aislados.
                       </p>
                     </div>
-                  )}
-                </For>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleTestMicroservice}
+                    disabled={testingMicroservice()}
+                    class="px-3.5 py-1.5 bg-elevate hover:bg-elevate-strong text-body text-xs font-semibold rounded-lg transition border border-edge disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                  >
+                    <RefreshCw size={12} class={testingMicroservice() ? 'animate-spin text-accent' : ''} />
+                    <span>{testingMicroservice() ? 'Probando...' : 'Probar Conexión con ai-micro'}</span>
+                  </button>
+                </div>
+
+                {/* Connection URL Display */}
+                <div class="space-y-1.5">
+                  <label class="block text-muted text-xs font-medium">
+                    URL de Conexión del Microservicio (<code class="font-mono text-accent-text">AI_MICROSERVICE_URL</code>):
+                  </label>
+                  <div class="flex items-center gap-2">
+                    <input
+                      type="text"
+                      readonly
+                      value={settings()?.ai_microservice_url || 'http://127.0.0.1:8788'}
+                      class="w-full px-3 py-2 bg-app border border-edge rounded-lg font-mono text-xs text-body focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        copyToClipboard(
+                          settings()?.ai_microservice_url || 'http://127.0.0.1:8788',
+                          'URL del Microservicio'
+                        )
+                      }
+                      class="p-2 bg-elevate hover:bg-elevate-strong rounded-lg border border-edge text-muted hover:text-body cursor-pointer shrink-0"
+                      title="Copiar URL"
+                    >
+                      <Copy size={13} />
+                    </button>
+                  </div>
+                  <p class="text-[11px] text-muted">
+                    El CRM despacha las solicitudes de conversación a este endpoint (<code class="font-mono text-accent-text">POST /chat</code>).
+                  </p>
+                </div>
+
+                {/* Test Result Display */}
+                <Show when={microserviceTestResult()}>
+                  <div
+                    class={`p-3 rounded-xl text-xs space-y-1.5 ${
+                      microserviceTestResult()?.success
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/25'
+                        : 'bg-red-500/10 text-red-400 border border-red-500/25'
+                    }`}
+                  >
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-1.5 font-semibold">
+                        <Show
+                          when={microserviceTestResult()?.success}
+                          fallback={<AlertCircle size={14} class="shrink-0" />}
+                        >
+                          <CheckCircle2 size={14} class="shrink-0" />
+                        </Show>
+                        <span>{microserviceTestResult()?.message}</span>
+                      </div>
+                      <Show when={microserviceTestResult()?.durationMs !== undefined}>
+                        <span class="font-mono text-[10px] opacity-80">
+                          {microserviceTestResult()?.durationMs} ms
+                        </span>
+                      </Show>
+                    </div>
+
+                    <Show when={microserviceTestResult()?.details?.models}>
+                      <div class="text-[11px] opacity-90 pl-5 space-y-0.5">
+                        <p>
+                          • Modelo Primario:{' '}
+                          <code class="font-mono text-xs font-semibold">
+                            {microserviceTestResult()?.details?.models?.primary}
+                          </code>
+                        </p>
+                        <p>
+                          • Modelo Respaldo:{' '}
+                          <code class="font-mono text-xs">
+                            {microserviceTestResult()?.details?.models?.fallback}
+                          </code>
+                        </p>
+                      </div>
+                    </Show>
+                  </div>
+                </Show>
+
+                {/* 3 Architecture Feature Highlights */}
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+                  <div class="p-3 rounded-lg bg-app border border-edge space-y-1">
+                    <div class="flex items-center gap-1.5 text-xs font-bold text-body">
+                      <Zap size={13} class="text-amber-400 shrink-0" />
+                      <span>Modelos de Inferencia</span>
+                    </div>
+                    <p class="text-[11px] text-muted leading-relaxed">
+                      Primario: <strong class="text-body font-mono text-[10px]">GLM-4.7-Flash</strong> (ultra rápido y baja latencia). Respaldo: <strong class="text-body font-mono text-[10px]">LLaMA 3.2 3B</strong>.
+                    </p>
+                  </div>
+
+                  <div class="p-3 rounded-lg bg-app border border-edge space-y-1">
+                    <div class="flex items-center gap-1.5 text-xs font-bold text-body">
+                      <ShieldCheck size={13} class="text-emerald-400 shrink-0" />
+                      <span>Catálogo Congelado</span>
+                    </div>
+                    <p class="text-[11px] text-muted leading-relaxed">
+                      Planes fijos (Bs 200, Bs 350, Bs 900), sedes aliadas en Cochabamba y pases QR hardcodeados en el microservicio sin alucinaciones.
+                    </p>
+                  </div>
+
+                  <div class="p-3 rounded-lg bg-app border border-edge space-y-1">
+                    <div class="flex items-center gap-1.5 text-xs font-bold text-body">
+                      <Bot size={13} class="text-accent shrink-0" />
+                      <span>Directivas Comerciales</span>
+                    </div>
+                    <p class="text-[11px] text-muted leading-relaxed">
+                      Respuestas breves de 1 a 3 frases, precio en la primera oración y derivación directa a asesor humano para cobros y llamadas.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Informative Note / Callout */}
+              <div class="p-3.5 rounded-xl bg-accent/10 border border-accent/25 space-y-1.5 text-xs">
+                <div class="flex items-center gap-2 text-accent-text font-bold text-xs">
+                  <Sparkles size={14} class="text-accent shrink-0" />
+                  <span>Arquitectura Desacoplada de Máxima Velocidad</span>
+                </div>
+                <p class="text-[11px] text-body-soft leading-relaxed pl-5">
+                  Toda la lógica de procesamiento de lenguaje natural, el <strong class="text-body font-semibold">Contexto del Negocio</strong> (<code class="font-mono text-accent-text">business_context / businessContext</code>) y los precios en Bolivianos (Bs) han sido desacoplados en el worker dedicado <code class="font-mono text-accent-text">ai-micro</code>. Tu CRM principal ya no requiere gestionar prompts ni catálogos locales en este formulario, garantizando respuestas directas, latencia mínima y cero alucinaciones comerciales.
+                </p>
               </div>
             </div>
           </Show>
@@ -1391,84 +1332,6 @@ export default function WhatsAppSettings() {
               </div>
             </div>
           </Show>
-        </Show>
-
-        {/* Modal Nueva / Editar Entrada de KB */}
-        <Show when={showKbModal()}>
-          <div class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div class="w-full max-w-md bg-surface border border-edge rounded-xl p-4 sm:p-5 space-y-3.5 shadow-xl animate-fade-in">
-              <div class="flex items-center justify-between border-b border-edge pb-2.5">
-                <h3 class="text-xs font-bold text-body flex items-center gap-1.5 uppercase tracking-wider text-accent-text">
-                  <BookOpen size={14} class="text-accent" />
-                  <span>{editingKbId() ? 'Editar Entrada de Catálogo' : 'Nueva Entrada'}</span>
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setShowKbModal(false)}
-                  class="text-muted hover:text-body p-1 cursor-pointer"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-
-              <form onSubmit={handleSaveKb} class="space-y-3 text-xs">
-                <div class="space-y-1">
-                  <label class="font-medium text-muted">Categoría:</label>
-                  <select
-                    value={kbCategory()}
-                    onChange={(e) => setKbCategory(e.currentTarget.value)}
-                    class="w-full px-2.5 py-1.5 bg-app border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent cursor-pointer"
-                  >
-                    <option value="plan_precio">Planes y Precios (en Bs)</option>
-                    <option value="como_funciona_app">Cómo funciona la App & Pases</option>
-                    <option value="centros_aliados">Centros y Gimnasios en Cochabamba</option>
-                    <option value="objecion_frecuente">Manejo de Objeción & Cierre</option>
-                    <option value="politica">Políticas de Activación y Garantías</option>
-                  </select>
-                </div>
-
-                <div class="space-y-1">
-                  <label class="font-medium text-muted">Título / Plan / Tema:</label>
-                  <input
-                    type="text"
-                    required
-                    value={kbTitle()}
-                    onInput={(e) => setKbTitle(e.currentTarget.value)}
-                    placeholder="Ej: Pase Fit Pro (Bs 280 / mes)"
-                    class="w-full px-2.5 py-1.5 bg-app border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent"
-                  />
-                </div>
-
-                <div class="space-y-1">
-                  <label class="font-medium text-muted">Contenido / Precios en Bs / Argumentos:</label>
-                  <textarea
-                    rows={4}
-                    required
-                    value={kbContent()}
-                    onInput={(e) => setKbContent(e.currentTarget.value)}
-                    placeholder="Detalla precios en Bolivianos (Bs), qué disciplinas o pases incluye y beneficios..."
-                    class="w-full p-2.5 bg-app border border-edge rounded-lg text-xs text-body focus:outline-none focus:border-accent leading-relaxed"
-                  />
-                </div>
-
-                <div class="flex items-center justify-end gap-2 pt-2 border-t border-edge">
-                  <button
-                    type="button"
-                    onClick={() => setShowKbModal(false)}
-                    class="px-3 py-1.5 rounded-lg text-xs font-medium text-body-soft hover:bg-elevate cursor-pointer border border-edge"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    class="px-4 py-1.5 bg-accent hover:bg-accent-hover text-white text-xs font-semibold rounded-lg transition shadow-xs cursor-pointer"
-                  >
-                    Guardar Entrada
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
         </Show>
       </div>
     </Layout>

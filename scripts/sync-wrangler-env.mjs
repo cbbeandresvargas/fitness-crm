@@ -54,6 +54,12 @@ const config = {
     devVarsFile.CLOUDFLARE_ACCOUNT_ID ||
     existingWrangler.account_id ||
     '',
+  AI_MICROSERVICE_URL:
+    process.env.AI_MICROSERVICE_URL ||
+    envFile.AI_MICROSERVICE_URL ||
+    devVarsFile.AI_MICROSERVICE_URL ||
+    existingWrangler.vars?.AI_MICROSERVICE_URL ||
+    'http://127.0.0.1:8788',
   D1_DATABASE_ID:
     process.env.D1_DATABASE_ID ||
     envFile.D1_DATABASE_ID ||
@@ -162,6 +168,7 @@ let template = fs.readFileSync(templatePath, 'utf-8');
 // Reemplazos de tokens
 template = template
   .replaceAll('__CLOUDFLARE_ACCOUNT_ID__', config.CLOUDFLARE_ACCOUNT_ID)
+  .replaceAll('__AI_MICROSERVICE_URL__', config.AI_MICROSERVICE_URL)
   .replaceAll('__D1_DATABASE_ID__', config.D1_DATABASE_ID)
   .replaceAll('__D1_DATABASE_NAME__', config.D1_DATABASE_NAME)
   .replaceAll('__KV_NAMESPACE_ID__', config.KV_NAMESPACE_ID)
@@ -187,6 +194,7 @@ try {
 // 3. Sincronizar .dev.vars para desarrollo local con wrangler dev
 const devVarsContent = [
   `CLOUDFLARE_ACCOUNT_ID=${config.CLOUDFLARE_ACCOUNT_ID}`,
+  config.AI_MICROSERVICE_URL ? `AI_MICROSERVICE_URL=${config.AI_MICROSERVICE_URL}` : '',
   config.CLOUDFLARE_API_TOKEN ? `CLOUDFLARE_API_TOKEN=${config.CLOUDFLARE_API_TOKEN}` : '',
   config.ADMIN_SECRET ? `ADMIN_SECRET=${config.ADMIN_SECRET}` : '',
   config.ENCRYPTION_KEY ? `ENCRYPTION_KEY=${config.ENCRYPTION_KEY}` : '',
@@ -205,6 +213,7 @@ fs.writeFileSync(path.join(rootDir, '.dev.vars'), devVarsContent + '\n', 'utf-8'
 
 console.log('⚡ [env-sync] wrangler.jsonc y .dev.vars generados con éxito:');
 console.log(`   - Account ID: ${config.CLOUDFLARE_ACCOUNT_ID || '(no definido)'}`);
+console.log(`   - AI Microservice URL: ${config.AI_MICROSERVICE_URL}`);
 console.log(`   - D1 Database: ${config.D1_DATABASE_NAME} (${config.D1_DATABASE_ID || 'sin ID'})`);
 console.log(`   - KV Namespace ID: ${config.KV_NAMESPACE_ID || '(sin ID)'}`);
 console.log(`   - R2 Bucket: ${config.R2_BUCKET_NAME}`);

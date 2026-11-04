@@ -4,13 +4,7 @@ import { requireAuth } from '../lib/auth';
 import { normalizePhone, checkDuplicatePhone, calculateDynamicSegment, autoAssignAgent } from '../lib/rules';
 import { computeFcSegment } from '../lib/segments';
 import { isValidLeadStatus, ALLOWED_LEAD_STATUSES } from '../lib/leadStatus';
-import {
-  buildLeadContextPrompt,
-  generateAiWhatsAppMessage,
-  generateAiLeadBriefing,
-  suggestAiTags,
-  createWhatsAppDeepLink,
-} from '../lib/ai';
+import { createWhatsAppDeepLink } from '../lib/ai';
 
 export const leadsRoutes = new Hono<{ Bindings: Env; Variables: { user: SessionData } }>();
 
@@ -584,45 +578,41 @@ leadsRoutes.post('/api/leads/:id/ai-message', async (c) => {
   const lead = await c.env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(leadId).first<Lead>();
   if (!lead) return c.json({ error: 'Lead no encontrado' }, 404);
 
-  let recentActivities: ActivityLog[] = [];
-  try {
-    const activitiesRes = await c.env.DB.prepare(`
-      SELECT m.id, m.lead_id, m.content as details, m.created_at,
-             CASE WHEN m.sender = 'agent' THEN 'whatsapp_sent' ELSE 'whatsapp_received' END as action_type,
-             CASE WHEN m.sender = 'agent' THEN 'Asesor' ELSE 'Prospecto' END as user_name
-      FROM whatsapp_messages m
-      WHERE m.lead_id = ?
-      ORDER BY m.created_at DESC LIMIT 5
-    `)
-      .bind(leadId)
-      .all<ActivityLog>();
-    recentActivities = activitiesRes.results || [];
-  } catch {
-    recentActivities = [];
+  const microserviceUrl = (
+    c.env.AI_MICROSERVICE_URL ||
+    (typeof process !== 'undefined' ? process.env?.AI_MICROSERVICE_URL : undefined)
+  )?.trim()?.replace(/\/+$/, '');
+
+  const nombre = (lead.full_name || '').split(' ')[0] || '';
+  let message = `¡Hola ${nombre}! Te escribe ${user.name} de Fitness Club Pass Cochabamba. ¿Qué actividades te gustaría entrenar o probar en nuestros centros afiliados?`;
+
+  if (microserviceUrl) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      const res = await fetch(`${microserviceUrl}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lead: { id: lead.id, name: lead.full_name, phone: lead.phone, status: lead.status },
+          history: [],
+          message: `Genera un mensaje de WhatsApp inicial con tono ${tone} firmado por el asesor ${user.name}.`,
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const data = (await res.json()) as any;
+        if (data?.reply || data?.reply_text) {
+          message = data.reply || data.reply_text;
+        }
+      }
+    } catch {
+      // Usar mensaje limpio por defecto
+    }
   }
 
-  const parsedLead: Lead = {
-    ...lead,
-    tags: typeof lead.tags === 'string' ? JSON.parse(lead.tags || '[]') : lead.tags,
-    metadata: typeof lead.metadata === 'string' ? JSON.parse(lead.metadata || '{}') : lead.metadata,
-  };
-
-  const promptData = buildLeadContextPrompt({
-    lead: parsedLead,
-    agentName: user.name,
-    recentActivities,
-    tone,
-  });
-
-  const message = await generateAiWhatsAppMessage(
-    c.env,
-    promptData,
-    parsedLead,
-    user.name
-  );
-
   const deepLink = createWhatsAppDeepLink(lead.phone, message);
-
   return c.json({ success: true, message, deepLink });
 });
 
@@ -630,38 +620,53 @@ leadsRoutes.post('/api/leads/:id/ai-message', async (c) => {
  * Resumen Ejecutivo con IA (AI Briefing)
  */
 leadsRoutes.post('/api/leads/:id/ai-briefing', async (c) => {
-  const user = c.get('user');
   const leadId = c.req.param('id');
-
   const lead = await c.env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(leadId).first<Lead>();
   if (!lead) return c.json({ error: 'Lead no encontrado' }, 404);
 
-  let recentActivities: ActivityLog[] = [];
-  try {
-    const activitiesRes = await c.env.DB.prepare(`
-      SELECT m.id, m.lead_id, m.content as details, m.created_at,
-             CASE WHEN m.sender = 'agent' THEN 'whatsapp_sent' ELSE 'whatsapp_received' END as action_type,
-             CASE WHEN m.sender = 'agent' THEN 'Asesor' ELSE 'Prospecto' END as user_name
-      FROM whatsapp_messages m
-      WHERE m.lead_id = ?
-      ORDER BY m.created_at DESC LIMIT 6
-    `)
-      .bind(leadId)
-      .all<ActivityLog>();
-    recentActivities = activitiesRes.results || [];
-  } catch {
-    recentActivities = [];
+  const microserviceUrl = (
+    c.env.AI_MICROSERVICE_URL ||
+    (typeof process !== 'undefined' ? process.env?.AI_MICROSERVICE_URL : undefined)
+  )?.trim()?.replace(/\/+$/, '');
+
+  let safeMetadata: Record<string, any> = {};
+  if (typeof lead.metadata === 'string') {
+    try {
+      safeMetadata = JSON.parse(lead.metadata || '{}');
+    } catch {
+      safeMetadata = {};
+    }
+  } else if (typeof lead.metadata === 'object' && lead.metadata !== null) {
+    safeMetadata = lead.metadata;
   }
 
-  const briefing = await generateAiLeadBriefing(
-    c.env,
-    {
-      ...lead,
-      tags: typeof lead.tags === 'string' ? JSON.parse(lead.tags || '[]') : lead.tags,
-      metadata: typeof lead.metadata === 'string' ? JSON.parse(lead.metadata || '{}') : lead.metadata,
-    },
-    recentActivities
-  );
+  let briefing = `${lead.full_name} se encuentra en etapa ${(lead.status || 'nuevo').toUpperCase()} buscando ${safeMetadata.objetivo || 'entrenamiento'} con interés en suscripciones multideporte en Cochabamba. Se recomienda coordinar activación en la app.`;
+
+  if (microserviceUrl) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      const res = await fetch(`${microserviceUrl}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lead: { id: lead.id, name: lead.full_name, phone: lead.phone, status: lead.status },
+          history: [],
+          message: 'Resume el perfil del prospecto en exactamente 2 oraciones concisas para el asesor comercial: 1) Quién es y qué busca, 2) Siguiente paso sugerido.',
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const data = (await res.json()) as any;
+        if (data?.reply || data?.reply_text) {
+          briefing = data.reply || data.reply_text;
+        }
+      }
+    } catch {
+      // Usar briefing limpio por defecto
+    }
+  }
 
   return c.json({ success: true, briefing });
 });
@@ -674,13 +679,28 @@ leadsRoutes.post('/api/leads/:id/ai-suggest-tags', async (c) => {
   const lead = await c.env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(leadId).first<Lead>();
   if (!lead) return c.json({ error: 'Lead no encontrado' }, 404);
 
-  const suggested = await suggestAiTags(c.env, {
-    ...lead,
-    tags: typeof lead.tags === 'string' ? JSON.parse(lead.tags || '[]') : lead.tags,
-    metadata: typeof lead.metadata === 'string' ? JSON.parse(lead.metadata || '{}') : lead.metadata,
-  });
+  let safeMetadata: Record<string, any> = {};
+  if (typeof lead.metadata === 'string') {
+    try {
+      safeMetadata = JSON.parse(lead.metadata || '{}');
+    } catch {
+      safeMetadata = {};
+    }
+  } else if (typeof lead.metadata === 'object' && lead.metadata !== null) {
+    safeMetadata = lead.metadata;
+  }
 
-  return c.json({ success: true, suggestedTags: suggested });
+  const defaults = ['Fitness', 'Cochabamba'];
+  if (lead.segment === 'A') defaults.push('AntiguoPagador');
+  if (safeMetadata.objetivo?.toLowerCase().includes('grasa') || safeMetadata.objetivo?.toLowerCase().includes('peso')) {
+    defaults.push('Pérdida de Peso');
+  }
+  if (safeMetadata.objetivo?.toLowerCase().includes('musculo') || safeMetadata.objetivo?.toLowerCase().includes('fuerza')) {
+    defaults.push('Hipertrofia');
+  }
+  defaults.push('Multideporte');
+
+  return c.json({ success: true, suggestedTags: defaults });
 });
 
 /**

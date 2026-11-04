@@ -173,6 +173,7 @@ export interface WhatsAppSettings {
   ai_tone?: string | null;
   ai_instructions?: string | null;
   business_context?: string | null;
+  ai_microservice_url?: string;
 }
 
 export interface WebhookInfo {
