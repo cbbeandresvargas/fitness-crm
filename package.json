@@ -22,7 +22,8 @@
     "deploy:ai": "npm --prefix ai-micro run deploy",
     "deploy:all": "npm run build && npm run deploy && npm run deploy:ai",
     "d1:init": "wrangler d1 execute fitness-crm-db --local --file=src/db/schema.sql && wrangler d1 execute fitness-crm-db --local --file=src/db/seed.sql",
-    "d1:migrate:remote": "wrangler d1 execute fitness-crm-db --remote --file=src/db/schema.sql -y",
+    "d1:migrate:local": "wrangler d1 migrations apply fitness-crm-db --local",
+    "d1:migrate:remote": "wrangler d1 migrations apply fitness-crm-db --remote",
     "test": "vitest run"
   },
   "dependencies": {

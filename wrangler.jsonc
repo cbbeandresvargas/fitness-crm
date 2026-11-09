@@ -20,7 +20,8 @@
 		{
 			"binding": "DB",
 			"database_name": "fitness-crm-db",
-			"database_id": "ca9fae22-d16d-490b-bb27-fcd854fdd328"
+			"database_id": "ca9fae22-d16d-490b-bb27-fcd854fdd328",
+			"migrations_dir": "src/db/migrations"
 		}
 	],
 	"kv_namespaces": [
