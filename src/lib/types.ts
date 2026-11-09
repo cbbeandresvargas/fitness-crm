@@ -38,6 +38,11 @@ export interface Lead {
   ai_enabled: number;
   handoff_at?: string | null;
   handoff_reason?: 'cliente' | 'modelo' | 'error' | 'manual' | null;
+  last_message_text?: string | null;
+  last_message_time?: string | null;
+  last_message_sender?: MessageSender | null;
+  last_message_status?: MessageStatus | null;
+  unread_count?: number;
   created_by?: string | null;
   updated_by?: string | null;
   created_at: string;

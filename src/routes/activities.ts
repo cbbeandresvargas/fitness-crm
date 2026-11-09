@@ -51,9 +51,11 @@ interface LeadInterestRow {
 activitiesRoutes.get('/api/activities', async (c) => {
   const res = await c.env.DB.prepare(`
     SELECT a.id, a.name, a.name_norm, a.is_active, a.created_at, a.updated_at,
-           (SELECT COUNT(*) FROM prospect_activities pa WHERE pa.activity_id = a.id) as prospect_count
+           COUNT(pa.id) as prospect_count
     FROM activities a
-    ORDER BY a.is_active DESC, (SELECT COUNT(*) FROM prospect_activities pa WHERE pa.activity_id = a.id) DESC, a.name COLLATE NOCASE ASC
+    LEFT JOIN prospect_activities pa ON pa.activity_id = a.id
+    GROUP BY a.id, a.name, a.name_norm, a.is_active, a.created_at, a.updated_at
+    ORDER BY a.is_active DESC, prospect_count DESC, a.name COLLATE NOCASE ASC
   `).all<ActivityRow>();
 
   return c.json({ activities: res.results || [] });

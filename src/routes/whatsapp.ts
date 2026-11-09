@@ -159,17 +159,25 @@ whatsappRoutes.post('/api/whatsapp/webhook', async (c) => {
 
         // A) Procesar actualizaciones de estado de mensajes enviados (sent, delivered, read)
         if (Array.isArray(value.statuses)) {
+          const stUpdates = [];
           for (const st of value.statuses) {
             const waId = st.id;
             const status = st.status; // 'sent' | 'delivered' | 'read' | 'failed'
             if (waId && ['sent', 'delivered', 'read', 'failed'].includes(status)) {
-              await c.env.DB.prepare(`
-                UPDATE whatsapp_messages 
-                SET status = ? 
-                WHERE whatsapp_message_id = ?
-              `)
-                .bind(status, waId)
-                .run();
+              stUpdates.push(
+                c.env.DB.prepare(`
+                  UPDATE whatsapp_messages 
+                  SET status = ? 
+                  WHERE whatsapp_message_id = ?
+                `).bind(status, waId)
+              );
+            }
+          }
+          if (stUpdates.length > 0) {
+            if (typeof c.env.DB.batch === 'function') {
+              await c.env.DB.batch(stUpdates);
+            } else {
+              for (const u of stUpdates) await u.run();
             }
           }
         }
@@ -808,40 +816,51 @@ whatsappRoutes.post('/api/whatsapp/leads/:id/test-ai', async (c) => {
 });
 
 /**
- * 6. BANDEJA DE ENTRADA UNIFICADA (INBOX CONVERSATIONS LIST)
+ * 6.0 CHEQUEO ULTRA-LIVIANO DE ACTIVIDAD GLOBAL DE INBOX (D1 INDEX-ONLY)
+ * Permite verificar si hubo actividad en toda la plataforma en solo 2 lecturas indexadas.
  */
-whatsappRoutes.get('/api/whatsapp/inbox', async (c) => {
-  const user = c.get('user');
+whatsappRoutes.get('/api/whatsapp/inbox/sync-check', async (c) => {
+  try {
+    const latestMsg = await c.env.DB.prepare(
+      'SELECT created_at FROM whatsapp_messages ORDER BY created_at DESC LIMIT 1'
+    ).first<{ created_at: string }>();
+    const latestLead = await c.env.DB.prepare(
+      'SELECT updated_at FROM leads ORDER BY updated_at DESC LIMIT 1'
+    ).first<{ updated_at: string }>();
 
-  const params: any[] = [];
-  let whereClause = '';
+    const lastActivity = `W/"${latestMsg?.created_at || '0'}_${latestLead?.updated_at || '0'}"`;
+    return c.json({
+      lastActivity,
+      lastMessageAt: latestMsg?.created_at || null,
+      lastLeadUpdateAt: latestLead?.updated_at || null,
+    });
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Error en sync-check' }, 500);
+  }
+});
+
+/**
+ * 6.01 DELTA UPDATES PARA INBOX (POLLING DE BAJO COSTO)
+ * Retorna únicamente las conversaciones que han tenido actividad desde `since`.
+ * Reduce lecturas a cero filas si no hubo actividad desde el timestamp provisto.
+ */
+whatsappRoutes.get('/api/whatsapp/inbox/updates', async (c) => {
+  const user = c.get('user');
+  const since = c.req.query('since');
+
+  if (!since) {
+    return c.json({ error: 'Parámetro query "since" requerido (formato ISO 8601)' }, 400);
+  }
+
+  const params: any[] = [since];
+  let whereClause = 'WHERE l.last_message_time > ?';
 
   if (user?.role === 'agent') {
-    whereClause = 'WHERE (l.assigned_to = ? OR l.assigned_to IS NULL)';
+    whereClause += ' AND (l.assigned_to = ? OR l.assigned_to IS NULL)';
     params.push(user.userId);
   }
 
-  // Optimización de alto rendimiento para Cloudflare Workers Free (límite de 50ms CPU):
-  // Sustitución de 5 subconsultas correlacionadas por CTE con Window Function ROW_NUMBER()
   const query = `
-    WITH ranked_messages AS (
-      SELECT 
-        lead_id,
-        content,
-        created_at,
-        sender,
-        status,
-        ROW_NUMBER() OVER (PARTITION BY lead_id ORDER BY created_at DESC) as rn
-      FROM whatsapp_messages
-    ),
-    unread_counts AS (
-      SELECT 
-        lead_id,
-        COUNT(*) as unread_count
-      FROM whatsapp_messages
-      WHERE sender = 'lead' AND status != 'read'
-      GROUP BY lead_id
-    )
     SELECT 
       l.id as leadId,
       l.full_name as leadName,
@@ -853,17 +872,15 @@ whatsappRoutes.get('/api/whatsapp/inbox', async (c) => {
       l.ai_enabled as aiEnabled,
       l.handoff_at as handoffAt,
       l.handoff_reason as handoffReason,
-      rm.content as lastMessageText,
-      rm.created_at as lastMessageTime,
-      rm.sender as lastMessageSender,
-      rm.status as lastMessageStatus,
-      COALESCE(uc.unread_count, 0) as unreadCount
+      COALESCE(l.last_message_text, 'Sin mensajes aún') as lastMessageText,
+      COALESCE(l.last_message_time, '') as lastMessageTime,
+      COALESCE(l.last_message_sender, 'system') as lastMessageSender,
+      COALESCE(l.last_message_status, 'sent') as lastMessageStatus,
+      COALESCE(l.unread_count, 0) as unreadCount
     FROM leads l
-    JOIN ranked_messages rm ON rm.lead_id = l.id AND rm.rn = 1
-    LEFT JOIN unread_counts uc ON uc.lead_id = l.id
     LEFT JOIN users u ON u.id = l.assigned_to
     ${whereClause}
-    ORDER BY COALESCE(rm.created_at, l.created_at) DESC 
+    ORDER BY l.last_message_time DESC 
     LIMIT 50
   `;
 
@@ -886,6 +903,92 @@ whatsappRoutes.get('/api/whatsapp/inbox', async (c) => {
     handoffReason: r.handoffReason,
   }));
 
+  return c.json({ conversations, timestamp: new Date().toISOString() });
+});
+
+/**
+ * 6. BANDEJA DE ENTRADA UNIFICADA (INBOX CONVERSATIONS LIST)
+ */
+whatsappRoutes.get('/api/whatsapp/inbox', async (c) => {
+  const user = c.get('user');
+
+  // Comprobación ETag / If-None-Match antes de ejecutar la CTE masiva
+  const ifNoneMatch = c.req.header('if-none-match');
+  let currentEtag: string | null = null;
+  try {
+    const latestMsg = await c.env.DB.prepare(
+      'SELECT created_at FROM whatsapp_messages ORDER BY created_at DESC LIMIT 1'
+    ).first<{ created_at: string }>();
+    const latestLead = await c.env.DB.prepare(
+      'SELECT updated_at FROM leads ORDER BY updated_at DESC LIMIT 1'
+    ).first<{ updated_at: string }>();
+    currentEtag = `W/"${latestMsg?.created_at || '0'}_${latestLead?.updated_at || '0'}"`;
+
+    if (ifNoneMatch && ifNoneMatch === currentEtag) {
+      c.header('ETag', currentEtag);
+      return c.body(null, 304);
+    }
+  } catch {
+    // Si falla el check rápido de índice, continuar con la consulta regular
+  }
+
+  const params: any[] = [];
+  let whereClause = 'WHERE l.last_message_time IS NOT NULL';
+
+  if (user?.role === 'agent') {
+    whereClause = 'WHERE (l.assigned_to = ? OR l.assigned_to IS NULL) AND l.last_message_time IS NOT NULL';
+    params.push(user.userId);
+  }
+
+  // Optimización crítica para Cloudflare D1 (SQLite):
+  // Lectura directa desde `leads` utilizando el índice compuesto `idx_leads_last_message_time`.
+  // Elimina full table scans sobre `whatsapp_messages` reduciendo las lecturas de O(N_mensajes) a O(LIMIT).
+  const query = `
+    SELECT 
+      l.id as leadId,
+      l.full_name as leadName,
+      l.phone as leadPhone,
+      l.status as leadStatus,
+      l.segment as leadSegment,
+      l.assigned_to as assignedTo,
+      u.name as assignedName,
+      l.ai_enabled as aiEnabled,
+      l.handoff_at as handoffAt,
+      l.handoff_reason as handoffReason,
+      l.last_message_text as lastMessageText,
+      l.last_message_time as lastMessageTime,
+      l.last_message_sender as lastMessageSender,
+      l.last_message_status as lastMessageStatus,
+      COALESCE(l.unread_count, 0) as unreadCount
+    FROM leads l
+    LEFT JOIN users u ON u.id = l.assigned_to
+    ${whereClause}
+    ORDER BY l.last_message_time DESC 
+    LIMIT 50
+  `;
+
+  const rows = await c.env.DB.prepare(query).bind(...params).all<any>();
+  const conversations: ConversationSummary[] = (rows.results || []).map((r) => ({
+    leadId: r.leadId,
+    leadName: r.leadName,
+    leadPhone: r.leadPhone,
+    leadStatus: r.leadStatus,
+    leadSegment: r.leadSegment,
+    assignedTo: r.assignedTo,
+    assignedName: r.assignedName,
+    lastMessageText: r.lastMessageText || 'Sin mensajes aún',
+    lastMessageTime: r.lastMessageTime || '',
+    lastMessageSender: r.lastMessageSender || 'system',
+    lastMessageStatus: r.lastMessageStatus || 'sent',
+    unreadCount: r.unreadCount || 0,
+    aiEnabled: r.aiEnabled === 1,
+    isHandoff: Boolean(r.handoffAt),
+    handoffReason: r.handoffReason,
+  }));
+
+  if (currentEtag) {
+    c.header('ETag', currentEtag);
+  }
   return c.json({ conversations });
 });
 
@@ -901,6 +1004,26 @@ whatsappRoutes.get('/api/whatsapp/leads/:id/chat', async (c) => {
     .first<Lead>();
   if (!lead) return c.json({ error: 'Lead no encontrado' }, 404);
 
+  const parsedLead = {
+    id: lead.id,
+    full_name: lead.full_name,
+    phone: lead.phone,
+    status: lead.status,
+    segment: lead.segment,
+    ai_enabled: lead.ai_enabled === 1,
+    is_handoff: Boolean(lead.handoff_at),
+    handoff_reason: lead.handoff_reason,
+  };
+
+  // OPTIMIZACIÓN D1: Si se envía 'since' y el último mensaje del lead es <= 'since',
+  // se descarta la consulta a whatsapp_messages reduciendo drásticamente las lecturas en polling.
+  if (since && lead.last_message_time && lead.last_message_time <= since) {
+    return c.json({
+      lead: parsedLead,
+      messages: [],
+    });
+  }
+
   let query = `
     SELECT m.*, u.name as user_name 
     FROM whatsapp_messages m 
@@ -910,36 +1033,48 @@ whatsappRoutes.get('/api/whatsapp/leads/:id/chat', async (c) => {
   const params: any[] = [leadId];
 
   if (since) {
-    query += ' AND m.created_at > ?';
+    query += ' AND m.created_at > ? ORDER BY m.created_at ASC LIMIT 100';
     params.push(since);
+  } else {
+    // Si no hay 'since' (carga inicial de chat), traer los 150 más recientes ordenados cronológicamente
+    query = `
+      SELECT * FROM (
+        SELECT m.*, u.name as user_name 
+        FROM whatsapp_messages m 
+        LEFT JOIN users u ON u.id = m.user_id 
+        WHERE m.lead_id = ?
+        ORDER BY m.created_at DESC 
+        LIMIT 150
+      ) ORDER BY created_at ASC
+    `;
   }
-
-  query += ' ORDER BY m.created_at ASC';
 
   const res = await c.env.DB.prepare(query).bind(...params).all();
 
-  // Marcar como leídos los mensajes del lead si los ve el asesor
-  if (!since) {
-    await c.env.DB.prepare(`
-      UPDATE whatsapp_messages 
-      SET status = 'read' 
-      WHERE lead_id = ? AND sender = 'lead' AND status != 'read'
-    `)
-      .bind(leadId)
-      .run();
+  // Marcar como leídos los mensajes del lead ÚNICAMENTE si existen mensajes no leídos
+  if (!since && (lead.unread_count || 0) > 0) {
+    const nowIso = new Date().toISOString();
+    const markReadStmts = [
+      c.env.DB.prepare(`
+        UPDATE whatsapp_messages 
+        SET status = 'read' 
+        WHERE lead_id = ? AND sender = 'lead' AND status != 'read'
+      `).bind(leadId),
+      c.env.DB.prepare(`
+        UPDATE leads 
+        SET unread_count = 0, updated_at = ? 
+        WHERE id = ? AND unread_count > 0
+      `).bind(nowIso, leadId),
+    ];
+    if (typeof c.env.DB.batch === 'function') {
+      await c.env.DB.batch(markReadStmts);
+    } else {
+      for (const st of markReadStmts) await st.run();
+    }
   }
 
   return c.json({
-    lead: {
-      id: lead.id,
-      full_name: lead.full_name,
-      phone: lead.phone,
-      status: lead.status,
-      segment: lead.segment,
-      ai_enabled: lead.ai_enabled === 1,
-      is_handoff: Boolean(lead.handoff_at),
-      handoff_reason: lead.handoff_reason,
-    },
+    lead: parsedLead,
     messages: res.results || [],
   });
 });
@@ -999,31 +1134,34 @@ whatsappRoutes.post('/api/whatsapp/leads/:id/send', async (c) => {
   const msgId = `msg_${crypto.randomUUID().slice(0, 8)}`;
   const now = new Date().toISOString();
 
-  await c.env.DB.prepare(`
+  const insertStmt = c.env.DB.prepare(`
     INSERT INTO whatsapp_messages (
       id, lead_id, user_id, sender, message_type, content, media_url, status, whatsapp_message_id, ai_generated, created_at
     ) VALUES (?, ?, ?, 'agent', ?, ?, ?, ?, ?, 0, ?)
-  `)
-    .bind(
-      msgId,
-      leadId,
-      user?.userId || null,
-      imageUrl ? 'image' : 'text',
-      text || 'Imagen enviada',
-      imageUrl,
-      waMessageId ? 'delivered' : 'sent',
-      waMessageId,
-      now
-    )
-    .run();
+  `).bind(
+    msgId,
+    leadId,
+    user?.userId || null,
+    imageUrl ? 'image' : 'text',
+    text || 'Imagen enviada',
+    imageUrl,
+    waMessageId ? 'delivered' : 'sent',
+    waMessageId,
+    now
+  );
 
-  await c.env.DB.prepare(`
+  const updateStmt = c.env.DB.prepare(`
     UPDATE leads 
     SET last_contacted_at = ?, updated_by = ?, updated_at = ? 
     WHERE id = ?
-  `)
-    .bind(now, user?.userId || null, now, leadId)
-    .run();
+  `).bind(now, user?.userId || null, now, leadId);
+
+  if (typeof c.env.DB.batch === 'function') {
+    await c.env.DB.batch([insertStmt, updateStmt]);
+  } else {
+    await insertStmt.run();
+    await updateStmt.run();
+  }
 
   return c.json({
     success: true,
@@ -1342,31 +1480,34 @@ whatsappRoutes.post('/api/whatsapp/leads/:id/send-sticker', async (c) => {
   const now = new Date().toISOString();
   const mediaUrl = stickerFileUrl(sticker.id);
 
-  await c.env.DB.prepare(`
+  const insertStmt = c.env.DB.prepare(`
     INSERT INTO whatsapp_messages (
       id, lead_id, user_id, sender, message_type, content, media_url, status, whatsapp_message_id, ai_generated, raw_payload, created_at
     ) VALUES (?, ?, ?, 'agent', 'sticker', ?, ?, ?, ?, 0, ?, ?)
-  `)
-    .bind(
-      msgId,
-      leadId,
-      user?.userId || null,
-      sticker.animated === 1 ? '[Sticker animado]' : '[Sticker]',
-      mediaUrl,
-      waMessageId ? 'delivered' : 'failed',
-      waMessageId,
-      JSON.stringify({ sticker_id: sticker.id, animated: sticker.animated === 1 }),
-      now
-    )
-    .run();
+  `).bind(
+    msgId,
+    leadId,
+    user?.userId || null,
+    sticker.animated === 1 ? '[Sticker animado]' : '[Sticker]',
+    mediaUrl,
+    waMessageId ? 'delivered' : 'failed',
+    waMessageId,
+    JSON.stringify({ sticker_id: sticker.id, animated: sticker.animated === 1 }),
+    now
+  );
 
-  await c.env.DB.prepare(`
+  const updateStmt = c.env.DB.prepare(`
     UPDATE leads 
     SET last_contacted_at = ?, updated_by = ?, updated_at = ? 
     WHERE id = ?
-  `)
-    .bind(now, user?.userId || null, now, leadId)
-    .run();
+  `).bind(now, user?.userId || null, now, leadId);
+
+  if (typeof c.env.DB.batch === 'function') {
+    await c.env.DB.batch([insertStmt, updateStmt]);
+  } else {
+    await insertStmt.run();
+    await updateStmt.run();
+  }
 
   return c.json({
     success: Boolean(waMessageId),

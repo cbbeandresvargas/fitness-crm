@@ -118,6 +118,18 @@ async function safeLogActivity(
   return;
 }
 
+let settingsCache: {
+  dbRef?: any;
+  aiEnabled: number;
+  expiresAt: number;
+} | null = null;
+
+let activitiesCache: {
+  dbRef?: any;
+  list: { id: string; name: string; name_norm: string; is_active: number }[];
+  expiresAt: number;
+} | null = null;
+
 /**
  * Despachador limpio que delega el turno de conversación al microservicio de IA (ai-micro)
  * y persiste el estado, nombre, disciplinas y mensaje en D1 y Meta WhatsApp.
@@ -151,13 +163,25 @@ export async function runSalesAgentTurn(params: {
       return { executed: false, error: 'IA desactivada o handoff activo' };
     }
 
-    // 2. Verificar toggle global de WhatsApp si existe configuración
+    // 2. Verificar toggle global de WhatsApp si existe configuración (con caché en memoria)
     try {
-      const settings = await env.DB.prepare(
-        'SELECT ai_enabled FROM whatsapp_settings ORDER BY created_at DESC LIMIT 1'
-      ).first<{ ai_enabled: number }>();
+      const nowMs = Date.now();
+      let aiEnabledVal = 1;
+      if (settingsCache && settingsCache.dbRef === env.DB && settingsCache.expiresAt > nowMs) {
+        aiEnabledVal = settingsCache.aiEnabled;
+      } else {
+        const settings = await env.DB.prepare(
+          'SELECT ai_enabled FROM whatsapp_settings ORDER BY created_at DESC LIMIT 1'
+        ).first<{ ai_enabled: number }>();
+        aiEnabledVal = settings?.ai_enabled ?? 1;
+        settingsCache = {
+          dbRef: env.DB,
+          aiEnabled: aiEnabledVal,
+          expiresAt: nowMs + 30_000,
+        };
+      }
 
-      if (settings && settings.ai_enabled === 0) {
+      if (aiEnabledVal === 0) {
         console.log('[Sales Agent] Toggle global de IA está apagado');
         return { executed: false, error: 'IA global apagada' };
       }
@@ -362,15 +386,26 @@ export async function runSalesAgentTurn(params: {
     // C) Registro y Asociación de Disciplinas de Interés en prospect_activities
     if (Array.isArray(action.detected_disciplines) && action.detected_disciplines.length > 0) {
       try {
-        const allActivitiesRes = await env.DB.prepare(
-          'SELECT id, name, name_norm, is_active FROM activities'
-        ).all<{
-          id: string;
-          name: string;
-          name_norm: string;
-          is_active: number;
-        }>();
-        const allActivities = allActivitiesRes.results || [];
+        const nowMs = Date.now();
+        let allActivities: { id: string; name: string; name_norm: string; is_active: number }[];
+        if (activitiesCache && activitiesCache.dbRef === env.DB && activitiesCache.expiresAt > nowMs) {
+          allActivities = activitiesCache.list;
+        } else {
+          const allActivitiesRes = await env.DB.prepare(
+            'SELECT id, name, name_norm, is_active FROM activities'
+          ).all<{
+            id: string;
+            name: string;
+            name_norm: string;
+            is_active: number;
+          }>();
+          allActivities = allActivitiesRes.results || [];
+          activitiesCache = {
+            dbRef: env.DB,
+            list: allActivities,
+            expiresAt: nowMs + 60_000,
+          };
+        }
 
         for (const rawDiscipline of action.detected_disciplines) {
           if (!rawDiscipline || typeof rawDiscipline !== 'string') continue;
@@ -609,32 +644,38 @@ export async function deliverOutboundMessage(params: {
   }
 
   const msgId = `msg_${crypto.randomUUID().slice(0, 8)}`;
+  const msgStatus = waMessageId ? 'delivered' : (metaError ? 'failed' : 'sent');
 
-  // Guardar en la base de datos D1
-  await env.DB.prepare(`
+  // Guardar en la base de datos D1 y sincronizar campos desnormalizados de leads
+  const insertMsgStmt = env.DB.prepare(`
     INSERT INTO whatsapp_messages (
       id, lead_id, user_id, sender, message_type, content, media_url, status, whatsapp_message_id, ai_generated, created_at
     ) VALUES (?, ?, NULL, 'agent', ?, ?, ?, ?, ?, 1, ?)
-  `)
-    .bind(
-      msgId,
-      lead.id,
-      imageUrl ? 'image' : 'text',
-      text,
-      imageUrl || null,
-      waMessageId ? 'delivered' : (metaError ? 'failed' : 'sent'),
-      waMessageId,
-      now
-    )
-    .run();
+  `).bind(
+    msgId,
+    lead.id,
+    imageUrl ? 'image' : 'text',
+    text,
+    imageUrl || null,
+    msgStatus,
+    waMessageId,
+    now
+  );
 
-  await env.DB.prepare(`
+  const updateLeadStmt = env.DB.prepare(`
     UPDATE leads 
-    SET last_contacted_at = ?, updated_at = ? 
+    SET last_contacted_at = ?, updated_at = ?,
+        last_message_text = ?, last_message_time = ?, last_message_sender = 'agent',
+        last_message_status = ?
     WHERE id = ?
-  `)
-    .bind(now, now, lead.id)
-    .run();
+  `).bind(now, now, text, now, msgStatus, lead.id);
+
+  if (typeof env.DB.batch === 'function') {
+    await env.DB.batch([insertMsgStmt, updateLeadStmt]);
+  } else {
+    await insertMsgStmt.run();
+    await updateLeadStmt.run();
+  }
 
   return {
     sentToMeta: Boolean(waMessageId),

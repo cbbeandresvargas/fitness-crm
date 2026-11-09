@@ -29,6 +29,12 @@ CREATE TABLE IF NOT EXISTS leads (
   ai_enabled INTEGER NOT NULL DEFAULT 1,
   handoff_at TEXT,
   handoff_reason TEXT,
+  -- Campos desnormalizados optimizados para Cloudflare D1 (lectura O(LIMIT) en bandeja de entrada)
+  last_message_text TEXT,
+  last_message_time TEXT,
+  last_message_sender TEXT CHECK(last_message_sender IN ('agent', 'lead', 'system')),
+  last_message_status TEXT CHECK(last_message_status IN ('pending', 'sent', 'delivered', 'read', 'failed')),
+  unread_count INTEGER NOT NULL DEFAULT 0,
   created_by TEXT REFERENCES users(id),
   updated_by TEXT REFERENCES users(id),
   created_at TEXT NOT NULL DEFAULT (DATETIME('now')),
@@ -128,18 +134,106 @@ CREATE TABLE IF NOT EXISTS prospect_activities (
   created_at TEXT NOT NULL DEFAULT (DATETIME('now'))
 );
 
+-- ============================================================================
 -- Índices de alto rendimiento y optimización para Cloudflare D1
+-- ============================================================================
 CREATE INDEX IF NOT EXISTS idx_leads_created_at ON leads(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_leads_assigned_created ON leads(assigned_to, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
 CREATE INDEX IF NOT EXISTS idx_leads_status_assigned ON leads(status, assigned_to);
 CREATE INDEX IF NOT EXISTS idx_leads_segment ON leads(segment);
+CREATE INDEX IF NOT EXISTS idx_leads_last_message_time ON leads(last_message_time DESC);
+CREATE INDEX IF NOT EXISTS idx_leads_assigned_last_msg ON leads(assigned_to, last_message_time DESC);
+CREATE INDEX IF NOT EXISTS idx_leads_unread ON leads(unread_count) WHERE unread_count > 0;
+
 CREATE INDEX IF NOT EXISTS idx_users_role_active ON users(role, is_active);
 CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_user_id ON audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_logs(entity_type, entity_id);
+
 CREATE INDEX IF NOT EXISTS idx_whatsapp_lead_created ON whatsapp_messages(lead_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_whatsapp_created ON whatsapp_messages(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_whatsapp_unread ON whatsapp_messages(lead_id, sender, status) WHERE status != 'read';
+CREATE INDEX IF NOT EXISTS idx_whatsapp_user_id ON whatsapp_messages(user_id);
+
 CREATE INDEX IF NOT EXISTS idx_kb_category ON knowledge_base(category);
+CREATE INDEX IF NOT EXISTS idx_templates_category ON message_templates(category);
 CREATE INDEX IF NOT EXISTS idx_stickers_created ON stickers(created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_activities_active_name ON activities(is_active DESC, name COLLATE NOCASE ASC);
 CREATE INDEX IF NOT EXISTS idx_prospect_activities_activity ON prospect_activities(activity_id);
+CREATE INDEX IF NOT EXISTS idx_prospect_activities_lead_created ON prospect_activities(lead_id, created_at ASC);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_prospect_activities_unique ON prospect_activities(lead_id, activity_id);
+
+-- ============================================================================
+-- Triggers atómicos para sincronización de Inbox en tiempo real
+-- ============================================================================
+
+CREATE TRIGGER IF NOT EXISTS trg_whatsapp_messages_after_insert
+AFTER INSERT ON whatsapp_messages
+BEGIN
+  UPDATE leads
+  SET 
+    last_message_text = CASE 
+      WHEN leads.last_message_time IS NULL OR NEW.created_at >= leads.last_message_time 
+      THEN NEW.content 
+      ELSE leads.last_message_text 
+    END,
+    last_message_time = CASE 
+      WHEN leads.last_message_time IS NULL OR NEW.created_at >= leads.last_message_time 
+      THEN NEW.created_at 
+      ELSE leads.last_message_time 
+    END,
+    last_message_sender = CASE 
+      WHEN leads.last_message_time IS NULL OR NEW.created_at >= leads.last_message_time 
+      THEN NEW.sender 
+      ELSE leads.last_message_sender 
+    END,
+    last_message_status = CASE 
+      WHEN leads.last_message_time IS NULL OR NEW.created_at >= leads.last_message_time 
+      THEN NEW.status 
+      ELSE leads.last_message_status 
+    END,
+    unread_count = CASE 
+      WHEN NEW.sender = 'lead' AND NEW.status != 'read' 
+      THEN leads.unread_count + 1 
+      ELSE leads.unread_count 
+    END,
+    updated_at = NEW.created_at
+  WHERE id = NEW.lead_id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_whatsapp_messages_after_update_status
+AFTER UPDATE OF status ON whatsapp_messages
+BEGIN
+  UPDATE leads
+  SET 
+    unread_count = CASE 
+      WHEN OLD.sender = 'lead' AND OLD.status != 'read' AND NEW.status = 'read' 
+      THEN MAX(0, leads.unread_count - 1)
+      WHEN OLD.sender = 'lead' AND OLD.status = 'read' AND NEW.status != 'read'
+      THEN leads.unread_count + 1
+      ELSE leads.unread_count
+    END,
+    last_message_status = CASE 
+      WHEN NEW.created_at >= COALESCE(leads.last_message_time, '') 
+      THEN NEW.status 
+      ELSE leads.last_message_status 
+    END,
+    updated_at = strftime('%Y-%m-%d %H:%M:%fZ', 'now')
+  WHERE id = NEW.lead_id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_whatsapp_messages_after_delete
+AFTER DELETE ON whatsapp_messages
+BEGIN
+  UPDATE leads
+  SET 
+    unread_count = CASE 
+      WHEN OLD.sender = 'lead' AND OLD.status != 'read' 
+      THEN MAX(0, leads.unread_count - 1)
+      ELSE leads.unread_count
+    END,
+    updated_at = strftime('%Y-%m-%d %H:%M:%fZ', 'now')
+  WHERE id = OLD.lead_id;
+END;

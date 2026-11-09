@@ -150,6 +150,17 @@ leadsRoutes.get('/api/leads', async (c) => {
   const status = c.req.query('status')?.trim();
   const agentId = c.req.query('agentId')?.trim();
   const tag = c.req.query('tag')?.trim();
+  const limitParam = c.req.query('limit');
+  const offsetParam = c.req.query('offset');
+  const pageParam = c.req.query('page');
+
+  // Límite seguro por defecto para evitar OOM y sobreconsumo de lecturas en D1
+  const limit = limitParam ? Math.min(Math.max(1, parseInt(limitParam, 10) || 50), 200) : 50;
+  let offset = offsetParam ? Math.max(0, parseInt(offsetParam, 10) || 0) : 0;
+  if (pageParam && !offsetParam) {
+    const page = Math.max(1, parseInt(pageParam, 10) || 1);
+    offset = (page - 1) * limit;
+  }
 
   let whereClauses: string[] = [];
   let params: any[] = [];
@@ -182,7 +193,7 @@ leadsRoutes.get('/api/leads', async (c) => {
   }
 
   const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-  const query = `
+  let query = `
     SELECT l.*, u.name as assigned_name 
     FROM leads l 
     LEFT JOIN users u ON u.id = l.assigned_to 
@@ -190,31 +201,42 @@ leadsRoutes.get('/api/leads', async (c) => {
     ORDER BY l.created_at DESC
   `;
 
+  if (!segment) {
+    query += ' LIMIT ? OFFSET ?';
+    params.push(limit, offset);
+  } else {
+    // Si filtra por segmento derivado, limitamos a un lote seguro de evaluación
+    query += ' LIMIT 200';
+  }
+
   const leadsRes = await c.env.DB.prepare(query).bind(...params).all<Lead>();
 
-  // Actividades de interés: UNA sola consulta que JOINea las relaciones de los
-  // prospectos ya filtrados, reutilizando las MISMAS condiciones (whereSql/params)
-  // de la consulta principal de leads. Cero variables SQL dependientes de la
-  // cantidad de prospectos (D1 limita los parámetros enlazados por consulta;
-  // un IN(?) con un placeholder por lead excedía el límite con cientos de leads).
+  // Actividades de interés: optimizado para evitar consultas N+1 y full-scans de tabla.
+  // Consultamos únicamente las actividades de los prospectos de la página actual utilizando IN (?)
+  // en lotes seguros de hasta 50 IDs.
   const hasLeads = (leadsRes.results || []).length > 0;
   const interestsByLead = new Map<string, { id: string; name: string; is_active: number }[]>();
   if (hasLeads) {
-    const interestsRes = await c.env.DB.prepare(
-      `SELECT pa.lead_id, a.id, a.name, a.is_active
-       FROM leads l
-       JOIN prospect_activities pa ON pa.lead_id = l.id
-       JOIN activities a ON a.id = pa.activity_id
-       ${whereSql}
-       ORDER BY pa.created_at ASC`
-    )
-      .bind(...params)
-      .all<{ lead_id: string; id: string; name: string; is_active: number }>();
+    const leadIds = (leadsRes.results || []).map((l) => l.id);
+    const batchSize = 50;
+    for (let i = 0; i < leadIds.length; i += batchSize) {
+      const slice = leadIds.slice(i, i + batchSize);
+      const placeholders = slice.map(() => '?').join(',');
+      const interestsRes = await c.env.DB.prepare(
+        `SELECT pa.lead_id, a.id, a.name, a.is_active
+         FROM prospect_activities pa
+         JOIN activities a ON a.id = pa.activity_id
+         WHERE pa.lead_id IN (${placeholders})
+         ORDER BY pa.created_at ASC`
+      )
+        .bind(...slice)
+        .all<{ lead_id: string; id: string; name: string; is_active: number }>();
 
-    for (const row of interestsRes.results || []) {
-      const arr = interestsByLead.get(row.lead_id) || [];
-      arr.push({ id: row.id, name: row.name, is_active: row.is_active });
-      interestsByLead.set(row.lead_id, arr);
+      for (const row of interestsRes.results || []) {
+        const arr = interestsByLead.get(row.lead_id) || [];
+        arr.push({ id: row.id, name: row.name, is_active: row.is_active });
+        interestsByLead.set(row.lead_id, arr);
+      }
     }
   }
 
@@ -232,9 +254,17 @@ leadsRoutes.get('/api/leads', async (c) => {
   // Filtro por segmento derivado (identificadores internos A/B/C)
   if (segment) {
     leads = leads.filter((l) => l.segment === segment);
+    if (limitParam || offsetParam || pageParam) {
+      leads = leads.slice(offset, offset + limit);
+    }
   }
 
-  return c.json({ leads });
+  return c.json({
+    leads,
+    total: leads.length,
+    limit,
+    offset,
+  });
 });
 
 /**
@@ -949,7 +979,7 @@ leadsRoutes.delete('/api/leads/:id', async (c) => {
     return c.json({ error: 'Acceso Denegado' }, 403);
   }
 
-  await c.env.DB.batch([
+  const deleteStmts = [
     c.env.DB.prepare('DELETE FROM prospect_activities WHERE lead_id = ?').bind(leadId),
     c.env.DB.prepare('DELETE FROM whatsapp_messages WHERE lead_id = ?').bind(leadId),
     c.env.DB.prepare('DELETE FROM leads WHERE id = ?').bind(leadId),
@@ -963,7 +993,13 @@ leadsRoutes.delete('/api/leads/:id', async (c) => {
       `Prospecto ${lead.full_name} (${lead.phone}) eliminado por ${user.name}`,
       new Date().toISOString()
     ),
-  ]);
+  ];
+
+  if (typeof c.env.DB.batch === 'function') {
+    await c.env.DB.batch(deleteStmts);
+  } else {
+    for (const stmt of deleteStmts) await stmt.run();
+  }
 
   return c.json({ success: true, deletedId: leadId });
 });

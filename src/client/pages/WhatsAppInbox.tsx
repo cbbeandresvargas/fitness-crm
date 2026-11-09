@@ -49,6 +49,21 @@ export default function WhatsAppInbox() {
   const [updatingStage, setUpdatingStage] = createSignal(false);
   const [templates, setTemplates] = createSignal<MessageTemplate[]>([]);
 
+  // Estado de sincronización adaptativa y control de llamadas D1
+  const [syncStatus, setSyncStatus] = createSignal<'active' | 'idle' | 'paused'>('active');
+  const [isManualSyncing, setIsManualSyncing] = createSignal(false);
+  const [lastSyncTime, setLastSyncTime] = createSignal<Date>(new Date());
+
+  // Guards de concurrencia en vuelo (In-Flight Guards)
+  let isChatInFlight = false;
+  let isInboxInFlight = false;
+
+  // Caché de ETag y control de inactividad
+  let lastInboxEtag: string | undefined = undefined;
+  let lastUserActivityTimestamp = Date.now();
+  let adaptiveTimer: any = null;
+  let ticksSinceInboxCheck = 0;
+
   // Stickers state
   const [stickers, setStickers] = createSignal<Sticker[]>([]);
   const [loadingStickers, setLoadingStickers] = createSignal(false);
@@ -60,9 +75,16 @@ export default function WhatsAppInbox() {
   let fileInputRef: HTMLInputElement | undefined;
 
   let chatContainerRef: HTMLDivElement | undefined;
-  let pollingTimer: any = null;
+
+  const recordUserActivity = () => {
+    lastUserActivityTimestamp = Date.now();
+    if (syncStatus() !== 'active') {
+      setSyncStatus('active');
+    }
+  };
 
   const handleFileSelect = (e: Event) => {
+    recordUserActivity();
     const target = e.target as HTMLInputElement;
     if (target.files && target.files[0]) {
       const file = target.files[0];
@@ -74,6 +96,7 @@ export default function WhatsAppInbox() {
   };
 
   const handleRemoveImage = () => {
+    recordUserActivity();
     setSelectedImage(null);
     setImagePreview(null);
     if (fileInputRef) fileInputRef.value = '';
@@ -87,32 +110,64 @@ export default function WhatsAppInbox() {
     }, 50);
   };
 
-  const loadInboxList = async () => {
+  const loadInboxList = async (forceFull = false) => {
+    if (isInboxInFlight) return;
+    isInboxInFlight = true;
+
     try {
-      const res = await api.getWhatsAppInbox();
-      setConversations(res.conversations || []);
-      
-      const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
-      if (!selectedLeadId() && isDesktop && res.conversations && res.conversations.length > 0) {
-        selectConversation(res.conversations[0].leadId);
+      const etagToSend = forceFull ? undefined : lastInboxEtag;
+      const res = await api.getWhatsAppInbox(etagToSend);
+
+      if (res.notModified) {
+        // Respuesta 304 Not Modified: Cloudflare D1 ejecutó solo 2 lecturas de índice sin CTE.
+        setLastSyncTime(new Date());
+        return;
+      }
+
+      if (res.conversations) {
+        setConversations(res.conversations);
+        if (res.etag) {
+          lastInboxEtag = res.etag;
+        }
+        setLastSyncTime(new Date());
+
+        const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
+        if (!selectedLeadId() && isDesktop && res.conversations.length > 0) {
+          selectConversation(res.conversations[0].leadId);
+        }
       }
     } catch (err) {
       console.error('Error cargando inbox:', err);
     } finally {
       setLoadingList(false);
+      isInboxInFlight = false;
     }
   };
 
   const loadChat = async (leadId: string, isPoll = false) => {
     if (!leadId) return;
-    if (!isPoll) setLoadingChat(true);
+    if (isPoll && isChatInFlight) return; // In-Flight guard
+
+    if (!isPoll) {
+      setLoadingChat(true);
+    } else {
+      isChatInFlight = true;
+    }
 
     try {
       const currentMsgs = messages();
       const lastMsgTime = isPoll && currentMsgs.length > 0 ? currentMsgs[currentMsgs.length - 1].created_at : undefined;
       
       const res = await api.getWhatsAppChat(leadId, lastMsgTime);
-      setActiveLead(res.lead);
+
+      // Protección contra carreras de navegación rápida entre chats
+      if (selectedLeadId() !== leadId) {
+        return;
+      }
+
+      if (res.lead) {
+        setActiveLead(res.lead);
+      }
 
       if (isPoll && lastMsgTime) {
         if (res.messages && res.messages.length > 0) {
@@ -121,28 +176,58 @@ export default function WhatsAppInbox() {
           if (newOnly.length > 0) {
             setMessages([...currentMsgs, ...newOnly]);
             scrollToBottom();
+
+            // Actualización local de vista previa en la columna izquierda sin consultar la DB completa
+            const lastOne = newOnly[newOnly.length - 1];
+            setConversations((prev) =>
+              prev.map((c) =>
+                c.leadId === leadId
+                  ? {
+                      ...c,
+                      lastMessageText: lastOne.content,
+                      lastMessageTime: lastOne.created_at,
+                      lastMessageSender: lastOne.sender,
+                      lastMessageStatus: lastOne.status,
+                      unreadCount: 0,
+                    }
+                  : c
+              )
+            );
+            recordUserActivity();
           }
         }
       } else {
         setMessages(res.messages || []);
         scrollToBottom();
       }
+      setLastSyncTime(new Date());
     } catch (err) {
       console.error('Error cargando chat:', err);
     } finally {
       if (!isPoll) setLoadingChat(false);
+      if (isPoll) isChatInFlight = false;
     }
   };
 
   const selectConversation = (leadId: string) => {
     setSelectedLeadId(leadId);
     setSearchParams({ leadId });
+    recordUserActivity();
+    ticksSinceInboxCheck = 0;
+    // Marcar como leído de inmediato localmente para reactividad visual instantánea
+    setConversations((prev) =>
+      prev.map((c) => (c.leadId === leadId ? { ...c, unreadCount: 0 } : c))
+    );
     loadChat(leadId, false);
+    scheduleNextCycle(10_000);
   };
 
   const handleBackToList = () => {
     setSelectedLeadId('');
     setSearchParams({});
+    recordUserActivity();
+    loadInboxList(false);
+    scheduleNextCycle(20_000);
   };
 
   const handleSendMessage = async (e?: Event) => {
@@ -152,6 +237,7 @@ export default function WhatsAppInbox() {
     const file = selectedImage();
     if ((!text && !file) || !leadId || sending()) return;
 
+    recordUserActivity();
     setSending(true);
     try {
       let imageUrl: string | undefined = undefined;
@@ -167,8 +253,10 @@ export default function WhatsAppInbox() {
       if (res.success) {
         setChatInput('');
         handleRemoveImage();
+        lastInboxEtag = undefined; // Forzar invalidación local de caché
         await loadChat(leadId, false);
-        await loadInboxList();
+        await loadInboxList(true);
+        scheduleNextCycle(10_000);
       }
     } catch (err: any) {
       showToast(`Error al enviar mensaje: ${err.message || 'Error desconocido'}`, 'error');
@@ -181,6 +269,7 @@ export default function WhatsAppInbox() {
     const lead = activeLead();
     if (!lead || togglingAi()) return;
 
+    recordUserActivity();
     setTogglingAi(true);
     try {
       const res = await api.toggleLeadAi(lead.id, {
@@ -194,7 +283,8 @@ export default function WhatsAppInbox() {
         is_handoff: res.is_handoff,
       });
 
-      await loadInboxList();
+      lastInboxEtag = undefined;
+      await loadInboxList(true);
     } catch (err: any) {
       showToast(`Error actualizando IA: ${err.message}`, 'error');
     } finally {
@@ -206,12 +296,14 @@ export default function WhatsAppInbox() {
     const lead = activeLead();
     if (!lead || triggeringAi()) return;
 
+    recordUserActivity();
     setTriggeringAi(true);
     try {
       const res = await api.testLeadAi(lead.id, { sendToWhatsApp: true });
       if (res.success) {
+        lastInboxEtag = undefined;
         await loadChat(lead.id, false);
-        await loadInboxList();
+        await loadInboxList(true);
       } else {
         showToast(`Error al generar respuesta de IA: ${res.error || 'No se pudo generar'}`, 'error');
       }
@@ -226,6 +318,7 @@ export default function WhatsAppInbox() {
     const lead = activeLead();
     if (!lead || updatingStage()) return;
 
+    recordUserActivity();
     setUpdatingStage(true);
     try {
       await api.updateLeadStatus(lead.id, newStatus);
@@ -233,7 +326,8 @@ export default function WhatsAppInbox() {
         ...lead,
         status: newStatus,
       });
-      await loadInboxList();
+      lastInboxEtag = undefined;
+      await loadInboxList(true);
     } catch (err: any) {
       showToast(`Error actualizando etapa: ${err.message}`, 'error');
     } finally {
@@ -256,6 +350,7 @@ export default function WhatsAppInbox() {
   };
 
   const handleToggleStickerPicker = () => {
+    recordUserActivity();
     const next = !showStickerPicker();
     setShowStickerPicker(next);
     if (next) {
@@ -267,6 +362,7 @@ export default function WhatsAppInbox() {
     const leadId = selectedLeadId();
     if (!leadId || sendingSticker()) return;
 
+    recordUserActivity();
     setSendingSticker(true);
     setShowStickerPicker(false);
 
@@ -277,12 +373,114 @@ export default function WhatsAppInbox() {
       } else {
         showToast(`Sticker "${sticker.name}" enviado`, 'success');
       }
+      lastInboxEtag = undefined;
       await loadChat(leadId, false);
-      await loadInboxList();
+      await loadInboxList(true);
+      scheduleNextCycle(10_000);
     } catch (err: any) {
       showToast(`Error al enviar sticker: ${err.message || 'Error desconocido'}`, 'error');
     } finally {
       setSendingSticker(false);
+    }
+  };
+
+  const handleManualRefresh = async () => {
+    if (isManualSyncing()) return;
+    setIsManualSyncing(true);
+    recordUserActivity();
+
+    try {
+      lastInboxEtag = undefined; // Forzar consulta completa
+      const leadId = selectedLeadId();
+      const promises: Promise<any>[] = [loadInboxList(true)];
+      if (leadId) {
+        promises.push(loadChat(leadId, false));
+      }
+      await Promise.all(promises);
+      setLastSyncTime(new Date());
+      showToast('Bandeja sincronizada', 'info');
+    } catch (err: any) {
+      showToast(`Error al sincronizar: ${err.message || 'Error desconocido'}`, 'error');
+    } finally {
+      setIsManualSyncing(false);
+      scheduleNextCycle(selectedLeadId() ? 10_000 : 20_000);
+    }
+  };
+
+  const clearAdaptiveTimer = () => {
+    if (adaptiveTimer) {
+      clearTimeout(adaptiveTimer);
+      adaptiveTimer = null;
+    }
+  };
+
+  const scheduleNextCycle = (delayMs: number) => {
+    clearAdaptiveTimer();
+    adaptiveTimer = setTimeout(() => {
+      runAdaptiveCycle();
+    }, delayMs);
+  };
+
+  const runAdaptiveCycle = async () => {
+    // 1. Pausa incondicional si la pestaña está oculta o minimizada
+    if (typeof document !== 'undefined' && document.hidden) {
+      setSyncStatus('paused');
+      clearAdaptiveTimer();
+      return;
+    }
+
+    const now = Date.now();
+    const idleDuration = now - lastUserActivityTimestamp;
+    const isIdle = idleDuration > 45_000;
+    const isDeepIdle = idleDuration > 300_000;
+
+    setSyncStatus(isIdle ? 'idle' : 'active');
+
+    const leadId = selectedLeadId();
+
+    try {
+      if (leadId) {
+        // En un chat activo: solo consultar mensajes nuevos para ese lead con timestamp incremental 'since'
+        await loadChat(leadId, true);
+
+        // La lista completa de conversaciones se actualiza con menor frecuencia y con ETag
+        ticksSinceInboxCheck++;
+        const inboxIntervalTicks = isDeepIdle ? 3 : isIdle ? 2 : 4;
+        if (ticksSinceInboxCheck >= inboxIntervalTicks) {
+          ticksSinceInboxCheck = 0;
+          await loadInboxList(false);
+        }
+      } else {
+        // En vista de lista: verificar cambios con ETag
+        await loadInboxList(false);
+      }
+    } catch (err) {
+      console.error('[WhatsApp Inbox] Error en ciclo adaptativo:', err);
+    } finally {
+      // Cálculo adaptativo del siguiente intervalo con backoff
+      let nextIntervalMs = 10_000;
+
+      if (leadId) {
+        if (isDeepIdle) {
+          nextIntervalMs = 60_000; // 60s en inactividad prolongada (>5min)
+        } else if (isIdle) {
+          nextIntervalMs = 30_000; // 30s en inactividad (>45s)
+        } else {
+          nextIntervalMs = 10_000; // 10s interactuando activamente
+        }
+      } else {
+        if (isDeepIdle) {
+          nextIntervalMs = 90_000; // 90s en lista inactiva prolongada
+        } else if (isIdle) {
+          nextIntervalMs = 60_000; // 60s en lista inactiva
+        } else {
+          nextIntervalMs = 20_000; // 20s en lista activa
+        }
+      }
+
+      if (typeof document === 'undefined' || !document.hidden) {
+        scheduleNextCycle(nextIntervalMs);
+      }
     }
   };
 
@@ -295,25 +493,49 @@ export default function WhatsAppInbox() {
   };
 
   onMount(async () => {
-    await loadInboxList();
+    // 1. Carga inicial
+    await loadInboxList(true);
     try {
       const tmplRes = await api.getTemplates();
       setTemplates(tmplRes?.templates || []);
     } catch {}
 
-    // Polling inteligente cada 3.5 segundos para sincronizar en tiempo real (pausado si pestaña inactiva)
-    pollingTimer = setInterval(() => {
-      if (typeof document !== 'undefined' && document.hidden) return;
-      const leadId = selectedLeadId();
-      if (leadId) {
-        loadChat(leadId, true);
-      }
-      loadInboxList();
-    }, 3500);
-  });
+    // 2. Escuchadores de actividad del usuario para resetear backoff
+    const activityEvents = ['mousedown', 'keydown', 'touchstart', 'scroll'];
+    const onUserEvent = () => recordUserActivity();
+    activityEvents.forEach((ev) => window.addEventListener(ev, onUserEvent, { passive: true }));
 
-  onCleanup(() => {
-    if (pollingTimer) clearInterval(pollingTimer);
+    // 3. Pausa instantánea al desenfocar o background y reanudación inmediata al volver
+    const onVisibilityChange = () => {
+      if (typeof document === 'undefined') return;
+      if (document.hidden) {
+        setSyncStatus('paused');
+        clearAdaptiveTimer();
+      } else {
+        recordUserActivity();
+        scheduleNextCycle(100);
+      }
+    };
+
+    const onWindowFocus = () => {
+      recordUserActivity();
+      if (!adaptiveTimer) {
+        scheduleNextCycle(200);
+      }
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('focus', onWindowFocus);
+
+    // 4. Iniciar el ciclo de polling adaptativo
+    scheduleNextCycle(10_000);
+
+    onCleanup(() => {
+      clearAdaptiveTimer();
+      activityEvents.forEach((ev) => window.removeEventListener(ev, onUserEvent));
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('focus', onWindowFocus);
+    });
   });
 
   const filteredConversations = createMemo(() => {
@@ -371,6 +593,48 @@ export default function WhatsAppInbox() {
           </div>
 
           <div class="flex items-center gap-2">
+            {/* Indicador de Estado de Conexión y Ahorro D1 */}
+            <div
+              class="flex items-center gap-1.5 px-2 py-1 rounded-md bg-elevate text-[11px] font-medium border border-edge"
+              title={`Sincronización adaptativa: ${
+                syncStatus() === 'active'
+                  ? 'Activo (tiempo real cada 10s)'
+                  : syncStatus() === 'idle'
+                  ? 'Modo Ahorro Cloudflare D1 (inactividad detectada)'
+                  : 'Pausado (pestaña en segundo plano)'
+              }`}
+            >
+              <span
+                class={`w-2 h-2 rounded-full ${
+                  syncStatus() === 'active'
+                    ? 'bg-emerald-500 animate-pulse'
+                    : syncStatus() === 'idle'
+                    ? 'bg-amber-400'
+                    : 'bg-zinc-400'
+                }`}
+              />
+              <span class="text-muted hidden sm:inline">
+                {syncStatus() === 'active'
+                  ? 'En vivo'
+                  : syncStatus() === 'idle'
+                  ? 'Ahorro D1'
+                  : 'Pausado'}
+              </span>
+            </div>
+
+            {/* Botón de Sincronización Manual Inmediata */}
+            <button
+              type="button"
+              onClick={handleManualRefresh}
+              disabled={isManualSyncing()}
+              class="px-2.5 py-1.5 rounded-lg bg-elevate hover:bg-elevate-strong text-body text-xs font-medium border border-edge transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              title="Sincronizar ahora con WhatsApp"
+              aria-label="Sincronizar ahora"
+            >
+              <RefreshCw size={13} class={isManualSyncing() ? 'animate-spin text-accent' : ''} />
+              <span class="hidden sm:inline">Sincronizar</span>
+            </button>
+
             <A
               href="/settings/whatsapp"
               class="px-2.5 py-1.5 rounded-lg bg-elevate hover:bg-elevate-strong text-body text-xs font-medium border border-edge transition flex items-center gap-1.5"

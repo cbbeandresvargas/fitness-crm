@@ -498,8 +498,55 @@ export const api = {
     });
   },
 
-  async getWhatsAppInbox(): Promise<{ conversations: ConversationSummary[] }> {
-    return fetchJson('/api/whatsapp/inbox');
+  async getWhatsAppInbox(etag?: string): Promise<{
+    conversations?: ConversationSummary[];
+    notModified?: boolean;
+    etag?: string;
+  }> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    };
+    if (etag) {
+      headers['If-None-Match'] = etag;
+    }
+
+    const res = await fetch('/api/whatsapp/inbox', {
+      credentials: 'include',
+      headers,
+    });
+
+    if (res.status === 304) {
+      return { notModified: true, etag };
+    }
+
+    if (!res.ok) {
+      if (
+        res.status === 401 &&
+        typeof window !== 'undefined' &&
+        !window.location.pathname.startsWith('/login')
+      ) {
+        window.location.href = '/login';
+      }
+      let errorMsg = `Error ${res.status}`;
+      try {
+        const data = (await res.json()) as any;
+        if (data && data.error) errorMsg = data.error;
+      } catch {}
+      throw new Error(errorMsg);
+    }
+
+    const data = (await res.json()) as { conversations: ConversationSummary[] };
+    const returnedEtag = res.headers.get('ETag') || undefined;
+    return {
+      conversations: data.conversations,
+      notModified: false,
+      etag: returnedEtag,
+    };
+  },
+
+  async getWhatsAppInboxSyncCheck(): Promise<{ lastActivity: string | null }> {
+    return fetchJson('/api/whatsapp/inbox/sync-check');
   },
 
   async getWhatsAppChat(leadId: string, since?: string): Promise<{
